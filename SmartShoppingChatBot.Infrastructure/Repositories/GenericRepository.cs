@@ -1,0 +1,105 @@
+﻿using System.Linq.Dynamic.Core;
+using System.Linq.Expressions;
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
+using SmartShoppingChatBot.Domain.Commons;
+using SmartShoppingChatBot.Domain.Interface;
+
+namespace SmartShoppingChatBot.Infrastructure.Repositories;
+
+public class GenericRepository<T> : IGenericRepository<T> where T : class
+{
+    private readonly MongoDbContext _context;
+    private readonly DbSet<T> _dbSet;
+
+    public GenericRepository(MongoDbContext context, DbSet<T> dbSet)
+    {
+        _context = context;
+        _dbSet = dbSet;
+    }
+
+    public async Task AddAsync(T entity)
+    {
+        await _dbSet.AddAsync(entity);
+    }
+
+    public IQueryable<T> AsQueryable()
+    {
+        return _dbSet.AsQueryable();
+    }
+
+    public async Task DeleteAsync(object id)
+    {
+        var entity = await _dbSet.FindAsync(id);
+        if (entity != null)
+        {
+            _dbSet.Remove(entity);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<IList<T>> FindAllAsync(
+        Expression<Func<T, bool>> predicate,
+        Func<IQueryable<T>, IQueryable<T>>? include = null)
+    {
+        IQueryable<T> query = _dbSet;
+        if (include != null)
+            query = include(query);
+
+        return await query.Where(predicate).ToListAsync();
+    }
+
+    public async Task<T?> FindAsync(
+        Expression<Func<T, bool>> predicate,
+        Func<IQueryable<T>, IQueryable<T>>? include = null)
+    {
+        IQueryable<T> query = _dbSet;
+        if (include != null)
+            query = include(query);
+
+        return await query.FirstOrDefaultAsync(predicate);
+    }
+
+
+
+    public async Task<BasePaginatedList<object>> GetAllWithPaggingSortSelectionFieldAsync<TEntity, TResponse>(
+        IQueryable<TEntity> query,
+        IConfigurationProvider mapperConfig,
+        string? orderBy = null,
+        string? fields = null,
+        int pageIndex = 1,
+        int pageSize = 10)
+    {
+        var validFields = QueryHelper.GetValidFields<TResponse>(fields);
+        var validOrderBy = QueryHelper.GetValidOrderBy<TResponse>(orderBy);
+
+        var count = await query.CountAsync();
+
+        // Map to DTO 
+        var dtoQuery = query.ProjectTo<TResponse>(mapperConfig);
+
+        if (!string.IsNullOrWhiteSpace(validOrderBy))
+            dtoQuery = dtoQuery.OrderBy(validOrderBy);
+
+        var pagedQuery = dtoQuery.Skip((pageIndex - 1) * pageSize).Take(pageSize);
+
+        var items = await pagedQuery
+                 .Select($"new ({validFields})")
+                 .ToDynamicListAsync();
+
+        return new BasePaginatedList<object>(items.Cast<object>().ToList(), count, pageIndex, pageSize);
+    }
+
+    public async Task<T?> GetByIdAsync(object id)
+    {
+        var entity = await _dbSet.FindAsync(id);
+        return entity;
+    }
+
+    public Task UpdateAsync(T entity)
+    {
+        _dbSet.Update(entity);
+        return Task.CompletedTask;
+    }
+}

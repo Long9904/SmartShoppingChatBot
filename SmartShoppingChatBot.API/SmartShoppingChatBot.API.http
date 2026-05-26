@@ -1,0 +1,6 @@
+@SmartShoppingChatBot.API_HostAddress = http://localhost:5077
+
+GET {{SmartShoppingChatBot.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
