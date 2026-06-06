@@ -11,10 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\SmartShoppingChatBot.Application\SmartShoppingChatBot.Application.csproj" />
     <ProjectReference Include="..\SmartShoppingChatBot.Infrastructure\SmartShoppingChatBot.Infrastructure.csproj" />
   </ItemGroup>

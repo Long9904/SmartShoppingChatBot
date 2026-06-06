@@ -1,7 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SmartShoppingChatBot.API.Extensions;
 using SmartShoppingChatBot.API.Middlewares;
 using SmartShoppingChatBot.Application;
+using SmartShoppingChatBot.Application.Commons.Options;
+using SmartShoppingChatBot.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,8 +24,12 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 });
 
-
+builder.Services.AddMongoDbConfig(builder.Configuration);
 builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices();
+
+// Email settings configuration
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

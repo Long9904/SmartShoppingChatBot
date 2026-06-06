@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SmartShoppingChatBot.Application\SmartShoppingChatBot.Application.csproj" />
+    <ProjectReference Include="..\SmartShoppingChatBot.Domain\SmartShoppingChatBot.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -15,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.2">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -22,6 +24,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     <PackageReference Include="MongoDB.EntityFrameworkCore" Version="8.4.1" />
+    <PackageReference Include="RazorLight" Version="2.3.1" />
     <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.2" />
   </ItemGroup>
 

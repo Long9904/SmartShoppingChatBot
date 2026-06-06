@@ -1,61 +1,40 @@
-﻿namespace SmartShoppingChatBot.Application.Commons.Results;
+﻿using static System.Runtime.InteropServices.JavaScript.JSType;
+
+namespace SmartShoppingChatBot.Application.Commons.Results;
 
 public class Result<T>
 {
     public bool IsSuccess { get; set; }
     public T? Data { get; set; }
-
-    public int? StatusCode { get; set; }
-
+    public int StatusCode { get; set; }
     public string? Message { get; set; }
 
-    public static Result<T> Success(T data, int? statusCode = null, string? message = null)
+    public Dictionary<string, string>? Errors { get; set; }
+
+    private Result(
+        bool isSuccess, 
+        int statusCode, 
+        T? data, 
+        string? message = null, 
+        Dictionary<string, string>? errors = null)
     {
-        return new Result<T>
-        {
-            IsSuccess = true,
-            Data = data,
-            StatusCode = statusCode,
-            Message = message
-        };
+        IsSuccess = isSuccess;
+        StatusCode = statusCode;
+        Data = data;
+        Message = message;
+        Errors = errors;
     }
 
-    public static Result<T> Failure(string message, int? statusCode = null)
-    {
-        return new Result<T>
-        {
-            IsSuccess = false,
-            Data = default,
-            StatusCode = statusCode,
-            Message = message
-        };
-    }
-}
+    public static Result<T> Success(T? data, int statusCode = 200, string? message = null)
+        => new(true, statusCode, data, message);
 
-
-
-public class Result
-{
-    public bool IsSuccess { get; set; }
-    public int? StatusCode { get; set; }
-    public string? Message { get; set; }
-    public static Result Success(int? statusCode = null, string? message = null)
-    {
-        return new Result
+    public static Result<T> Failure(
+        int statusCode = 400,
+        string? message = null,
+        Dictionary<string, string>? errors = null)
+        => new(false, statusCode, default, message)
         {
-            IsSuccess = true,
-            StatusCode = statusCode,
-            Message = message
+            Errors = errors
         };
-    }
-    public static Result Failure(string message, int? statusCode = null)
-    {
-        return new Result
-        {
-            IsSuccess = false,
-            StatusCode = statusCode,
-            Message = message
-        };
-    }
 }
 
