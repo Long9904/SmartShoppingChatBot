@@ -13,10 +13,10 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
     private readonly MongoDbContext _context;
     private readonly DbSet<T> _dbSet;
 
-    public GenericRepository(MongoDbContext context, DbSet<T> dbSet)
+    public GenericRepository(MongoDbContext context)
     {
         _context = context;
-        _dbSet = dbSet;
+        _dbSet = _context.Set<T>();
     }
 
     public async Task AddAsync(T entity)

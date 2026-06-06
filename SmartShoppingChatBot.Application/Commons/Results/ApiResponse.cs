@@ -1,17 +1,19 @@
-﻿namespace SmartShoppingChatBot.Application.Commons.Results
+﻿using SmartShoppingChatBot.Application.DTOs;
+
+namespace SmartShoppingChatBot.Application.Commons.Results
 {
     public class ApiResponse<T>
     {
         public bool IsSuccess { get; init; }
         public string? Message { get; init; }
         public T? Data { get; init; }
-        public string? Errors { get; init; }
+        public Dictionary<string, string>? Errors { get; init; }
 
         private ApiResponse(
             bool isSuccess,
             string? message,
             T? data,
-            string? errors)
+            Dictionary<string, string>? errors)
         {
             IsSuccess = isSuccess;
             Message = message;
@@ -26,7 +28,8 @@
 
         public static ApiResponse<T> Fail(
             string message,
-            string? errors = null)
+            Dictionary<string, string>? errors = null)
             => new(false, message, default, errors);
+
     }
 }
