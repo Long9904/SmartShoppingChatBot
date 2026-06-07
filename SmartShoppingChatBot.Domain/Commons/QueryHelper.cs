@@ -17,9 +17,9 @@ public static class QueryHelper
             .Where(f => allowedFields.Any(af => string.Equals(af, f, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-        // Luôn đảm bảo có Id (nếu DTO có Id)
-        if (allowedFields.Contains("Id") && !requestedFields.Any(f => f.Equals("Id", StringComparison.OrdinalIgnoreCase)))
-            requestedFields.Insert(0, "Id");
+        // Luôn đảm bảo có _id (nếu DTO có _id)
+        if (allowedFields.Contains("_id") && !requestedFields.Any(f => f.Equals("_id", StringComparison.OrdinalIgnoreCase)))
+            requestedFields.Insert(0, "_id");
 
         return requestedFields.Any() ? string.Join(", ", requestedFields) : string.Join(", ", allowedFields);
     }

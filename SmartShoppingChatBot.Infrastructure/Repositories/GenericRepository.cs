@@ -75,20 +75,34 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         var validOrderBy = QueryHelper.GetValidOrderBy<TResponse>(orderBy);
 
         var count = await query.CountAsync();
+        if (count == 0) return new BasePaginatedList<object>(new List<object>(), count, pageIndex, pageSize);
 
-        // Map to DTO 
-        var dtoQuery = query.ProjectTo<TResponse>(mapperConfig);
+
+        IQueryable<TEntity> orderedQuery = query;
 
         if (!string.IsNullOrWhiteSpace(validOrderBy))
-            dtoQuery = dtoQuery.OrderBy(validOrderBy);
+            orderedQuery = query.OrderBy(validOrderBy);
 
-        var pagedQuery = dtoQuery.Skip((pageIndex - 1) * pageSize).Take(pageSize);
+        var pagedEntityQuery = orderedQuery
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize);
 
-        var items = await pagedQuery
-                 .Select($"new ({validFields})")
-                 .ToDynamicListAsync();
+        var dtoQuery = pagedEntityQuery.ProjectTo<TResponse>(mapperConfig);
 
+        if (!string.IsNullOrWhiteSpace(validFields))
+        {
+            var dynamicItems = await dtoQuery
+                     .Select($"new ({validFields})")
+                     .ToDynamicListAsync();
+
+            var serializedItems = dynamicItems.Select(x => (object)x).ToList();
+
+            return new BasePaginatedList<object>(serializedItems, count, pageIndex, pageSize);
+        }
+
+        var items = await dtoQuery.ToListAsync();
         return new BasePaginatedList<object>(items.Cast<object>().ToList(), count, pageIndex, pageSize);
+
     }
 
     public async Task<T?> GetByIdAsync(object id)
