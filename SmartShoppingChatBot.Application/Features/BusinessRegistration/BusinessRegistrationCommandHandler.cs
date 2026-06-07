@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AutoMapper;
+using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Domain.Commons;
@@ -13,13 +14,16 @@ public class BusinessRegistrationCommandHandler :
 {
     private readonly IBusinessRepository _businessRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
 
     public BusinessRegistrationCommandHandler(
         IBusinessRepository businessRepository, 
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMapper mapper)
     {
         _businessRepository = businessRepository;
         _unitOfWork = unitOfWork;
+        _mapper = mapper;
     }
 
     public async Task<Result<BusinessRegistrationResponse>> Handle(
@@ -49,7 +53,6 @@ public class BusinessRegistrationCommandHandler :
             BrandAssetsUrl = request.BrandAssetsUrl,
             BusinessStatus = Domain.Enums.BusinessEnums.PENDING,
             CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow,
             CreatedBy = new UserEmbedded
             {
                 Name = "Business Owner"
@@ -59,18 +62,7 @@ public class BusinessRegistrationCommandHandler :
         await _businessRepository.AddAsync(business);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var response = new BusinessRegistrationResponse
-        {
-            Id = business.Id,
-            BusinessName = business.BusinessName,
-            Email = business.Email,
-            HotLine = business.HotLine,
-            WebsiteUrl = business.WebsiteUrl,
-            AddressLine = business.AddressLine,
-            City = business.City,
-            BrandAssetsUrl = business.BrandAssetsUrl,
-            BusinessStatus = business.BusinessStatus
-        };
+        var response = _mapper.Map<BusinessRegistrationResponse>(business);
 
         return Result<BusinessRegistrationResponse>.Success(response, 201, "Business registered successfully.");
     }
