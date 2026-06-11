@@ -8,7 +8,6 @@ public class BusinessResponse
 {
     public string? Id { get; set; }
     public string BusinessName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
     public string HotLine { get; set; } = string.Empty;
     public string WebsiteUrl { get; set; } = string.Empty;
     public string AddressLine { get; set; } = string.Empty;
