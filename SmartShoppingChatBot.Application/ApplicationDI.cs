@@ -21,6 +21,9 @@ public static class ApplicationDI
         // AutoMapper registration
         services.AddAutoMapper(cfg => cfg.AddMaps(typeof(AutoMapperDI).Assembly));
 
+        // Time zone
+        services.AddSingleton<TimeProvider, VietnamTimeProvider>();
+
         return services;
     }
 }

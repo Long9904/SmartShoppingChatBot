@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -10,6 +11,7 @@ using SmartShoppingChatBot.API.Middlewares;
 using SmartShoppingChatBot.Application;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Infrastructure;
+using SmartShoppingChatBot.Infrastructure.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,8 +33,9 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddMongoDbConfig(builder.Configuration);
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
+builder.Services.AddHttpContextAccessor();
 
-// Email settings configuration
+// BusinessEmail settings configuration
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 
@@ -84,6 +87,20 @@ builder.Services.AddAuthentication(options =>
 })
     .AddJwtBearer(options =>
     {
+        // Cookies
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Cookies["access_token"];
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+
         options.TokenValidationParameters = new()
         {
             ValidateIssuer = true,
@@ -100,7 +117,52 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// MassTransit
+builder.Services.AddMassTransit(x =>
+{
+    // Auto-discover and register all consumers in the MeetingService.Consumers assembly
+    x.AddConsumers(typeof(ApplicationDI).Assembly);
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMQ:Host"], "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMQ:Username"]!);
+            h.Password(builder.Configuration["RabbitMQ:Password"]!);
+        });
+
+        cfg.UseMessageRetry(r => r.Exponential(
+            retryLimit: 5,
+            minInterval: TimeSpan.FromSeconds(1),
+            maxInterval: TimeSpan.FromSeconds(30),
+            intervalDelta: TimeSpan.FromSeconds(5)
+        ));
+
+        // Auto-configure endpoints for all discovered consumers
+        cfg.ConfigureEndpoints(context);
+    });
+});
+
+
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigins", policy =>
+          policy.WithOrigins(allowedOrigins)
+          .AllowAnyMethod()
+          .AllowAnyHeader()
+          .AllowCredentials());
+});
+
+// Razor page
+builder.Services.AddRazorPages();
+
 var app = builder.Build();
+
+using var scope = app.Services.CreateScope();
+var userSeeder = scope.ServiceProvider.GetRequiredService<UserSeeder>();
+await userSeeder.SeedUsersAsync();
 
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -115,5 +177,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapRazorPages();
 
 app.Run();

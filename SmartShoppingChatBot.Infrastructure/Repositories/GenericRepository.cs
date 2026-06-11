@@ -10,7 +10,7 @@ namespace SmartShoppingChatBot.Infrastructure.Repositories;
 
 public class GenericRepository<T> : IGenericRepository<T> where T : class
 {
-    private readonly MongoDbContext _context;
+    protected readonly MongoDbContext _context;
     private readonly DbSet<T> _dbSet;
 
     public GenericRepository(MongoDbContext context)
@@ -103,6 +103,13 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         var items = await dtoQuery.ToListAsync();
         return new BasePaginatedList<object>(items.Cast<object>().ToList(), count, pageIndex, pageSize);
 
+    }
+
+    public async Task<BasePaginatedList<T>> PaginatedListAsync(IQueryable<T> query, int index, int pageSize)
+    {
+        var count = await query.CountAsync();
+        var items = await query.Skip((index - 1) * pageSize).Take(pageSize).ToListAsync();
+        return new BasePaginatedList<T>(items, count, index, pageSize);
     }
 
     public async Task<T?> GetByIdAsync(object id)

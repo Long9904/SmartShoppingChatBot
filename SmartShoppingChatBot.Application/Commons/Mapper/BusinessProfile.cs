@@ -9,5 +9,6 @@ public class BusinessProfile : Profile
     public BusinessProfile()
     {
         CreateMap<Business, BusinessRegistrationResponse>();
+        CreateMap<Business, BusinessResponse>();
     }
 }

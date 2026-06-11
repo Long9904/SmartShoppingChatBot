@@ -9,9 +9,9 @@ public class BusinessRegistrationCommandValidator : AbstractValidator<BusinessRe
         RuleFor(command => command.BusinessName)
             .NotEmpty().WithMessage("Business name is required.");
 
-        RuleFor(command => command.Email)
+        RuleFor(command => command.BusinessOwnerEmail)
             .Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("Email is required.")
+            .NotEmpty().WithMessage("Owner email is required.")
             .EmailAddress().WithMessage("Invalid email format.");
 
         RuleFor(command => command.HotLine)
@@ -29,13 +29,6 @@ public class BusinessRegistrationCommandValidator : AbstractValidator<BusinessRe
         RuleFor(command => command.AddressLine)
             .NotEmpty().WithMessage("Address line is required.");
 
-        RuleFor(command => command.City)
-            .NotEmpty().WithMessage("City is required.");
-
-        RuleFor(command => command.BrandAssetsUrl)
-            .Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("Brand assets URL is required.")
-            .Must(BeAValidUrl).WithMessage("Invalid URL format.");
     }
 
     private bool BeAValidUrl(string url)

@@ -1,4 +1,5 @@
-﻿using SmartShoppingChatBot.Domain.Entities;
+﻿using SmartShoppingChatBot.Domain.Commons;
+using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Infrastructure.Repositories;

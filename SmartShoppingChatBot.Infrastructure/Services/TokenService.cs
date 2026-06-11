@@ -18,10 +18,11 @@ public class TokenService : ITokenService
         _jwt = jwtOptions.Value;
     }
 
-    public string CreateAccessToken(AccessTokenPayload payload, DateTime expUtc)
+    public string CreateAccessToken(AccessTokenPayload payload)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
 
         var claims = new List<Claim>
         {
@@ -30,7 +31,30 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.Role, payload.Role.ToString()),
         };
 
-        expUtc = DateTime.UtcNow.AddMinutes(_jwt.ExpireMinutes);
+        DateTime expUtc = DateTime.UtcNow.AddMinutes(_jwt.ExpireMinutes);
+
+        var token = new JwtSecurityToken(
+            issuer: _jwt.Issuer,
+            audience: _jwt.Audience,
+            claims: claims,
+            expires: expUtc,
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string CreateTempToken(string userId)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, userId),
+        };
+
+        DateTime expUtc = DateTime.UtcNow.AddMinutes(_jwt.TempTokenExpireMinutes);
 
         var token = new JwtSecurityToken(
             issuer: _jwt.Issuer,

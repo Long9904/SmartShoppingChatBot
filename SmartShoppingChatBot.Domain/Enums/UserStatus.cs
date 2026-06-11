@@ -4,6 +4,7 @@
     {
         ACTIVE = 1,
         INACTIVE = 2,
-        DELETED = 3
+        DELETED = 3,
+        PENDING_EMAIL_VERIFICATION = 4,
     }
 }

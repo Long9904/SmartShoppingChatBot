@@ -1,10 +1,9 @@
-﻿
-using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Domain.Entities;
+﻿using SmartShoppingChatBot.Application.DTOs;
 
 namespace SmartShoppingChatBot.Application.Interface;
 
 public interface ITokenService
 {
-    string CreateAccessToken(AccessTokenPayload payload, DateTime expUtc);
+    string CreateAccessToken(AccessTokenPayload payload);
+    string CreateTempToken(string userId);
 }
