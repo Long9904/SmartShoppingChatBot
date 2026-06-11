@@ -1,7 +1,9 @@
-﻿namespace SmartShoppingChatBot.Domain.Commons;
+﻿using MongoDB.Bson;
+
+namespace SmartShoppingChatBot.Domain.Commons;
 
 public class UserEmbedded
 {
-    public string Id { get; set; } = string.Empty;
+    public ObjectId Id { get; set; }
     public string Name { get; set; } = string.Empty;
 }

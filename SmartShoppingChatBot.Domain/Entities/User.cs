@@ -12,28 +12,33 @@ namespace SmartShoppingChatBot.Domain.Entities
         [BsonRepresentation(BsonType.ObjectId)]
         public ObjectId Id { get; set; }
         public string? FullName { get; set; }
-        public string? Email { get; set; }
+        public required string Email { get; set; }
         public bool IsEmailVerified { get; set; }
-        public bool MustChangePassword { get; set; }
         public bool IsProfileCompleted { get; set; }
-        public string? PasswordHash { get; set; }
+        public required string PasswordHash { get; set; }
         public string? PhoneNumber { get; set; }
-
-        [BsonRepresentation(BsonType.String)]
-        public RoleEnums Role { get; set; }
 
         [BsonRepresentation(BsonType.String)]
         public UserStatus UserStatus { get; set; }
 
-        // Business snapshot
-        public ObjectId BusinessId { get; set; }
-        public string? BusinessName { get; set; }
+        public List<BusinessEmbedded> Businesses { get; set; } = new List<BusinessEmbedded>();
 
         // Audit fields
-        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-        public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset UpdatedAt { get; set; }
         public DateTimeOffset? DeletedAt { get; set; }
         public UserEmbedded? CreatedBy { get; set; }
         public UserEmbedded? UpdatedBy { get; set; }
+    }
+
+
+    public class BusinessEmbedded
+    {
+        public ObjectId Id { get; set; }
+
+        [BsonRepresentation(BsonType.String)]
+        public RoleEnums Role { get; set; }
+        public string? BusinessName { get; set; } = null;
+        public DateTimeOffset JoinedAt { get; set; }
     }
 }

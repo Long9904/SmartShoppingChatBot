@@ -5,13 +5,9 @@ namespace SmartShoppingChatBot.Infrastructure.Repositories
 {
     public class BusinessRepository : GenericRepository<Business>, IBusinessRepository
     {
+
         public BusinessRepository(MongoDbContext context) : base(context)
         {
-        }
-
-        public async Task<Business?> GetByEmailAsync(string email)
-        {
-            return await FindAsync(b => b.Email == email);
         }
 
         public async Task<Business?> GetByHotlineAsync(string hotline)

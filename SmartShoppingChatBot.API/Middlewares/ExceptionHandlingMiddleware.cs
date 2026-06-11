@@ -36,6 +36,7 @@ namespace SmartShoppingChatBot.API.Middlewares
                     JsonException => (int)HttpStatusCode.BadRequest,
                     InvalidOperationException => (int)HttpStatusCode.BadRequest,
                     NullReferenceException => (int)HttpStatusCode.InternalServerError,
+                    FormatException => (int)HttpStatusCode.BadRequest,
                     _ => (int)HttpStatusCode.InternalServerError
                 };
 

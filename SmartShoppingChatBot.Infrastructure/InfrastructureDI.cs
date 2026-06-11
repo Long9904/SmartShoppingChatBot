@@ -2,6 +2,7 @@
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Interface;
 using SmartShoppingChatBot.Infrastructure.Repositories;
+using SmartShoppingChatBot.Infrastructure.Seeders;
 using SmartShoppingChatBot.Infrastructure.Services;
 
 namespace SmartShoppingChatBot.Infrastructure;
@@ -17,6 +18,11 @@ public static class InfrastructureDI
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IPasswordService, PasswordService>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+        // Seeder
+        services.AddScoped<UserSeeder>();
 
         // Repo
         services.AddScoped<IBusinessRepository, BusinessRepository>();  
