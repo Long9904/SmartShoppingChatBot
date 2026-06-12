@@ -42,30 +42,10 @@ public class BusinessRegistrationCommandHandler :
         BusinessRegistrationCommand request,
         CancellationToken cancellationToken)
     {
-        var existingOwnerEmail = await _userRepository.FindAsync(
-            u => u.Email == request.BusinessOwnerEmail && u.UserStatus == UserStatus.ACTIVE);
-        if (existingOwnerEmail != null)
+        var validationResult = await ValidateBusinessRegistrationAsync(request, _businessRepository, _userRepository);
+        if (!validationResult.IsSuccess)
         {
-            return Result<BusinessRegistrationResponse>.Failure(409, "A user with the same email already exists.");
-        } // registered
-
-
-        var ownerIsPeding = await _userRepository.FindAsync(
-            u => u.Email == request.BusinessOwnerEmail && u.UserStatus == UserStatus.PENDING_EMAIL_VERIFICATION);
-        if (ownerIsPeding != null)
-            return Result<BusinessRegistrationResponse>.Failure(409, "A user with the same email is pending registration. Please wait for approval.");
-
-        var onwerIsRejected = await _userRepository.FindAsync(
-            u => u.Email == request.BusinessOwnerEmail && u.UserStatus == UserStatus.INACTIVE);
-
-        if (onwerIsRejected != null)
-            return Result<BusinessRegistrationResponse>.Failure(409, "A user with the same email has been rejected. Please contact support for more information.");
-
-
-        var existingBusinessHotLine = await _businessRepository.GetByHotlineAsync(request.HotLine);
-        if (existingBusinessHotLine != null)
-        {
-            return Result<BusinessRegistrationResponse>.Failure(409, "A business with the same hotline already exists.");
+            return validationResult;
         }
 
         var businessId = ObjectId.GenerateNewId();
@@ -79,7 +59,7 @@ public class BusinessRegistrationCommandHandler :
             HotLine = request.HotLine,
             WebsiteUrl = request.WebsiteUrl,
             AddressLine = request.AddressLine,
-            BusinessStatus = BusinessEnums.PENDING,
+            BusinessStatus = BusinessEnums.PENDING_APPROVAL,
             CreatedAt = dateNow,
             UpdatedAt = dateNow,
             CreatedBy = new UserEmbedded
@@ -99,7 +79,7 @@ public class BusinessRegistrationCommandHandler :
             PasswordHash = string.Empty,
             CreatedAt = dateNow,
             UpdatedAt = dateNow,
-            UserStatus = UserStatus.INACTIVE,
+            UserStatus = UserStatus.PENDING_APPROVAL,
             CreatedBy = new UserEmbedded
             {
                 Id = userId,
@@ -136,5 +116,46 @@ public class BusinessRegistrationCommandHandler :
         var response = _mapper.Map<BusinessRegistrationResponse>(business);
         _logger.LogInformation($"Business with name {business.BusinessName} registered successfully.");
         return Result<BusinessRegistrationResponse>.Success(response, 201, "Business registered successfully.");
+    }
+
+
+    public async Task<Result<BusinessRegistrationResponse>> ValidateBusinessRegistrationAsync(
+        BusinessRegistrationCommand request,
+        IBusinessRepository businessRepository,
+        IUserRepository userRepository)
+    {
+        var existingUser = await userRepository.FindAsync(
+        u => u.Email == request.BusinessOwnerEmail);
+
+        if (existingUser != null)
+        {
+            return existingUser.UserStatus switch
+            {
+                UserStatus.ACTIVE => Result<BusinessRegistrationResponse>.Failure(409, "This email is already registered."),
+
+                UserStatus.PENDING_APPROVAL =>
+                    Result<BusinessRegistrationResponse>.Failure(400, "This email is already waiting for admin approval."),
+
+                UserStatus.PENDING_PROFILE_COMPLETION =>
+                    Result<BusinessRegistrationResponse>.Failure(409, "This email has been approved and is waiting for profile completion."),
+
+                UserStatus.REJECTED =>
+                    Result<BusinessRegistrationResponse>.Failure(400, "This email was rejected. Please contact support."),
+
+                _ =>
+                    Result<BusinessRegistrationResponse>.Failure(409, "This email is already used.")
+            };
+        }
+
+        var existingHotline = await businessRepository.GetByHotlineAsync(request.HotLine);
+
+        if (existingHotline != null)
+        {
+            return Result<BusinessRegistrationResponse>.Failure(
+                409,
+                "A business with the same hotline already exists.");
+        }
+
+        return Result<BusinessRegistrationResponse>.Success(null!, 200);
     }
 }

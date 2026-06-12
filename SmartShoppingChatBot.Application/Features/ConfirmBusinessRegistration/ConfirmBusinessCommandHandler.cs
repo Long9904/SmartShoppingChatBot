@@ -41,7 +41,7 @@ public class ConfirmBusinessCommandHandler :
             return Result<BusinessRegistrationResponse>.Failure(400, "Business not found");
         }
 
-        if (business.BusinessStatus != BusinessEnums.PENDING)
+        if (business.BusinessStatus != BusinessEnums.PENDING_APPROVAL)
         {
             return Result<BusinessRegistrationResponse>.Failure(400, "Business cannot be processed");
         }
@@ -49,41 +49,49 @@ public class ConfirmBusinessCommandHandler :
         var owner = await _userRepository.FindAsync(u => u.Businesses.Any(
             b => b.Id == business.Id && b.Role == RoleEnums.BUSINESS_OWNER));
 
+        if (owner == null) return Result<BusinessRegistrationResponse>.Failure(400, "Business owner not found");
+
         if (request.IsApproved)
         {
             business.BusinessStatus = BusinessEnums.APPROVED;
             business.UpdatedAt = _time.GetUtcNow();
+
+            owner.UserStatus = UserStatus.PENDING_PROFILE_COMPLETION;
+            owner.UpdatedAt = _time.GetUtcNow();
         }
         else
         {
             business.BusinessStatus = BusinessEnums.REJECTED;
             business.UpdatedAt = _time.GetUtcNow();
+
+            owner.UserStatus = UserStatus.REJECTED;
+            owner.UpdatedAt = _time.GetUtcNow();
         }
 
-        await _businessRepository.UpdateAsync(business);
-        await _unitOfWork.SaveChangesAsync();
 
-        // In one time, it only have one owner, so we can get the first one
- 
-        if (owner != null)
+        try
         {
-            owner.UserStatus = UserStatus.PENDING_EMAIL_VERIFICATION;
+            await _unitOfWork.BeginTransactionAsync();
+            await _businessRepository.UpdateAsync(business);
             await _userRepository.UpdateAsync(owner);
             await _unitOfWork.SaveChangesAsync();
-
-            await _publishEndpoint.Publish(new BusinessRegistrationConfirmedEvent
-            {
-                BusinessId = business.Id.ToString(),
-                BusinessName = business.BusinessName,
-                OwnerEmail = owner.Email,
-                OwnerName = owner.FullName,
-                BusinessStatus = business.BusinessStatus
-            });
-        }
-        else
+            await _unitOfWork.CommitTransactionAsync();
+        } catch (Exception ex)
         {
-            return Result<BusinessRegistrationResponse>.Failure(400,"Business owner not found");
+            await _unitOfWork.RollBackAsync();
+            return Result<BusinessRegistrationResponse>.Failure(500, $"An error occurred while processing the business registration: {ex.Message}");
         }
+
+        await _publishEndpoint.Publish(new BusinessRegistrationConfirmedEvent
+        {
+            BusinessId = business.Id.ToString(),
+            BusinessName = business.BusinessName,
+            OwnerEmail = owner.Email,
+            OwnerName = owner.FullName,
+            BusinessStatus = business.BusinessStatus
+        });
+
+
 
         var response = new BusinessRegistrationResponse
         {

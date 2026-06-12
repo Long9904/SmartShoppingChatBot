@@ -16,7 +16,7 @@ public class Business
     public string AddressLine { get; set; } = string.Empty;
 
     [BsonRepresentation(BsonType.String)]
-    public BusinessEnums BusinessStatus { get; set; } = BusinessEnums.PENDING;
+    public BusinessEnums BusinessStatus { get; set; } = BusinessEnums.PENDING_APPROVAL;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }

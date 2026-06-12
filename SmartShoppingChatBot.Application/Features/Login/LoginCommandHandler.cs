@@ -3,6 +3,7 @@ using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Application.Features.Login;
@@ -36,6 +37,14 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
 
         if (!isPasswordTrue) return Result<LoginResponse>.Failure(401, "Invalid email or password");
 
+        if (user.UserStatus == UserStatus.PENDING_APPROVAL)
+            return Result<LoginResponse>.Failure(403, "Your account is pending approval. Please wait for an admin to review your profile.");
+
+        if (user.UserStatus == UserStatus.PENDING_PROFILE_COMPLETION)
+            return Result<LoginResponse>.Failure(403, "Your account is pending profile completion. Please check your email for verification.");
+
+        if (user.UserStatus != UserStatus.ACTIVE)
+            return Result<LoginResponse>.Failure(403, "Your account is not active. Please contact support.");
 
         var token = _tokenService.CreateTempToken(user.Id.ToString());
 
