@@ -3,8 +3,9 @@
     public enum UserStatus
     {
         ACTIVE = 1,
-        INACTIVE = 2,
         DELETED = 3,
-        PENDING_EMAIL_VERIFICATION = 4,
+        PENDING_PROFILE_COMPLETION = 4,
+        PENDING_APPROVAL = 5,
+        REJECTED = 6
     }
 }
