@@ -6,4 +6,5 @@ public interface ITokenService
 {
     string CreateAccessToken(AccessTokenPayload payload);
     string CreateTempToken(string userId);
+    string CreateEmailVerificationToken();
 }

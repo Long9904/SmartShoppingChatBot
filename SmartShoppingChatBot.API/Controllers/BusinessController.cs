@@ -47,11 +47,16 @@ namespace SmartShoppingChatBot.API.Controllers
         [HttpPut("{id}/verify")]
         [Authorize(Roles = "ADMIN")]
         [EndpointDescription("Verify a business")]
-        public async Task<IActionResult> VerifyBusiness([FromRoute] string id, [FromQuery] bool isApproved)
+        public async Task<IActionResult> VerifyBusiness([FromRoute] string id, [FromQuery] bool? isApproved)
         {
+            if (!ObjectId.TryParse(id, out var businessId))
+            {
+                return BadRequest(ApiResponse<BusinessRegistrationResponse>.Fail("Invalid business ID."));
+            }
+
             var command = new ConfirmBusinessCommand
             {
-                BusinessId = ObjectId.Parse(id),
+                BusinessId = businessId,
                 IsApproved = isApproved
             };
 

@@ -13,5 +13,7 @@ public class BusinessRegistrationConfirmedEvent
 
     public string? OwnerName { get; set; }
 
+    public string? TokenVerification { get; set; }
+
     public BusinessEnums BusinessStatus { get; set; }
 }

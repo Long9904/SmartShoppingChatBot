@@ -1,8 +1,15 @@
 ﻿using MassTransit;
 using MediatR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MongoDB.Bson;
+using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.Commons.Results;
+using SmartShoppingChatBot.Application.Commons.Utils;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Events;
+using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 
@@ -12,75 +19,105 @@ public class ConfirmBusinessCommandHandler :
     IRequestHandler<ConfirmBusinessCommand, Result<BusinessRegistrationResponse>>
 {
     private readonly IBusinessRepository _businessRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly ITokenRepository _tokenRepository;
+    private readonly ITokenService _tokenService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPublishEndpoint _publishEndpoint;
-    private readonly IUserRepository _userRepository;
+    private readonly EmailTokenSettings _emailTokenSettings;
     private readonly TimeProvider _time;
+    private readonly ILogger<ConfirmBusinessCommandHandler> _logger;
 
     public ConfirmBusinessCommandHandler(
         IBusinessRepository businessRepository,
+        IUserRepository userRepository,
+        ITokenRepository tokenRepository,
+        ITokenService tokenService,
         IUnitOfWork unitOfWork,
         IPublishEndpoint publishEndpoint,
-        IUserRepository userRepository,
-        TimeProvider time)
+        TimeProvider time,
+        ILogger<ConfirmBusinessCommandHandler> logger,
+        IOptions<EmailTokenSettings> emailTokenSettingsOptions
+        )
     {
         _businessRepository = businessRepository;
         _unitOfWork = unitOfWork;
         _publishEndpoint = publishEndpoint;
         _userRepository = userRepository;
+        _tokenRepository = tokenRepository;
         _time = time;
+        _logger = logger;
+        _tokenService = tokenService;
+        _emailTokenSettings = emailTokenSettingsOptions.Value;
     }
 
     public async Task<Result<BusinessRegistrationResponse>> Handle(
         ConfirmBusinessCommand request,
         CancellationToken cancellationToken)
     {
-        var business = await _businessRepository.FindAsync(b => b.Id == request.BusinessId);
+
+        var business = await _businessRepository.FindAsync(b => b.Id == request.BusinessId && b.BusinessStatus == BusinessEnums.PENDING_APPROVAL);
+
         if (business == null)
         {
             return Result<BusinessRegistrationResponse>.Failure(400, "Business not found");
         }
 
-        if (business.BusinessStatus != BusinessEnums.PENDING_APPROVAL)
-        {
-            return Result<BusinessRegistrationResponse>.Failure(400, "Business cannot be processed");
-        }
-
-        var owner = await _userRepository.FindAsync(u => u.Businesses.Any(
-            b => b.Id == business.Id && b.Role == RoleEnums.BUSINESS_OWNER));
+        var owner = await _userRepository.FindAsync(u => u.Business.Id == request.BusinessId && u.Business.Role == RoleEnums.BUSINESS_OWNER);
 
         if (owner == null) return Result<BusinessRegistrationResponse>.Failure(400, "Business owner not found");
 
-        if (request.IsApproved)
+        var updatedAt = _time.GetUtcNow();
+
+        if (request.IsApproved == true)
         {
             business.BusinessStatus = BusinessEnums.APPROVED;
-            business.UpdatedAt = _time.GetUtcNow();
-
             owner.UserStatus = UserStatus.PENDING_PROFILE_COMPLETION;
-            owner.UpdatedAt = _time.GetUtcNow();
         }
         else
         {
             business.BusinessStatus = BusinessEnums.REJECTED;
-            business.UpdatedAt = _time.GetUtcNow();
-
+            business.UpdatedAt = updatedAt;
             owner.UserStatus = UserStatus.REJECTED;
-            owner.UpdatedAt = _time.GetUtcNow();
         }
 
+        business.UpdatedAt = updatedAt;
+        owner.UpdatedAt = updatedAt;
+
+
+        var token = _tokenService.CreateEmailVerificationToken();
+        var tokenHash = TokenHelper.Sha256(token);
+
+        var newToken = new Token
+        {
+            Id = ObjectId.GenerateNewId(),
+            UserId = owner.Id,
+            TokenValue = tokenHash,
+            ExpiresAt = _time.GetLocalNow().AddDays(_emailTokenSettings.ExpireDays),
+            CreatedAt = _time.GetLocalNow(),
+            Type = TokenType.EMAIL_VERIFICATION
+        };
 
         try
         {
-            await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
             await _businessRepository.UpdateAsync(business);
             await _userRepository.UpdateAsync(owner);
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-        } catch (Exception ex)
-        {
-            await _unitOfWork.RollBackAsync();
-            return Result<BusinessRegistrationResponse>.Failure(500, $"An error occurred while processing the business registration: {ex.Message}");
+            await _tokenRepository.AddAsync(newToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
         }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollBackAsync(cancellationToken);
+
+            _logger.LogError(ex, "An error occurred while processing business registration for {BusinessId}.", request.BusinessId);
+            return Result<BusinessRegistrationResponse>.Failure(500, "An error occurred while processing the business registration.");
+        }
+
+        var buildURL = $"{_emailTokenSettings.UrlBase}{Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(owner.Email)}";
 
         await _publishEndpoint.Publish(new BusinessRegistrationConfirmedEvent
         {
@@ -88,9 +125,9 @@ public class ConfirmBusinessCommandHandler :
             BusinessName = business.BusinessName,
             OwnerEmail = owner.Email,
             OwnerName = owner.FullName,
-            BusinessStatus = business.BusinessStatus
-        });
-
+            BusinessStatus = business.BusinessStatus,
+            TokenVerification = business.BusinessStatus == BusinessEnums.APPROVED ? buildURL : null
+        }, cancellationToken);
 
 
         var response = new BusinessRegistrationResponse
@@ -99,6 +136,10 @@ public class ConfirmBusinessCommandHandler :
             BusinessName = business.BusinessName,
             BusinessStatus = business.BusinessStatus
         };
-        return Result<BusinessRegistrationResponse>.Success(response, 200, "Verify business registration successful");
+        var message = request.IsApproved == true
+            ? "Business registration approved successfully."
+            : "Business registration rejected successfully.";
+
+        return Result<BusinessRegistrationResponse>.Success(response, 200, message);
     }
 }

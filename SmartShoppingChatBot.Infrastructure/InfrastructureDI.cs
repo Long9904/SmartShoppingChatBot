@@ -27,7 +27,7 @@ public static class InfrastructureDI
         // Repo
         services.AddScoped<IBusinessRepository, BusinessRepository>();  
         services.AddScoped<IUserRepository, UserRepository>();
-
+        services.AddScoped<ITokenRepository, TokenRepository>();
 
         return services;
     }
