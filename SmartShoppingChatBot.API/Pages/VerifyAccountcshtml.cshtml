@@ -1,0 +1,494 @@
+@page "/verified-account"
+@model SmartShoppingChatBot.API.Pages.VerifyAccountcshtmlModel
+@{
+    Layout = null;
+
+    var errors = Model.Errors;
+    errors.TryGetValue("password", out var passwordError);
+    errors.TryGetValue("confirmPassword", out var confirmPasswordError);
+    errors.TryGetValue("phoneNumber", out var phoneError);
+    errors.TryGetValue("dateOfBirth", out var dateOfBirthError);
+    errors.TryGetValue("gender", out var genderError);
+    errors.TryGetValue("token", out var tokenError);
+
+    var isTokenMissing = string.IsNullOrWhiteSpace(Model.Command.Token);
+    var showSuccess = Model.HasSubmitted && Model.IsSuccess;
+    var alertClass = showSuccess ? "alert alert-success" : isTokenMissing ? "alert alert-warning" : "alert alert-error";
+    var birthDateValue = Model.Command.DateOfBirth?.ToString("yyyy-MM-dd") ?? "";
+    var minBirthDate = DateTime.Today.AddYears(-120).ToString("yyyy-MM-dd");
+    var maxBirthDate = DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verify account</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: #24292f;
+            background: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        .page {
+            min-height: 100vh;
+            padding: 32px 16px;
+            background: #f6f8fa;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .brand {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .brand-mark {
+            display: inline-flex;
+            width: 48px;
+            height: 48px;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d0d7de;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #24292f;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        h1 {
+            margin: 18px 0 8px;
+            font-size: 24px;
+            font-weight: 400;
+            letter-spacing: 0;
+            line-height: 1.25;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: #57606a;
+        }
+
+        .email-box {
+            margin-top: 16px;
+            padding: 8px 12px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #57606a;
+            overflow-wrap: anywhere;
+        }
+
+        .email-box strong {
+            color: #24292f;
+            font-weight: 600;
+        }
+
+        .panel {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: #ffffff;
+        }
+
+        .alert {
+            margin: 0 0 16px;
+            padding: 12px;
+            border: 1px solid;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            border-color: rgba(207, 34, 46, .4);
+            background: #ffebe9;
+            color: #82071e;
+        }
+
+        .alert-warning {
+            border-color: rgba(154, 103, 0, .4);
+            background: #fff8c5;
+            color: #633c01;
+        }
+
+        .alert-success {
+            border-color: rgba(31, 136, 61, .35);
+            background: #dafbe1;
+            color: #116329;
+        }
+
+        .form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .field {
+            display: grid;
+            gap: 6px;
+        }
+
+        label,
+        .field-title {
+            font-weight: 600;
+        }
+
+        .input {
+            width: 100%;
+            min-height: 34px;
+            padding: 5px 12px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #24292f;
+            outline: none;
+            box-shadow: inset 0 1px 0 rgba(208, 215, 222, .2);
+        }
+
+        .input:focus {
+            border-color: #0969da;
+            box-shadow: inset 0 1px 0 rgba(208, 215, 222, .2), 0 0 0 3px rgba(9, 105, 218, .3);
+        }
+
+        .input:disabled {
+            background: #f6f8fa;
+            color: #8c959f;
+            cursor: not-allowed;
+        }
+
+        .password-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .password-row .input {
+            min-width: 0;
+        }
+
+        .secondary-button {
+            min-height: 34px;
+            padding: 5px 12px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: #f6f8fa;
+            color: #24292f;
+            cursor: pointer;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .secondary-button:hover {
+            background: #f3f4f6;
+            border-color: #afb8c1;
+        }
+
+        .secondary-button:disabled {
+            color: #8c959f;
+            cursor: not-allowed;
+        }
+
+        .gender-options {
+            display: grid;
+            gap: 8px;
+        }
+
+        .radio-option {
+            display: flex;
+            min-height: 34px;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: #ffffff;
+            cursor: pointer;
+            font-weight: 400;
+        }
+
+        .radio-option:has(input:checked) {
+            border-color: #0969da;
+            background: #ddf4ff;
+        }
+
+        .radio-option input {
+            margin: 0;
+        }
+
+        .error-text {
+            margin: 0;
+            color: #cf222e;
+            font-size: 12px;
+        }
+
+        .submit-button {
+            width: 100%;
+            min-height: 36px;
+            border: 1px solid rgba(31, 136, 61, .4);
+            border-radius: 6px;
+            background: #1f883d;
+            color: #ffffff;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .submit-button:hover {
+            background: #1a7f37;
+        }
+
+        .submit-button:disabled {
+            border-color: #d0d7de;
+            background: #94d3a2;
+            cursor: not-allowed;
+        }
+
+        .note {
+            margin: 16px 0 0;
+            color: #57606a;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .success-box {
+            text-align: center;
+        }
+
+        .success-title {
+            margin: 0 0 8px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .success-message {
+            margin: 0;
+            color: #57606a;
+        }
+
+        @@media (max-width: 480px) {
+            .page {
+                padding: 24px 12px;
+            }
+
+            .panel {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <div class="container">
+            <header class="brand">
+                <div class="brand-mark">SS</div>
+                <h1>Verify your account</h1>
+                <p class="subtitle">Create your password and complete your profile.</p>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Email))
+                {
+                    <div class="email-box">
+                        Email: <strong>@Model.Email</strong>
+                    </div>
+                }
+            </header>
+
+            <section class="panel">
+                @if (!string.IsNullOrWhiteSpace(Model.Message) || !string.IsNullOrWhiteSpace(tokenError))
+                {
+                    <div class="@alertClass" role="alert">
+                        @(tokenError ?? Model.Message)
+                    </div>
+                }
+
+                @if (showSuccess)
+                {
+                    <div class="success-box">
+                        <h2 class="success-title">Account verified</h2>
+                        <p class="success-message">You can now sign in with your new password.</p>
+                    </div>
+                }
+                else
+                {
+                    <form class="form" method="post" novalidate>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="Command.Token" value="@Model.Command.Token" />
+                        <input type="hidden" name="Email" value="@Model.Email" />
+
+                        <div class="field">
+                            <label for="password">Password</label>
+                            <div class="password-row">
+                                <input class="input"
+                                       id="password"
+                                       name="Command.Password"
+                                       type="password"
+                                       autocomplete="new-password"
+                                       minlength="6"
+                                       required
+                                       disabled="@isTokenMissing" />
+                                <button class="secondary-button"
+                                        type="button"
+                                        data-toggle-password="password"
+                                        disabled="@isTokenMissing">
+                                    Show
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(passwordError))
+                            {
+                                <p class="error-text">@passwordError</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="confirmPassword">Confirm password</label>
+                            <div class="password-row">
+                                <input class="input"
+                                       id="confirmPassword"
+                                       name="Command.ConfirmPassword"
+                                       type="password"
+                                       autocomplete="new-password"
+                                       minlength="6"
+                                       required
+                                       disabled="@isTokenMissing" />
+                                <button class="secondary-button"
+                                        type="button"
+                                        data-toggle-password="confirmPassword"
+                                        disabled="@isTokenMissing">
+                                    Show
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(confirmPasswordError))
+                            {
+                                <p class="error-text">@confirmPasswordError</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="phoneNumber">Phone number</label>
+                            <input class="input"
+                                   id="phoneNumber"
+                                   name="Command.PhoneNumber"
+                                   type="tel"
+                                   inputmode="tel"
+                                   autocomplete="tel"
+                                   pattern="^0(3|5|7|8|9)[0-9]{8}$"
+                                   placeholder="09xxxxxxxx"
+                                   value="@Model.Command.PhoneNumber"
+                                   required
+                                   disabled="@isTokenMissing" />
+                            @if (!string.IsNullOrWhiteSpace(phoneError))
+                            {
+                                <p class="error-text">@phoneError</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="dateOfBirth">Date of birth</label>
+                            <input class="input"
+                                   id="dateOfBirth"
+                                   name="Command.DateOfBirth"
+                                   type="date"
+                                   min="@minBirthDate"
+                                   max="@maxBirthDate"
+                                   value="@birthDateValue"
+                                   required
+                                   disabled="@isTokenMissing" />
+                            @if (!string.IsNullOrWhiteSpace(dateOfBirthError))
+                            {
+                                <p class="error-text">@dateOfBirthError</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <div class="field-title">Gender</div>
+                            <div class="gender-options">
+                                <label class="radio-option">
+                                    <input type="radio"
+                                           name="Command.Gender"
+                                           value="0"
+                                           checked="@(Model.Command.Gender == 0)"
+                                           required
+                                           disabled="@isTokenMissing" />
+                                    Female
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio"
+                                           name="Command.Gender"
+                                           value="1"
+                                           checked="@(Model.Command.Gender == 1)"
+                                           required
+                                           disabled="@isTokenMissing" />
+                                    Male
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio"
+                                           name="Command.Gender"
+                                           value="2"
+                                           checked="@(Model.Command.Gender == 2)"
+                                           required
+                                           disabled="@isTokenMissing" />
+                                    Other
+                                </label>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(genderError))
+                            {
+                                <p class="error-text">@genderError</p>
+                            }
+                        </div>
+
+                        <button class="submit-button" type="submit" disabled="@isTokenMissing">
+                            Verify account
+                        </button>
+                    </form>
+                }
+            </section>
+
+            <p class="note">This form uses the verification token from your email link.</p>
+        </div>
+    </main>
+
+    <script>
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const toggles = document.querySelectorAll('[data-toggle-password]');
+
+        for (const toggle of toggles) {
+            toggle.addEventListener('click', () => {
+                const input = document.getElementById(toggle.dataset.togglePassword);
+                if (!input) return;
+
+                const shouldShow = input.type === 'password';
+                input.type = shouldShow ? 'text' : 'password';
+                toggle.textContent = shouldShow ? 'Hide' : 'Show';
+            });
+        }
+
+        function syncConfirmPasswordValidity() {
+            if (!passwordInput || !confirmPasswordInput) return;
+
+            const mismatched = confirmPasswordInput.value.length > 0
+                && passwordInput.value !== confirmPasswordInput.value;
+
+            confirmPasswordInput.setCustomValidity(mismatched ? 'Passwords do not match.' : '');
+        }
+
+        passwordInput?.addEventListener('input', syncConfirmPasswordValidity);
+        confirmPasswordInput?.addEventListener('input', syncConfirmPasswordValidity);
+    </script>
+</body>
+</html>

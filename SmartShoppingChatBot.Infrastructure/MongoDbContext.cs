@@ -12,6 +12,9 @@ public class MongoDbContext : DbContext
     public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
     public DbSet<Payment> Payment { get; set; }
+
+    public DbSet<Token> Tokens { get; set; }
+
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
@@ -25,6 +28,12 @@ public class MongoDbContext : DbContext
         });
 
         modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<Token>(entity =>
         {
             entity.HasKey(e => e.Id);
         });

@@ -9,6 +9,6 @@ namespace SmartShoppingChatBot.Application.Features.ConfirmBusinessRegistration
     {
         public ObjectId BusinessId { get; init; } = ObjectId.Empty;
 
-        public bool IsApproved { get; init; }
+        public bool? IsApproved { get; init; }
     }
 }

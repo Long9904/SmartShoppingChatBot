@@ -14,6 +14,9 @@ public class BusinessRegistrationCommandValidator : AbstractValidator<BusinessRe
             .NotEmpty().WithMessage("Owner email is required.")
             .EmailAddress().WithMessage("Invalid email format.");
 
+        RuleFor(command => command.BusinessOwnerName)
+            .NotEmpty().WithMessage("Owner name is required.");
+
         RuleFor(command => command.HotLine)
             .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("Hotline is required.")

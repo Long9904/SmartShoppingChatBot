@@ -28,10 +28,12 @@ public class SendEmailRegistration : IConsumer<BusinessRegistrationConfirmedEven
                     BusinessName = context.Message.BusinessName,
                     OwnerEmail = context.Message.OwnerEmail,
                     OwnerName = context.Message.OwnerName,
-                    VerificationToken = context.Message.BusinessId
+                    VerificationToken = context.Message.TokenVerification
                 });
             await _emailService.SendEmailAsync(context.Message.OwnerEmail!, "Business Registration Approved", body);
         }
+
+
         else if (context.Message.BusinessStatus == BusinessEnums.REJECTED)
         {
             var body = await _templateService.RenderEmailTemplateAsync(

@@ -39,8 +39,8 @@ public class UserSeeder
         var usersRole = _configuration.GetSection("UserSeeder:Role").Value;
         var businessName = _configuration.GetSection("UserSeeder:BusinessName").Value;
 
-        if (string.IsNullOrEmpty(usersEmail) 
-            || string.IsNullOrEmpty(usersPassword) 
+        if (string.IsNullOrEmpty(usersEmail)
+            || string.IsNullOrEmpty(usersPassword)
             || string.IsNullOrEmpty(businessName))
         {
             return;
@@ -73,16 +73,14 @@ public class UserSeeder
             IsProfileCompleted = true,
             CreatedAt = _time.GetUtcNow(),
             UpdatedAt = _time.GetUtcNow(),
-            Businesses = new List<BusinessEmbedded>
+            Business = new BusinessEmbedded
             {
-                new BusinessEmbedded
-                {
-                    Id = businessId,
-                    BusinessName = businessName,
-                    Role = role,
-                    JoinedAt = _time.GetUtcNow(),
-                }
+                Id = businessId,
+                BusinessName = businessName,
+                Role = role,
+                JoinedAt = _time.GetUtcNow(),
             }
+
         };
 
         var business = new Business

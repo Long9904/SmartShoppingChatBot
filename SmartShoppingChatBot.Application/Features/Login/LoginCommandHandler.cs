@@ -13,18 +13,15 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
     private readonly IUserRepository _userRepository;
     private readonly ITokenService _tokenService;
     private readonly IPasswordService _passwordService;
-    private readonly IMapper _mapper;
 
     public LoginCommandHandler(
         IUserRepository userRepository,
         ITokenService tokenService,
-        IPasswordService passwordService,
-        IMapper mapper)
+        IPasswordService passwordService)
     {
         _userRepository = userRepository;
         _tokenService = tokenService;
         _passwordService = passwordService;
-        _mapper = mapper;
     }
 
     public async Task<Result<LoginResponse>> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -46,14 +43,20 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
         if (user.UserStatus != UserStatus.ACTIVE)
             return Result<LoginResponse>.Failure(403, "Your account is not active. Please contact support.");
 
-        var token = _tokenService.CreateTempToken(user.Id.ToString());
+        var payload = new AccessTokenPayload
+        {
+            UserId = user.Id.ToString(),
+            Role = user.Business.Role,
+            BusinessId = user.Business.Id.ToString(),
+        };
+
+        var token = _tokenService.CreateAccessToken(payload);
 
         var res = new LoginResponse
         {
-            TempToken = token,
+            AccessToken = token,
             IsEmailVerified = user.IsEmailVerified,
             IsProfileCompleted = user.IsProfileCompleted,
-            Businesses = _mapper.Map<List<BusinessLoginResponse>>(user.Businesses)
         };
 
         return Result<LoginResponse>.Success(res, 200, "Login successful");
