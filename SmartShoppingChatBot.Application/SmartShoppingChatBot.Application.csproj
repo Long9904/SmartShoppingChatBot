@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features\Subscription\Add\" />
     <Folder Include="Plugins\" />
   </ItemGroup>
 

@@ -27,6 +27,8 @@ public static class InfrastructureDI
         // Repo
         services.AddScoped<IBusinessRepository, BusinessRepository>();  
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+        services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
 
 
         return services;
