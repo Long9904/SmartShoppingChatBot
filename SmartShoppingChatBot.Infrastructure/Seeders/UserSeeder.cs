@@ -73,6 +73,7 @@ public class UserSeeder
             IsProfileCompleted = true,
             CreatedAt = _time.GetUtcNow(),
             UpdatedAt = _time.GetUtcNow(),
+            Gender = 2,
             Business = new BusinessEmbedded
             {
                 Id = businessId,
