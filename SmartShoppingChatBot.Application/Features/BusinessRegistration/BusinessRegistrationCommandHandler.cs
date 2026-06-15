@@ -42,7 +42,7 @@ public class BusinessRegistrationCommandHandler :
         BusinessRegistrationCommand request,
         CancellationToken cancellationToken)
     {
-        var validationResult = await ValidateBusinessRegistrationAsync(request, _businessRepository, _userRepository);
+        var validationResult = await ValidateBusinessRegistrationAsync(request);
         if (!validationResult.IsSuccess)
         {
             return validationResult;
@@ -51,29 +51,32 @@ public class BusinessRegistrationCommandHandler :
         var businessId = ObjectId.GenerateNewId();
         var userId = ObjectId.GenerateNewId();
         var dateNow = _time.GetLocalNow();
+        var ownerName = request.BusinessOwnerName.Trim();
+        var ownerEmail = request.BusinessOwnerEmail.Trim();
+        var businessName = request.BusinessName.Trim();
 
         var business = new Business
         {
             Id = businessId,
-            BusinessName = request.BusinessName,
-            HotLine = request.HotLine,
-            WebsiteUrl = request.WebsiteUrl,
-            AddressLine = request.AddressLine,
+            BusinessName = businessName,
+            HotLine = request.HotLine.Trim(),
+            WebsiteUrl = request.WebsiteUrl.Trim(),
+            AddressLine = request.AddressLine.Trim(),
             BusinessStatus = BusinessEnums.PENDING_APPROVAL,
             CreatedAt = dateNow,
             UpdatedAt = dateNow,
             CreatedBy = new UserEmbedded
             {
                 Id = userId,
-                Name = request.BusinessOwnerName,
+                Name = ownerName,
             }
         };
 
-        var ownerUSer = new User
+        var ownerUser = new User
         {
             Id = userId,
-            Email = request.BusinessOwnerEmail,
-            FullName = request.BusinessOwnerName,
+            Email = ownerEmail,
+            FullName = ownerName,
             IsEmailVerified = false,
             IsProfileCompleted = false,
             PasswordHash = string.Empty,
@@ -83,26 +86,23 @@ public class BusinessRegistrationCommandHandler :
             CreatedBy = new UserEmbedded
             {
                 Id = userId,
-                Name = request.BusinessOwnerName,
+                Name = ownerName,
             },
-            Businesses = new List<BusinessEmbedded>
+            Business = new BusinessEmbedded
             {
-                new BusinessEmbedded
-                {
-                    Id = business.Id,
-                    BusinessName = business.BusinessName,
-                    Role = RoleEnums.BUSINESS_OWNER,
-                    JoinedAt = dateNow,
-                }
+                Id = business.Id,
+                BusinessName = business.BusinessName,
+                Role = RoleEnums.BUSINESS_OWNER,
+                JoinedAt = dateNow,
+
             }
         };
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
         try
         {
+            await _unitOfWork.BeginTransactionAsync(cancellationToken);
             await _businessRepository.AddAsync(business);
-            await _userRepository.AddAsync(ownerUSer);
+            await _userRepository.AddAsync(ownerUser);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
         }
@@ -114,18 +114,17 @@ public class BusinessRegistrationCommandHandler :
         }
 
         var response = _mapper.Map<BusinessRegistrationResponse>(business);
-        _logger.LogInformation($"Business with name {business.BusinessName} registered successfully.");
+        _logger.LogInformation("Business with name {BusinessName} registered successfully.", business.BusinessName);
         return Result<BusinessRegistrationResponse>.Success(response, 201, "Business registered successfully.");
     }
 
 
-    public async Task<Result<BusinessRegistrationResponse>> ValidateBusinessRegistrationAsync(
-        BusinessRegistrationCommand request,
-        IBusinessRepository businessRepository,
-        IUserRepository userRepository)
+    private async Task<Result<BusinessRegistrationResponse>> ValidateBusinessRegistrationAsync(
+        BusinessRegistrationCommand request)
     {
-        var existingUser = await userRepository.FindAsync(
-        u => u.Email == request.BusinessOwnerEmail);
+        var normalizedOwnerEmail = request.BusinessOwnerEmail.Trim().ToLower();
+        var existingUser = await _userRepository.FindAsync(
+            u => u.Email.ToLower() == normalizedOwnerEmail);
 
         if (existingUser != null)
         {
@@ -147,7 +146,7 @@ public class BusinessRegistrationCommandHandler :
             };
         }
 
-        var existingHotline = await businessRepository.GetByHotlineAsync(request.HotLine);
+        var existingHotline = await _businessRepository.GetByHotlineAsync(request.HotLine.Trim());
 
         if (existingHotline != null)
         {

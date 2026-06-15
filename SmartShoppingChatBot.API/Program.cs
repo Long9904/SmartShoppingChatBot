@@ -37,7 +37,8 @@ builder.Services.AddHttpContextAccessor();
 
 // BusinessEmail settings configuration
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
-
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<EmailTokenSettings>(builder.Configuration.GetSection("EmailTokenSettings"));
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -161,8 +162,13 @@ builder.Services.AddRazorPages();
 var app = builder.Build();
 
 using var scope = app.Services.CreateScope();
+
 var userSeeder = scope.ServiceProvider.GetRequiredService<UserSeeder>();
 await userSeeder.SeedUsersAsync();
+
+var db = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
+
+await db.Database.EnsureCreatedAsync();
 
 app.UseSwagger();
 app.UseSwaggerUI();

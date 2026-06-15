@@ -17,11 +17,14 @@ namespace SmartShoppingChatBot.Domain.Entities
         public bool IsProfileCompleted { get; set; }
         public required string PasswordHash { get; set; }
         public string? PhoneNumber { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public int Gender { get; set; }
+        public DateTimeOffset? EmailVerifiedAt { get; set; }
 
         [BsonRepresentation(BsonType.String)]
         public UserStatus UserStatus { get; set; }
 
-        public List<BusinessEmbedded> Businesses { get; set; } = new List<BusinessEmbedded>();
+        public required BusinessEmbedded Business { get; set; }
 
         // Audit fields
         public DateTimeOffset CreatedAt { get; set; }
