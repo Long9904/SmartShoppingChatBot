@@ -47,5 +47,9 @@ public class MongoDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
         });
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
     }
 }

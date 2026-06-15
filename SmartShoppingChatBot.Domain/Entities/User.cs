@@ -18,7 +18,7 @@ namespace SmartShoppingChatBot.Domain.Entities
         public required string PasswordHash { get; set; }
         public string? PhoneNumber { get; set; }
         public DateTime? DateOfBirth { get; set; }
-        public int Gender { get; set; }
+        public int? Gender { get; set; }
         public DateTimeOffset? EmailVerifiedAt { get; set; }
 
         [BsonRepresentation(BsonType.String)]
