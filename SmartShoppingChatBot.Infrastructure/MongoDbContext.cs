@@ -9,6 +9,9 @@ public class MongoDbContext : DbContext
     public DbSet<Business> Businesses { get; set; }
 
     public DbSet<User> Users { get; set; }
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+    public DbSet<Subscription> Subscriptions { get; set; }
+    public DbSet<Payment> Payment { get; set; }
 
     public DbSet<Token> Tokens { get; set; }
 
@@ -31,6 +34,20 @@ public class MongoDbContext : DbContext
         });
 
         modelBuilder.Entity<Token>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<SubscriptionPlan>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Subscription>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+        modelBuilder.Entity<Payment>(entity =>
         {
             entity.HasKey(e => e.Id);
         });
