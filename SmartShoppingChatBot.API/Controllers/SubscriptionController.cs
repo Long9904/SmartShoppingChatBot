@@ -20,6 +20,7 @@ namespace SmartShoppingChatBot.API.Controllers
             _mediator = mediator;
         }
         [HttpPost]
+        [EndpointSummary("Add a new subscription.")]
         [EndpointDescription("Add a new subscription.")]
         public async Task<IActionResult> AddSubscription([FromBody] SubscriptionAddCommand command)
         {
@@ -30,6 +31,7 @@ namespace SmartShoppingChatBot.API.Controllers
             return StatusCode(result.StatusCode, result);
         }
         [HttpGet]
+        [EndpointSummary("Get all subscriptions with optional filters.")]
         [EndpointDescription("Get all subscriptions with optional filters.")]
         public async Task<IActionResult> GetSubscriptions([FromQuery] GetSubscriptionQuery query)
         {

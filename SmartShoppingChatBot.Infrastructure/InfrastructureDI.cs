@@ -20,6 +20,7 @@ public static class InfrastructureDI
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IPaymentService, PaymentService>();
 
         // Seeder
         services.AddScoped<UserSeeder>();
@@ -30,6 +31,7 @@ public static class InfrastructureDI
         services.AddScoped<ITokenRepository, TokenRepository>();       
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
         services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 
         return services;

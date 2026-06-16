@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using SmartShoppingChatBot.Domain.Enums;
 using System;
 using System.Collections.Generic;
@@ -13,14 +14,14 @@ namespace SmartShoppingChatBot.Domain.Entities
     {
         [Key]
         [BsonRepresentation(MongoDB.Bson.BsonType.ObjectId)]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string UserId { get; set; } = string.Empty;
-        public string SubscriptionPlanId { get; set; } = string.Empty;
-        public string OrderCode { get; set; } = string.Empty;
+        public ObjectId Id { get; set; } 
+        public ObjectId BussinessId { get; set; } 
+        public ObjectId SubscriptionPlanId { get; set; } 
+        public long OrderCode { get; set; }
         public decimal Amount { get; set; }
         public string Description { get; set; } = string.Empty;
         public PaymentEnums Status { get; set; } = PaymentEnums.Pending;
         public DateTimeOffset CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTimeOffset UpdatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
     }
 }

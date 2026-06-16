@@ -19,6 +19,6 @@ namespace SmartShoppingChatBot.Domain.Entities
         public ObjectId SubscriptionPlanId { get; set; }
         public DateTimeOffset StartDate { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset EndDate { get; set; }
-        public StatusEnums IsActive { get; set; } = StatusEnums.Inactive;
+        public StatusEnums Status { get; set; } = StatusEnums.Inactive;
     }
 }
