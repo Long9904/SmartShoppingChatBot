@@ -15,7 +15,6 @@ public class VerifyAccountCommandHandler : IRequestHandler<VerifyAccountCommand,
     private readonly ITokenRepository _tokenRepository;
     private readonly IUserRepository _userRepository;
     private readonly IPasswordService _passwordService;
-    private readonly IBusinessRepository _businessRepository;
     private readonly TimeProvider _time;
     private readonly ILogger<VerifyAccountCommandHandler> _logger;
 
@@ -24,7 +23,6 @@ public class VerifyAccountCommandHandler : IRequestHandler<VerifyAccountCommand,
         ITokenRepository tokenRepository,
         IUserRepository userRepository,
         IPasswordService passwordService,
-        IBusinessRepository businessRepository,
         TimeProvider timeProvider,
         ILogger<VerifyAccountCommandHandler> logger)
     {
@@ -34,12 +32,11 @@ public class VerifyAccountCommandHandler : IRequestHandler<VerifyAccountCommand,
         _passwordService = passwordService;
         _logger = logger;
         _time = timeProvider;
-        _businessRepository = businessRepository;
     }
 
     public async Task<Result<bool>> Handle(VerifyAccountCommand request, CancellationToken cancellationToken)
     {
-        var tokenHash = TokenHelper.Sha256(request.Token);
+        var tokenHash = TokenHelper.BuildHashToken(request.Token);
         Console.WriteLine(tokenHash);
         // Check if the token exists and is valid
         var existingToken = await _tokenRepository.FindAsync(t => t.TokenValue == tokenHash && t.Type == TokenType.EMAIL_VERIFICATION);
@@ -66,14 +63,6 @@ public class VerifyAccountCommandHandler : IRequestHandler<VerifyAccountCommand,
             return Result<bool>.Failure(400, "Email is already verified.");
         }
 
-        var business = await _businessRepository.FindAsync(b => b.Id == user.Business.Id);
-        if (business == null)
-        {
-            return Result<bool>.Failure(400, "Associated business not found.");
-        }
-        business.BusinessStatus = BusinessEnums.ACTIVE;
-
-        // Update the user's email verification status
         var timeNow = _time.GetUtcNow();
         user.IsEmailVerified = true;
         user.IsProfileCompleted = true;
@@ -84,7 +73,6 @@ public class VerifyAccountCommandHandler : IRequestHandler<VerifyAccountCommand,
         user.PhoneNumber = request.PhoneNumber.Trim();
         user.Gender = request.Gender!.Value;
         user.UserStatus = UserStatus.ACTIVE;
-
         existingToken.TokenValue = null!;
 
         try
@@ -93,7 +81,6 @@ public class VerifyAccountCommandHandler : IRequestHandler<VerifyAccountCommand,
 
             await _userRepository.UpdateAsync(user);
             await _tokenRepository.UpdateAsync(existingToken);
-            await _businessRepository.UpdateAsync(business);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             await _unitOfWork.CommitTransactionAsync(cancellationToken);

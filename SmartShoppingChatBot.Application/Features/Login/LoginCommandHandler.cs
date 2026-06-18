@@ -48,6 +48,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
             UserId = user.Id.ToString(),
             Role = user.Business.Role,
             BusinessId = user.Business.Id.ToString(),
+            BusinessName = user.Business.BusinessName ?? string.Empty,
         };
 
         var token = _tokenService.CreateAccessToken(payload);

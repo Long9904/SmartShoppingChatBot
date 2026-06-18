@@ -71,7 +71,7 @@ public class ConfirmBusinessCommandHandler :
 
         if (request.IsApproved == true)
         {
-            business.BusinessStatus = BusinessEnums.APPROVED;
+            business.BusinessStatus = BusinessEnums.ACTIVE;
             owner.UserStatus = UserStatus.PENDING_PROFILE_COMPLETION;
         }
         else
@@ -86,15 +86,15 @@ public class ConfirmBusinessCommandHandler :
 
 
         var token = _tokenService.CreateEmailVerificationToken();
-        var tokenHash = TokenHelper.Sha256(token);
+        var tokenHash = TokenHelper.BuildHashToken(token);
 
         var newToken = new Token
         {
             Id = ObjectId.GenerateNewId(),
             UserId = owner.Id,
             TokenValue = tokenHash,
-            ExpiresAt = _time.GetLocalNow().AddDays(_emailTokenSettings.ExpireDays),
-            CreatedAt = _time.GetLocalNow(),
+            ExpiresAt = _time.GetUtcNow().AddDays(_emailTokenSettings.ExpireDays),
+            CreatedAt = _time.GetUtcNow(),
             Type = TokenType.EMAIL_VERIFICATION
         };
 
@@ -126,7 +126,7 @@ public class ConfirmBusinessCommandHandler :
             OwnerEmail = owner.Email,
             OwnerName = owner.FullName,
             BusinessStatus = business.BusinessStatus,
-            TokenVerification = business.BusinessStatus == BusinessEnums.APPROVED ? buildURL : null
+            TokenVerification = business.BusinessStatus == BusinessEnums.ACTIVE ? buildURL : null
         }, cancellationToken);
 
 
