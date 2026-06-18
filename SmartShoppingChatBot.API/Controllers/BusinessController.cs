@@ -24,6 +24,7 @@ namespace SmartShoppingChatBot.API.Controllers
 
         [HttpPost]
         [EndpointDescription("Registration a new business")]
+        [EndpointSummary("BO registers a new business")]
         public async Task<IActionResult> CreateBusiness([FromBody] BusinessRegistrationCommand command)
         {
             var result = await _mediator.Send(command);
@@ -36,7 +37,7 @@ namespace SmartShoppingChatBot.API.Controllers
 
         [HttpGet]
         [Authorize(Roles = "ADMIN")]
-        [EndpointDescription("Get all businesses")]
+        [EndpointDescription("Admin Get all businesses")]
         public async Task<IActionResult> GetAllBusinesses([FromQuery] GetBusinessesQuery query)
         {
             var result = await _mediator.Send(query);
@@ -46,7 +47,7 @@ namespace SmartShoppingChatBot.API.Controllers
 
         [HttpPut("{id}/verify")]
         [Authorize(Roles = "ADMIN")]
-        [EndpointDescription("Verify a business")]
+        [EndpointDescription("Admin verify a business")]
         public async Task<IActionResult> VerifyBusiness([FromRoute] string id, [FromQuery] bool? isApproved)
         {
             if (!ObjectId.TryParse(id, out var businessId))

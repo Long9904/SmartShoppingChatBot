@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using SmartShoppingChatBot.API.Extensions;
 using SmartShoppingChatBot.API.Middlewares;
 using SmartShoppingChatBot.Application;
+using SmartShoppingChatBot.Application.Commons.Behaviors;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Infrastructure;
 using SmartShoppingChatBot.Infrastructure.Seeders;
@@ -28,6 +29,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.JsonSerializerOptions.Converters.Add(new VietnamDateTimeOffsetConverter());
 });
 
 builder.Services.AddMongoDbConfig(builder.Configuration);
@@ -174,6 +176,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles();
 
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();

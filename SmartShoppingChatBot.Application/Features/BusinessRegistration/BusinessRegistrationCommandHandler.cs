@@ -50,7 +50,7 @@ public class BusinessRegistrationCommandHandler :
 
         var businessId = ObjectId.GenerateNewId();
         var userId = ObjectId.GenerateNewId();
-        var dateNow = _time.GetLocalNow();
+        var dateNow = _time.GetUtcNow();
         var ownerName = request.BusinessOwnerName.Trim();
         var ownerEmail = request.BusinessOwnerEmail.Trim();
         var businessName = request.BusinessName.Trim();

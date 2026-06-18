@@ -1,8 +1,8 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.GetMyProfile;
 using SmartShoppingChatBot.Application.Features.Login;
 
 namespace SmartShoppingChatBot.API.Controllers;
@@ -26,5 +26,15 @@ public class AuthenticationController : ControllerBase
         if (result.IsSuccess)
             return StatusCode(result.StatusCode, ApiResponse<LoginResponse>.Ok(result.Data!, result.Message));
         return StatusCode(result.StatusCode, ApiResponse<LoginResponse>.Fail(result.Message!, result.Errors));
+    }
+
+    [HttpGet("me")]
+    [EndpointDescription("Get My Profile")]
+    public async Task<IActionResult> GetMyProfile()
+    {
+        var result = await _mediator.Send(new GetMyProfileCommand());
+        if (result.IsSuccess)
+            return StatusCode(result.StatusCode, ApiResponse<ProfileResponse>.Ok(result.Data!, result.Message));
+        return StatusCode(result.StatusCode, ApiResponse<ProfileResponse>.Fail(result.Message!, result.Errors));
     }
 }

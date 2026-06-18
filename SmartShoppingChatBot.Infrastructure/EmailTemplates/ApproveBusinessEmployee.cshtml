@@ -1,0 +1,92 @@
+@using SmartShoppingChatBot.Application.DTOs
+@model ApproveBusinessEmployeeEmailModel
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xác nhận tài khoản nhân viên</title>
+</head>
+
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:Arial,Helvetica,sans-serif;color:#202124;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+        Catalog Team thông báo doanh nghiệp @Model.BusinessName đã đăng ký tài khoản nhân viên cho bạn. Xác nhận email để kích hoạt tài khoản Lunar AI.
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#f6f7f9;">
+        <tr>
+            <td align="center" style="padding:32px 16px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;">
+                    <tr>
+                        <td style="padding:28px 32px 20px 32px;">
+                            <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;line-height:1;letter-spacing:0;color:#111827;">
+                                Lunar AI
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:0 32px;">
+                            <div style="display:inline-block;padding:6px 10px;border-radius:999px;background:#ecfdf3;color:#067647;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;">
+                                Employee account
+                            </div>
+
+                            <h1 style="margin:18px 0 12px 0;font-size:28px;line-height:1.25;font-weight:700;color:#111827;">
+                                Xác nhận tài khoản nhân viên
+                            </h1>
+
+                            <p style="margin:0;font-size:16px;line-height:1.6;color:#4b5563;">
+                                Xin chào <strong style="color:#111827;">@Model.EmployeeName</strong>, Catalog Team thông báo
+                                Business Owner của doanh nghiệp <strong style="color:#111827;">@Model.BusinessName</strong>
+                                đã đăng ký tài khoản nhân viên cho bạn trên Lunar AI.
+                                Vui lòng xác nhận <strong style="color:#111827;">@Model.EmployeeEmail</strong>
+                                để kích hoạt tài khoản.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:26px 32px 8px 32px;">
+                            <a href="@Model.VerificationToken" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:700;">
+                                Xác nhận tài khoản
+                            </a>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:14px 32px 0 32px;">
+                            <p style="margin:0;font-size:14px;line-height:1.6;color:#6b7280;">
+                                Liên kết này hết hạn sau <strong style="color:#374151;">48 giờ</strong>.
+                                Nếu bạn không thực hiện yêu cầu này, hãy bỏ qua email.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:22px 32px 28px 32px;">
+                            <p style="margin:0 0 8px 0;font-size:13px;line-height:1.5;color:#6b7280;">
+                                Nếu nút không hoạt động, sao chép liên kết sau:
+                            </p>
+
+                            <div style="padding:12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;line-height:1.5;word-break:break-all;">
+                                <a href="@Model.VerificationToken" style="color:#374151;text-decoration:underline;">
+                                    @Model.VerificationToken
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;max-width:560px;">
+                    <tr>
+                        <td style="padding:18px 8px 0 8px;text-align:center;font-size:12px;line-height:1.6;color:#9ca3af;">
+                            Lunar AI · Catalog Team
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

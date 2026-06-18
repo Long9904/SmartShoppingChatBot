@@ -61,6 +61,7 @@ public class UserSeeder
 
         var userId = ObjectId.GenerateNewId();
         var businessId = ObjectId.GenerateNewId();
+        var dateNow = _time.GetUtcNow();
 
         var newUser = new User
         {
@@ -71,15 +72,15 @@ public class UserSeeder
             UserStatus = UserStatus.ACTIVE,
             IsEmailVerified = true,
             IsProfileCompleted = true,
-            CreatedAt = _time.GetUtcNow(),
-            UpdatedAt = _time.GetUtcNow(),
+            CreatedAt = dateNow,
+            UpdatedAt = dateNow,
             Gender = 2,
             Business = new BusinessEmbedded
             {
                 Id = businessId,
                 BusinessName = businessName,
                 Role = role,
-                JoinedAt = _time.GetUtcNow(),
+                JoinedAt = dateNow,
             }
 
         };
@@ -89,6 +90,8 @@ public class UserSeeder
             Id = businessId,
             BusinessName = businessName,
             BusinessStatus = BusinessEnums.ACTIVE,
+            CreatedAt = dateNow,
+            UpdatedAt = dateNow,
         };
 
         await _context.Businesses.AddAsync(business);

@@ -6,12 +6,12 @@ using SmartShoppingChatBot.Domain.Enums;
 
 namespace SmartShoppingChatBot.Application.Consumers;
 
-public class SendEmailRegistration : IConsumer<BusinessRegistrationConfirmedEvent>
+public class SendBusinessRegistrationEmail : IConsumer<BusinessRegistrationConfirmedEvent>
 {
     private readonly IEmailService _emailService;
     private readonly IEmailTemplateService _templateService;
 
-    public SendEmailRegistration(IEmailService emailService, IEmailTemplateService templateService)
+    public SendBusinessRegistrationEmail(IEmailService emailService, IEmailTemplateService templateService)
     {
         _emailService = emailService;
         _templateService = templateService;
@@ -19,7 +19,7 @@ public class SendEmailRegistration : IConsumer<BusinessRegistrationConfirmedEven
 
     public async Task Consume(ConsumeContext<BusinessRegistrationConfirmedEvent> context)
     {
-        if (context.Message.BusinessStatus == BusinessEnums.APPROVED)
+        if (context.Message.BusinessStatus == BusinessEnums.ACTIVE)
         {
             var body = await _templateService.RenderEmailTemplateAsync(
                 "ApproveBusinessOwner",

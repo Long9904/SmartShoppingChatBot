@@ -5,7 +5,7 @@ namespace SmartShoppingChatBot.Application.Commons.Utils;
 
 public static class TokenHelper
 {
-    public static string Sha256(string input)
+    public static string BuildHashToken(string input)
     {
         using var sha = SHA256.Create();
 

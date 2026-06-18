@@ -24,12 +24,14 @@ public class TokenService : ITokenService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        var businessSlug = payload.BusinessName.ToLower().Replace(" ", "-");
 
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, payload.UserId.ToString()),
             new Claim("business", payload.BusinessId),
             new Claim(ClaimTypes.Role, payload.Role.ToString()),
+            new Claim("businessSlug", businessSlug)
         };
 
         DateTime expUtc = DateTime.UtcNow.AddMinutes(_jwt.ExpireMinutes);
