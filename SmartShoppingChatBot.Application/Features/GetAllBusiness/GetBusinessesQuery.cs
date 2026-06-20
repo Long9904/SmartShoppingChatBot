@@ -7,5 +7,5 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusiness;
 
 public class GetBusinessesQuery : IRequest<Result<BasePaginatedList<BusinessResponse>>>
 {
-        public GetBusinessesFilter? Filter { get; set; }
+        public GetBusinessesFilter Filter { get; set; } = new();
 }

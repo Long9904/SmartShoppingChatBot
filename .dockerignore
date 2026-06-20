@@ -1,0 +1,28 @@
+# Các thư mục build và output (Rất quan trọng)
+**/bin/
+**/obj/
+
+# Các thư mục chứa các thư viện đã tải về
+.vs/
+.vscode/
+.git/
+.gitignore
+
+# Các file lưu trữ hoặc log
+*.log
+*.tmp
+*.user
+*.userosscache
+*.sln.docstates
+*.db
+
+# Các file cấu hình người dùng
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+# Nếu dùng Docker để test/deploy, bỏ qua các thư mục kiểm thử nếu không cần
+**/bin/Debug/
+**/bin/Release/
+**/obj/Debug/
+**/obj/Release/

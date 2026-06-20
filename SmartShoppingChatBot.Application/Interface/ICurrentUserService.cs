@@ -6,7 +6,7 @@ namespace SmartShoppingChatBot.Application.Interface
     public interface ICurrentUserService
     {
         Task<string?> GetUserId();
-        Task<string?> GetBusinessId();
+        Task<Result<Business>> GetBusiness();
 
         Task<Result<User>> GetUser();
     }

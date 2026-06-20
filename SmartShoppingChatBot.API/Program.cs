@@ -71,6 +71,16 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Smart Shopping ChatBot API",
+        Version = "v1",
+        Description = "API documentation for Smart Shopping ChatBot\n\n\n" +
+                       "Definition and Acronyms: \n\n" +
+                       "- BO: Business Owner\n\n" +
+                       "- CT: Catalog Team",
+    });
 });
 
 // JWT configuration

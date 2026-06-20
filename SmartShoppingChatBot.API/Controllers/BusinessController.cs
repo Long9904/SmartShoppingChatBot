@@ -7,6 +7,8 @@ using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.BusinessRegistration;
 using SmartShoppingChatBot.Application.Features.ConfirmBusinessRegistration;
 using SmartShoppingChatBot.Application.Features.GetAllBusiness;
+using SmartShoppingChatBot.Application.Features.GetMyBusinessProfile;
+using SmartShoppingChatBot.Application.Features.UpdateBusiness;
 using SmartShoppingChatBot.Domain.Commons;
 
 namespace SmartShoppingChatBot.API.Controllers
@@ -38,15 +40,45 @@ namespace SmartShoppingChatBot.API.Controllers
         [HttpGet]
         [Authorize(Roles = "ADMIN")]
         [EndpointDescription("Admin Get all businesses")]
-        public async Task<IActionResult> GetAllBusinesses([FromQuery] GetBusinessesQuery query)
+        [EndpointSummary("Admin Get all businesses")]
+        public async Task<IActionResult> GetAllBusinesses([FromQuery] GetBusinessesFilter query)
         {
-            var result = await _mediator.Send(query);
+            var result = await _mediator.Send(new GetBusinessesQuery { Filter = query });
 
             return Ok(ApiResponse<BasePaginatedList<BusinessResponse>>.Ok(result.Data!, result.Message));
         }
 
+        [HttpGet("profile")]
+        [Authorize(Roles = "BUSINESS_OWNER, CATALOG_TEAM")]
+        [EndpointDescription("Business owner, catalog team views current business profile")]
+        [EndpointSummary("BO, CT views current business profile")]
+        public async Task<IActionResult> ViewBusinessProfile()
+        {
+            var result = await _mediator.Send(new GetMyBusinessProfileQuery());
+
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<BusinessResponse>.Ok(result.Data!, result.Message));
+
+            return StatusCode(result.StatusCode, ApiResponse<BusinessResponse>.Fail(result.Message!, result.Errors));
+        }
+
+        [HttpPut("profile")]
+        [Authorize(Roles = "BUSINESS_OWNER, CATALOG_TEAM")]
+        [EndpointDescription("Business owner, catalog team updates current business profile")]
+        [EndpointSummary("BO, CT updates current business profile")]
+        public async Task<IActionResult> UpdateBusinessProfile([FromBody] UpdateBusinessCommand command)
+        {
+            var result = await _mediator.Send(command);
+
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<BusinessResponse>.Ok(result.Data!, result.Message));
+
+            return StatusCode(result.StatusCode, ApiResponse<BusinessResponse>.Fail(result.Message!, result.Errors));
+        }
+
         [HttpPut("{id}/verify")]
         [Authorize(Roles = "ADMIN")]
+        [EndpointSummary("Admin verify a business")]
         [EndpointDescription("Admin verify a business")]
         public async Task<IActionResult> VerifyBusiness([FromRoute] string id, [FromQuery] bool? isApproved)
         {

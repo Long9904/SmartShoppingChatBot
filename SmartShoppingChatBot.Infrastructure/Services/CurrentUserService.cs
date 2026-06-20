@@ -25,28 +25,33 @@ public class CurrentUserService : ICurrentUserService
         _userRepository = userRepository;
         _businessRepository = businessRepository;
     }
-    public async Task<string?> GetBusinessId()
+    public async Task<Result<Business>> GetBusiness()
     {
-        var businessId = _httpContextAccessor.HttpContext?.User?.FindFirst("business")?.Value ?? throw new AuthenticationException("Token is invalid");
+        var businessId = _httpContextAccessor.HttpContext?.User?.FindFirst("business")?.Value;
+
+        if (businessId == null)
+        {
+            return Result<Business>.Failure(401, "Token is invalid.");
+        }
 
         var isValidId = ObjectId.TryParse(businessId, out var objectId);
         if (!isValidId)
         {
-            throw new AuthenticationException("Token is invalid.");
+            return Result<Business>.Failure(401, "Token is invalid.");
         }
         var business = await _businessRepository.FindAsync(b => b.Id == objectId);
         if (business == null)
         {
-            throw new AuthenticationException("Token is invalid.");
+            return Result<Business>.Failure(404, "Business not found.");
         }
 
         return business.BusinessStatus switch 
         {
-            BusinessEnums.ACTIVE => businessId,
-            BusinessEnums.PENDING_APPROVAL => throw new AuthenticationException("Business is pending approval."),
-            BusinessEnums.REJECTED => throw new AuthenticationException("Business is rejected."),
-            BusinessEnums.DELETED => throw new AuthenticationException("Business is deleted."),
-            _ => throw new AuthenticationException("Token is invalid.")
+            BusinessEnums.ACTIVE => Result<Business>.Success(business, 200, "Business retrieved successfully."),
+            BusinessEnums.PENDING_APPROVAL => Result<Business>.Failure(403, "Business is pending approval."),
+            BusinessEnums.REJECTED => Result<Business>.Failure(403, "Business is rejected."),
+            BusinessEnums.DELETED => Result<Business>.Failure(403, "Business is deleted."),
+            _ =>  Result<Business>.Failure(401, "Token is invalid.")
         };
     }
 
