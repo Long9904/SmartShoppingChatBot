@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Reflection;
+using System.Text.Json;
 using FluentValidation;
 using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
@@ -35,12 +36,30 @@ namespace SmartShoppingChatBot.Application.Commons.Behaviors
 
 
                 var responseType = typeof(TResponse);
+
                 if (responseType.IsGenericType && responseType.GetGenericTypeDefinition() == typeof(Result<>))
                 {
-                    var method = responseType.GetMethod("Failure", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var method = responseType.GetMethod(
+                        "Failure",
+                        BindingFlags.Public | BindingFlags.Static,
+                        binder: null,
+                        types: new[]
+                        {
+                            typeof(int),
+                            typeof(string),
+                            typeof(Dictionary<string, string>)
+                        },
+                        modifiers: null
+                    );
+
                     if (method != null)
                     {
-                        return (TResponse)method.Invoke(null, new object[] { errorsDictionary })!;
+                        return (TResponse)method.Invoke(null, new object?[]
+                        {
+                            400, 
+                            "Validation failed", 
+                            errorsDictionary
+                        })!;
                     }
                 }
             }

@@ -8,9 +8,14 @@ public class UnitOfWork : IUnitOfWork
     private readonly MongoDbContext _context;
     private IDbContextTransaction? _transaction;
 
-    public UnitOfWork(MongoDbContext context)
+    public IBusinessRepository BusinessRepository { get; private set; }
+
+    public UnitOfWork(
+        MongoDbContext context, 
+        IBusinessRepository businessRepository)
     {
         _context = context;
+        BusinessRepository = businessRepository;
     }
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)

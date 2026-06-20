@@ -8,4 +8,6 @@ public interface IUnitOfWork
     Task RollBackAsync(CancellationToken cancellationToken = default);
 
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    IBusinessRepository BusinessRepository { get; }
 }

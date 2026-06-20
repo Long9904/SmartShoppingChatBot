@@ -1,0 +1,346 @@
+@page "/verified-account"
+@model SmartShoppingChatBot.API.Pages.VerifyAccountcshtmlModel
+@{
+    Layout = null;
+
+    var errors = Model.Errors;
+    errors.TryGetValue("password", out var passwordError);
+    errors.TryGetValue("confirmPassword", out var confirmPasswordError);
+    errors.TryGetValue("phoneNumber", out var phoneError);
+    errors.TryGetValue("dateOfBirth", out var dateOfBirthError);
+    errors.TryGetValue("gender", out var genderError);
+    errors.TryGetValue("token", out var tokenError);
+
+    var isTokenMissing = string.IsNullOrWhiteSpace(Model.Command.Token);
+    var showSuccess = Model.HasSubmitted && Model.IsSuccess;
+    var alertClass = showSuccess ? "message success" : isTokenMissing ? "message warning" : "message error";
+    var birthDateValue = Model.Command.DateOfBirth?.ToString("yyyy-MM-dd") ?? "";
+    var minBirthDate = DateTime.Today.AddYears(-120).ToString("yyyy-MM-dd");
+    var maxBirthDate = DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Email Verify</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+    <link rel="stylesheet" href="/css/verify-account.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body>
+    <main class="page">
+        <section class="shell" aria-label="Email verification form">
+            <h1 class="title">Verify Email</h1>
+
+            <div class="card">
+                @if (!string.IsNullOrWhiteSpace(Model.Email))
+                {
+                    <p class="email-box">
+                        Email: <strong>@Model.Email</strong>
+                    </p>
+                }
+
+                @if (showSuccess)
+                {
+                    <div class="success-box">
+                        <div class="success-icon" aria-hidden="true">
+                            <i data-lucide="check"></i>
+                        </div>
+                        <h2 class="success-title">Account verified</h2>
+                        <p class="success-message">You can now sign in with your new password.</p>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Message))
+                        {
+                            <p class="@alertClass" aria-live="polite">@Model.Message</p>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <form id="verify-form" method="post" novalidate>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="Command.Token" value="@Model.Command.Token" />
+                        <input type="hidden" name="Email" value="@Model.Email" />
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Message) || !string.IsNullOrWhiteSpace(tokenError))
+                        {
+                            <p class="@alertClass" role="alert">
+                                @(tokenError ?? Model.Message)
+                            </p>
+                        }
+
+                        <div class="field">
+                            <label for="password">Password</label>
+                            <div class="control">
+                                <i data-lucide="lock"></i>
+                                <input id="password"
+                                       name="Command.Password"
+                                       type="password"
+                                       placeholder="Create a password"
+                                       autocomplete="new-password"
+                                       minlength="6"
+                                       required
+                                       disabled="@isTokenMissing" />
+                                <button class="toggle-pass"
+                                        type="button"
+                                        data-target="password"
+                                        aria-label="Show password"
+                                        title="Show password"
+                                        disabled="@isTokenMissing">
+                                    <i data-lucide="eye"></i>
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(passwordError))
+                            {
+                                <p class="error-text">@passwordError</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <div class="control">
+                                <i data-lucide="lock"></i>
+                                <input id="confirmPassword"
+                                       name="Command.ConfirmPassword"
+                                       type="password"
+                                       placeholder="Confirm your password"
+                                       autocomplete="new-password"
+                                       minlength="6"
+                                       required
+                                       disabled="@isTokenMissing" />
+                                <button class="toggle-pass"
+                                        type="button"
+                                        data-target="confirmPassword"
+                                        aria-label="Show confirm password"
+                                        title="Show password"
+                                        disabled="@isTokenMissing">
+                                    <i data-lucide="eye"></i>
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(confirmPasswordError))
+                            {
+                                <p class="error-text">@confirmPasswordError</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="phoneNumber">Phone Number</label>
+                            <div class="control">
+                                <i data-lucide="phone"></i>
+                                <input id="phoneNumber"
+                                       name="Command.PhoneNumber"
+                                       type="tel"
+                                       placeholder="Enter your phone number"
+                                       autocomplete="tel"
+                                       inputmode="tel"
+                                       pattern="^0(3|5|7|8|9)[0-9]{8}$"
+                                       value="@Model.Command.PhoneNumber"
+                                       required
+                                       disabled="@isTokenMissing" />
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(phoneError))
+                            {
+                                <p class="error-text">@phoneError</p>
+                            }
+                        </div>
+
+                        <div class="field">
+                            <label for="dateOfBirth">Date of Birth</label>
+                            <div class="control">
+                                <i data-lucide="calendar-days"></i>
+                                <input id="dateOfBirth"
+                                       name="Command.DateOfBirth"
+                                       type="text"
+                                       placeholder="Select your date of birth"
+                                       autocomplete="bday"
+                                       value="@birthDateValue"
+                                       data-min-date="@minBirthDate"
+                                       data-max-date="@maxBirthDate"
+                                       readonly
+                                       required
+                                       disabled="@isTokenMissing" />
+                                <button class="calendar-button"
+                                        id="open-calendar"
+                                        type="button"
+                                        aria-label="Open calendar"
+                                        title="Open calendar"
+                                        disabled="@isTokenMissing">
+                                    <i data-lucide="chevron-down"></i>
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(dateOfBirthError))
+                            {
+                                <p class="error-text">@dateOfBirthError</p>
+                            }
+                        </div>
+
+                        <fieldset class="field" aria-labelledby="gender-title">
+                            <legend class="field-title" id="gender-title">Gender</legend>
+                            <div class="gender-grid">
+                                <label class="gender-option">
+                                    <input type="radio"
+                                           name="Command.Gender"
+                                           value="0"
+                                           checked="@(Model.Command.Gender == 0)"
+                                           required
+                                           disabled="@isTokenMissing" />
+                                    <span class="gender-label"><i data-lucide="venus"></i>Female</span>
+                                </label>
+                                <label class="gender-option">
+                                    <input type="radio"
+                                           name="Command.Gender"
+                                           value="1"
+                                           checked="@(Model.Command.Gender == 1)"
+                                           required
+                                           disabled="@isTokenMissing" />
+                                    <span class="gender-label"><i data-lucide="mars"></i>Male</span>
+                                </label>
+                                <label class="gender-option">
+                                    <input type="radio"
+                                           name="Command.Gender"
+                                           value="2"
+                                           checked="@(Model.Command.Gender == 2)"
+                                           required
+                                           disabled="@isTokenMissing" />
+                                    <span class="gender-label"><i data-lucide="sparkles"></i>Other</span>
+                                </label>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(genderError))
+                            {
+                                <p class="error-text">@genderError</p>
+                            }
+                        </fieldset>
+
+                        <button class="submit" type="submit" disabled="@isTokenMissing">
+                            Verify Account
+                        </button>
+                    </form>
+                }
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const passwordInput = document.getElementById("password");
+        const confirmPasswordInput = document.getElementById("confirmPassword");
+        const dobInput = document.getElementById("dateOfBirth");
+        const calendarButton = document.getElementById("open-calendar");
+        let birthdayPicker = null;
+
+        function refreshIcons() {
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        function syncYearDropdown(instance) {
+            if (!instance || !instance.calendarContainer) {
+                return;
+            }
+
+            const currentMonth = instance.calendarContainer.querySelector(".flatpickr-current-month");
+            if (!currentMonth) {
+                return;
+            }
+
+            let yearSelect = currentMonth.querySelector(".flatpickr-year-select");
+            if (!yearSelect) {
+                yearSelect = document.createElement("select");
+                yearSelect.className = "flatpickr-year-select";
+                yearSelect.setAttribute("aria-label", "Year");
+
+                const currentYear = new Date().getFullYear();
+                for (let year = currentYear; year >= 1900; year -= 1) {
+                    const option = document.createElement("option");
+                    option.value = String(year);
+                    option.textContent = String(year);
+                    yearSelect.appendChild(option);
+                }
+
+                yearSelect.addEventListener("change", function () {
+                    instance.changeYear(Number(yearSelect.value));
+                });
+
+                currentMonth.appendChild(yearSelect);
+            }
+
+            yearSelect.value = String(instance.currentYear);
+        }
+
+        refreshIcons();
+
+        if (dobInput && window.flatpickr && !dobInput.disabled) {
+            birthdayPicker = flatpickr(dobInput, {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                minDate: dobInput.dataset.minDate,
+                maxDate: dobInput.dataset.maxDate,
+                disableMobile: true,
+                monthSelectorType: "dropdown",
+                onReady: function (_, __, instance) {
+                    syncYearDropdown(instance);
+                },
+                onMonthChange: function (_, __, instance) {
+                    syncYearDropdown(instance);
+                },
+                onYearChange: function (_, __, instance) {
+                    syncYearDropdown(instance);
+                },
+                onOpen: function (_, __, instance) {
+                    syncYearDropdown(instance);
+                }
+            });
+        } else if (dobInput && !dobInput.disabled) {
+            dobInput.removeAttribute("readonly");
+            dobInput.type = "date";
+            dobInput.min = dobInput.dataset.minDate || "";
+            dobInput.max = dobInput.dataset.maxDate || "";
+        }
+
+        calendarButton?.addEventListener("click", function () {
+            if (birthdayPicker) {
+                birthdayPicker.open();
+            } else if (dobInput) {
+                dobInput.showPicker?.();
+                dobInput.focus();
+            }
+        });
+
+        document.querySelectorAll(".toggle-pass").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const input = document.getElementById(button.dataset.target);
+                if (!input) {
+                    return;
+                }
+
+                const isHidden = input.type === "password";
+                input.type = isHidden ? "text" : "password";
+                button.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+                button.setAttribute("title", isHidden ? "Hide password" : "Show password");
+                button.innerHTML = isHidden ? '<i data-lucide="eye-off"></i>' : '<i data-lucide="eye"></i>';
+                refreshIcons();
+            });
+        });
+
+        function syncConfirmPasswordValidity() {
+            if (!passwordInput || !confirmPasswordInput) {
+                return;
+            }
+
+            const mismatched = confirmPasswordInput.value.length > 0
+                && passwordInput.value !== confirmPasswordInput.value;
+
+            confirmPasswordInput.setCustomValidity(mismatched ? "Passwords do not match." : "");
+        }
+
+        passwordInput?.addEventListener("input", syncConfirmPasswordValidity);
+        confirmPasswordInput?.addEventListener("input", syncConfirmPasswordValidity);
+    </script>
+</body>
+</html>

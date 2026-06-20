@@ -1,12 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using MongoDB.Driver;
 using SmartShoppingChatBot.Infrastructure;
 
 namespace SmartShoppingChatBot.API.Extensions
 {
     public static class MongoDbExtensions
     {
-        public static IServiceCollection AddMongoDb(
+        public static IServiceCollection AddMongoDbConfig(
             this IServiceCollection services, 
             IConfiguration configuration)
         {

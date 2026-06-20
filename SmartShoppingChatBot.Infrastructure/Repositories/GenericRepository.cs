@@ -10,13 +10,13 @@ namespace SmartShoppingChatBot.Infrastructure.Repositories;
 
 public class GenericRepository<T> : IGenericRepository<T> where T : class
 {
-    private readonly MongoDbContext _context;
+    protected readonly MongoDbContext _context;
     private readonly DbSet<T> _dbSet;
 
-    public GenericRepository(MongoDbContext context, DbSet<T> dbSet)
+    public GenericRepository(MongoDbContext context)
     {
         _context = context;
-        _dbSet = dbSet;
+        _dbSet = _context.Set<T>();
     }
 
     public async Task AddAsync(T entity)
@@ -75,20 +75,43 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         var validOrderBy = QueryHelper.GetValidOrderBy<TResponse>(orderBy);
 
         var count = await query.CountAsync();
+        if (count == 0) return new BasePaginatedList<object>(new List<object>(), count, pageIndex, pageSize);
 
-        // Map to DTO 
-        var dtoQuery = query.ProjectTo<TResponse>(mapperConfig);
+
+        IQueryable<TEntity> orderedQuery = query;
+
+        var pagedEntityQuery = query
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize);
+
+        var dtoQuery = pagedEntityQuery.ProjectTo<TResponse>(mapperConfig);
 
         if (!string.IsNullOrWhiteSpace(validOrderBy))
+        {
             dtoQuery = dtoQuery.OrderBy(validOrderBy);
+        }
 
-        var pagedQuery = dtoQuery.Skip((pageIndex - 1) * pageSize).Take(pageSize);
+        if (!string.IsNullOrWhiteSpace(validFields))
+        {
+            var dynamicItems = await dtoQuery
+                     .Select($"new ({validFields})")
+                     .ToDynamicListAsync();
 
-        var items = await pagedQuery
-                 .Select($"new ({validFields})")
-                 .ToDynamicListAsync();
+            var serializedItems = dynamicItems.Select(x => (object)x).ToList();
 
+            return new BasePaginatedList<object>(serializedItems, count, pageIndex, pageSize);
+        }
+
+        var items = await dtoQuery.ToListAsync();
         return new BasePaginatedList<object>(items.Cast<object>().ToList(), count, pageIndex, pageSize);
+
+    }
+
+    public async Task<BasePaginatedList<T>> PaginatedListAsync(IQueryable<T> query, int index, int pageSize)
+    {
+        var count = await query.CountAsync();
+        var items = await query.Skip((index - 1) * pageSize).Take(pageSize).ToListAsync();
+        return new BasePaginatedList<T>(items, count, index, pageSize);
     }
 
     public async Task<T?> GetByIdAsync(object id)

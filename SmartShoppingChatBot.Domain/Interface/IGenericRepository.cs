@@ -25,6 +25,8 @@ public interface IGenericRepository<T> where T : class
             int pageIndex = 1,
             int pageSize = 10);
 
+    Task<BasePaginatedList<T>> PaginatedListAsync(IQueryable<T> query, int index, int pageSize);
+
     Task<T?> GetByIdAsync(object id);
 
 }

@@ -1,0 +1,77 @@
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using SmartShoppingChatBot.Application.Commons.Options;
+using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Interface;
+
+namespace SmartShoppingChatBot.Infrastructure.Services;
+
+public class TokenService : ITokenService
+{
+    private readonly JwtSettings _jwt;
+
+    public TokenService(IOptions<JwtSettings> jwtOptions)
+    {
+        _jwt = jwtOptions.Value;
+    }
+
+    public string CreateAccessToken(AccessTokenPayload payload)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var businessSlug = payload.BusinessName.ToLower().Replace(" ", "-");
+
+        var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, payload.UserId.ToString()),
+            new Claim("business", payload.BusinessId),
+            new Claim(ClaimTypes.Role, payload.Role.ToString()),
+            new Claim("businessSlug", businessSlug)
+        };
+
+        DateTime expUtc = DateTime.UtcNow.AddMinutes(_jwt.ExpireMinutes);
+
+        var token = new JwtSecurityToken(
+            issuer: _jwt.Issuer,
+            audience: _jwt.Audience,
+            claims: claims,
+            expires: expUtc,
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string CreateEmailVerificationToken()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    }
+
+    public string CreateTempToken(string userId)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, userId),
+        };
+
+        DateTime expUtc = DateTime.UtcNow.AddMinutes(_jwt.TempTokenExpireMinutes);
+
+        var token = new JwtSecurityToken(
+            issuer: _jwt.Issuer,
+            audience: _jwt.Audience,
+            claims: claims,
+            expires: expUtc,
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}
