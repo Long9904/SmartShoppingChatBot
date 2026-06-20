@@ -80,14 +80,16 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
 
         IQueryable<TEntity> orderedQuery = query;
 
-        if (!string.IsNullOrWhiteSpace(validOrderBy))
-            orderedQuery = query.OrderBy(validOrderBy);
-
-        var pagedEntityQuery = orderedQuery
+        var pagedEntityQuery = query
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize);
 
         var dtoQuery = pagedEntityQuery.ProjectTo<TResponse>(mapperConfig);
+
+        if (!string.IsNullOrWhiteSpace(validOrderBy))
+        {
+            dtoQuery = dtoQuery.OrderBy(validOrderBy);
+        }
 
         if (!string.IsNullOrWhiteSpace(validFields))
         {
