@@ -35,7 +35,7 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusinessMember
             }
 
             var query =  _userRepository.AsQueryable();
-            query = query.Where(x => x.Business.Id == business.Data.Id && x.Business.Role == RoleEnums.CATALOG_TEAM);
+            query = query.Where(x => x.Business.Id == business.Data.Id && x.Business.Role == RoleEnums.CATALOG_TEAM && x.UserStatus != UserStatus.DELETED);
 
             if (request.Filter.UserStatus != null)
             {
