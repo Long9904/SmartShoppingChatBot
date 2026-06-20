@@ -71,6 +71,8 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         int pageIndex = 1,
         int pageSize = 10)
     {
+        pageIndex = pageIndex < 1 ? 1 : pageIndex;
+        pageSize = pageSize < 1 ? 10 : pageSize;
         var validFields = QueryHelper.GetValidFields<TResponse>(fields);
         var validOrderBy = QueryHelper.GetValidOrderBy<TResponse>(orderBy);
 
@@ -78,22 +80,18 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         if (count == 0) return new BasePaginatedList<object>(new List<object>(), count, pageIndex, pageSize);
 
 
-        IQueryable<TEntity> orderedQuery = query;
-
-        var pagedEntityQuery = query
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize);
-
-        var dtoQuery = pagedEntityQuery.ProjectTo<TResponse>(mapperConfig);
+        var dtoQuery = query.ProjectTo<TResponse>(mapperConfig);
 
         if (!string.IsNullOrWhiteSpace(validOrderBy))
         {
             dtoQuery = dtoQuery.OrderBy(validOrderBy);
         }
 
+        var queryWithPaging = dtoQuery.Skip((pageIndex - 1) * pageSize).Take(pageSize);
+
         if (!string.IsNullOrWhiteSpace(validFields))
         {
-            var dynamicItems = await dtoQuery
+            var dynamicItems = await queryWithPaging
                      .Select($"new ({validFields})")
                      .ToDynamicListAsync();
 
@@ -102,13 +100,15 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
             return new BasePaginatedList<object>(serializedItems, count, pageIndex, pageSize);
         }
 
-        var items = await dtoQuery.ToListAsync();
+        var items = await queryWithPaging.ToListAsync();
         return new BasePaginatedList<object>(items.Cast<object>().ToList(), count, pageIndex, pageSize);
 
     }
 
     public async Task<BasePaginatedList<T>> PaginatedListAsync(IQueryable<T> query, int index, int pageSize)
     {
+        pageSize = pageSize < 1 ? 10 : pageSize;
+        index = index < 1 ? 1 : index;
         var count = await query.CountAsync();
         var items = await query.Skip((index - 1) * pageSize).Take(pageSize).ToListAsync();
         return new BasePaginatedList<T>(items, count, index, pageSize);
