@@ -37,6 +37,11 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusinessMember
             var query =  _userRepository.AsQueryable();
             query = query.Where(x => x.Business.Id == business.Data.Id && x.Business.Role == RoleEnums.CATALOG_TEAM && x.UserStatus != UserStatus.DELETED);
 
+            if (string.IsNullOrWhiteSpace(request.Filter.OrderBy))
+            {
+                request.Filter.OrderBy = "JoinedAt desc";
+            }
+
             if (request.Filter.UserStatus != null)
             {
                 query = query.Where(x => x.UserStatus == request.Filter.UserStatus.Value);
