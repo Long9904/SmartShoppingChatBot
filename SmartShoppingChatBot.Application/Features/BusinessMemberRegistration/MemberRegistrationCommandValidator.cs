@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
 
-namespace SmartShoppingChatBot.Application.Features.EmployeeRegistration;
+namespace SmartShoppingChatBot.Application.Features.BusinessMemberRegistration;
 
-public class EmployeeRegistrationCommandValidator : AbstractValidator<EmployeeRegistrationCommand>
+public class MemberRegistrationCommandValidator : AbstractValidator<MemberRegistrationCommand>
 {
-    public EmployeeRegistrationCommandValidator()
+    public MemberRegistrationCommandValidator()
     {
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")

@@ -118,3 +118,9 @@ TestResults/
 node_modules/
 register-webhook.sh
 docs/
+
+# Codex local skills and agent artifacts
+.codex/
+
+artifacts/
+tools/

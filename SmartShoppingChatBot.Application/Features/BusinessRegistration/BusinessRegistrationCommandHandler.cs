@@ -133,13 +133,13 @@ public class BusinessRegistrationCommandHandler :
                 UserStatus.ACTIVE => Result<BusinessRegistrationResponse>.Failure(409, "This email is already registered."),
 
                 UserStatus.PENDING_APPROVAL =>
-                    Result<BusinessRegistrationResponse>.Failure(400, "This email is already waiting for admin approval."),
+                    Result<BusinessRegistrationResponse>.Failure(409, "This email is already waiting for admin approval."),
 
                 UserStatus.PENDING_PROFILE_COMPLETION =>
                     Result<BusinessRegistrationResponse>.Failure(409, "This email has been approved and is waiting for profile completion."),
 
                 UserStatus.REJECTED =>
-                    Result<BusinessRegistrationResponse>.Failure(400, "This email was rejected. Please contact support."),
+                    Result<BusinessRegistrationResponse>.Failure(409, "This email was rejected. Please contact support."),
 
                 _ =>
                     Result<BusinessRegistrationResponse>.Failure(409, "This email is already used.")

@@ -15,15 +15,15 @@ using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 
-namespace SmartShoppingChatBot.Application.Features.EmployeeRegistration
+namespace SmartShoppingChatBot.Application.Features.BusinessMemberRegistration
 {
-    public class EmployeeRegistrationCommandHandler :
-        IRequestHandler<EmployeeRegistrationCommand, Result<EmployeeRegistrationResponse>>
+    public class MemberRegistrationCommandHandler :
+        IRequestHandler<MemberRegistrationCommand, Result<BusinessMemberRegistrationResponse>>
     {
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly ILogger<EmployeeRegistrationCommandHandler> _logger;
+        private readonly ILogger<MemberRegistrationCommandHandler> _logger;
         private readonly EmailTokenSettings _emailTokenSettings;
         private readonly TimeProvider _time;
         private readonly ICurrentUserService _currentUserService;
@@ -31,11 +31,11 @@ namespace SmartShoppingChatBot.Application.Features.EmployeeRegistration
         private readonly ITokenService _tokenService;
         private readonly ITokenRepository _tokenRepository;
 
-        public EmployeeRegistrationCommandHandler(
+        public MemberRegistrationCommandHandler(
             IUserRepository userRepository, 
             IUnitOfWork unitOfWork, 
             IMapper mapper, 
-            ILogger<EmployeeRegistrationCommandHandler> logger, 
+            ILogger<MemberRegistrationCommandHandler> logger, 
             TimeProvider time, 
             ICurrentUserService currentUserService, 
             IPublishEndpoint publishEndpoint, 
@@ -55,13 +55,13 @@ namespace SmartShoppingChatBot.Application.Features.EmployeeRegistration
             _emailTokenSettings = emailTokenSettingsOptions.Value;
         }
 
-        public async Task<Result<EmployeeRegistrationResponse>> Handle(EmployeeRegistrationCommand request, CancellationToken cancellationToken)
+        public async Task<Result<BusinessMemberRegistrationResponse>> Handle(MemberRegistrationCommand request, CancellationToken cancellationToken)
         {
             var isUser = await _currentUserService.GetUser();
 
             if (!isUser.IsSuccess)
             {
-                return Result<EmployeeRegistrationResponse>.Failure(isUser.StatusCode, isUser.Message);
+                return Result<BusinessMemberRegistrationResponse>.Failure(isUser.StatusCode, isUser.Message);
             }
 
             var businessOwner = isUser.Data;
@@ -120,7 +120,7 @@ namespace SmartShoppingChatBot.Application.Features.EmployeeRegistration
             {
                 _logger.LogError(ex, "Error occurred while registering employee.");
                 await _unitOfWork.RollBackAsync(cancellationToken);
-                return Result<EmployeeRegistrationResponse>.Failure(500, "An error occurred while processing your request.");
+                return Result<BusinessMemberRegistrationResponse>.Failure(500, "An error occurred while processing your request.");
             }
 
             var buildURL = $"{_emailTokenSettings.UrlBase}{Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(employee.Email)}";
@@ -134,12 +134,12 @@ namespace SmartShoppingChatBot.Application.Features.EmployeeRegistration
                 TokenVerification = buildURL,
             }, cancellationToken);
 
-            return Result<EmployeeRegistrationResponse>.Success(new EmployeeRegistrationResponse
+            return Result<BusinessMemberRegistrationResponse>.Success(new BusinessMemberRegistrationResponse
             {
                 Id = employee.Id.ToString(),
                 FullName = employee.FullName,
                 Email = employee.Email,
-            });
+            }, message: "Employee registered successfully. Please check your email to verify your account.");
         }
     }
 }
