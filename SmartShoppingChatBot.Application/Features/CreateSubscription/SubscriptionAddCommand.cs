@@ -15,6 +15,8 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionAdd
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public int Duration { get; set; }
-       
+        public long TokenLimit { get; set; }
+        public int MessageLimit { get; set; }
+
     }
 }

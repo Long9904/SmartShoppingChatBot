@@ -42,7 +42,7 @@ namespace SmartShoppingChatBot.Application.Features.GetAllSubscription
                 TotalPages = pagingList.TotalPages,
                 PageIndex = pagingList.PageIndex,
                 PageSize = pagingList.PageSize
-            });
+            },200,"Get subscriptions successfully");
         }
     }
 }

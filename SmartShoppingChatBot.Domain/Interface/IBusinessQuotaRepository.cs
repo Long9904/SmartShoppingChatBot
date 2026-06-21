@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Domain.Interface
 {
-    public interface ISubscriptionRepository : IGenericRepository<BusinessSubscription>
+    public interface IBusinessQuotaRepository : IGenericRepository<BusinessQuota>
     {
     }
 }

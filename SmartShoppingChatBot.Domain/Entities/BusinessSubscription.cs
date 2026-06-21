@@ -10,15 +10,16 @@ using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Domain.Entities
 {
-    public class Subscription
+    public class BusinessSubscription
     {
         [Key]
         [BsonRepresentation(BsonType.ObjectId)]
         public ObjectId Id { get; set; }
-        public ObjectId UserId { get; set; }
+        public ObjectId BusinessId { get; set; }
         public ObjectId SubscriptionPlanId { get; set; }
         public DateTimeOffset StartDate { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset EndDate { get; set; }
+        [BsonRepresentation(BsonType.String)]
         public StatusEnums Status { get; set; } = StatusEnums.Inactive;
     }
 }

@@ -1,16 +1,17 @@
 ﻿using FluentValidation;
 using FluentValidation.Validators;
+using SmartShoppingChatBot.Application.Features.SubscriptionUpdate;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.SubscriptionAdd
+namespace SmartShoppingChatBot.Application.Features.SubscriptionUpgrades
 {
-    public class SubscriptionAddCommandValidator : AbstractValidator<SubscriptionAddCommand>
+    public class SubscriptionUpdateCommandValidator : AbstractValidator<SubscriptionUpdateCommand>
     {
-        public SubscriptionAddCommandValidator()
+        public SubscriptionUpdateCommandValidator()
         {
             RuleFor(x => x.Name)
                 .Cascade(CascadeMode.Stop)

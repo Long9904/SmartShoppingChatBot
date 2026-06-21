@@ -18,7 +18,14 @@ namespace SmartShoppingChatBot.Domain.Entities
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        // Duration (in days) for the subscription plan
         public int Duration { get; set; }
+        [BsonRepresentation(BsonType.String)]
         public StatusEnums Status { get; set; } = StatusEnums.Active;
+        //Monthly token limit for the subscription plan
+        public long TokenLimit { get; set; } = 0;
+        public int MessageLimit { get; set; } = 0;
+
+
     }
 }

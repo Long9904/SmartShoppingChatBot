@@ -32,6 +32,7 @@ public static class InfrastructureDI
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
         services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IBusinessQuotaRepository, BusinessQuotaRepository>();
 
 
         return services;
