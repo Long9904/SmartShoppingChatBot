@@ -15,6 +15,8 @@ public class MongoDbContext : DbContext
 
     public DbSet<Token> Tokens { get; set; }
 
+    public DbSet<SystemContent> SystemContents { get; set; }
+
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
@@ -48,6 +50,11 @@ public class MongoDbContext : DbContext
             entity.HasKey(e => e.Id);
         });
         modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<SystemContent>(entity =>
         {
             entity.HasKey(e => e.Id);
         });
