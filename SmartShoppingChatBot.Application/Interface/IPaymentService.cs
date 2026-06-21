@@ -14,7 +14,7 @@ namespace SmartShoppingChatBot.Application.Interface
     {
         Task<Result<PaymentResponsed>> CreatePaymentLink(CreatePaymentRequest request);
         Task<bool> VerifyPaymentWebhook(PayOSWebhookRequest webhookData);  
-        Task<Result<Payment>> TestPaymentSuccessfull(long orderCode);
-        
+        Task<Result<Payment>> TestPaymentSuccessful(long orderCode);
+
     }
 }

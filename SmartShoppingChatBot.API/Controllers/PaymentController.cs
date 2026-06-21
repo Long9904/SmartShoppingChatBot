@@ -18,6 +18,7 @@ namespace SmartShoppingChatBot.API.Controllers
         {
             _paymentService = paymentService;
         }
+
         [HttpPost]
         [EndpointSummary("Create Payment Link ")]
         [EndpointDescription("Create a new payment link.")]
@@ -28,6 +29,7 @@ namespace SmartShoppingChatBot.API.Controllers
                 return StatusCode(result.StatusCode, ApiResponse<PaymentResponsed>.Ok(result.Data!, result.Message));
             return StatusCode(result.StatusCode, ApiResponse<PaymentResponsed>.Fail(result.Message!, result.Errors));
         }
+
         [HttpGet("callback")]
         [EndpointSummary("[DON'T CALL THIS ENDPOINT DIRECTLY] WEBHOOK CALLBACK FOR PAYMENT")]
         [EndpointDescription("Handle payment success callback.")]
@@ -43,7 +45,7 @@ namespace SmartShoppingChatBot.API.Controllers
         [EndpointSummary("TEST ENDPOINT TO SIMULATE PAYMENT SUCCESS")]
         public async Task<IActionResult> TestPaymentSuccess(long orderCode)
         {
-            var payment = await _paymentService.TestPaymentSuccessfull(orderCode);
+            var payment = await _paymentService.TestPaymentSuccessful(orderCode);
             if (payment != null)
                 return StatusCode(StatusCodes.Status200OK, "Payment simulated successfully.");
             return StatusCode(StatusCodes.Status400BadRequest, "Failed to simulate payment.");

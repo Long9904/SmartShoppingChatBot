@@ -64,7 +64,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 return Result<PaymentResponsed>.Failure(400, "Invalid business id format");
             }
-            if (ObjectId.TryParse(request.SubscriptionPlantId, out var subscriptionPlanId) == false)
+            if (ObjectId.TryParse(request.SubscriptionPlanId, out var subscriptionPlanId) == false)
             {
                 return Result<PaymentResponsed>.Failure(400, "Invalid subscription plan id format");
             }
@@ -79,7 +79,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 return Result<PaymentResponsed>.Failure(404, "Subscription plan not found");
             }
-            string returnBaseUrl = !string.IsNullOrEmpty(request.ReturnUrlDomain) ? request.ReturnUrlDomain : _config["PayOs:Url"]!;
+            string returnBaseUrl = !string.IsNullOrEmpty(request.ReturnUrlDomain) ? request.ReturnUrlDomain : _config["PayOS:Url"]!;
             var formatPrice = Math.Floor(subscriptionPlan.Price);
             var paymentRequest = new CreatePaymentLinkRequest
             {
@@ -140,66 +140,90 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     TransactionDateTime = webhookData.Data.TransactionDateTime,
                 },
             });
-            //start transaction to update payment status and add subscription
+
+            // Validate webhook verification result
+            if (data == null)
+            {
+                _logger.LogWarning("Webhook verification returned null for order code {OrderCode}", webhookData.Data.OrderCode);
+                return false;
+            }
+
+            if (!webhookData.Success)
+            {
+                _logger.LogWarning("Webhook success flag is false for order code {OrderCode}", webhookData.Data.OrderCode);
+                return false;
+            }
+
+            //check if payment with order code exists
+            var existingPayment = await _paymentRepository.FindAsync(x => x.OrderCode == webhookData.Data.OrderCode);
+            if (existingPayment == null)
+            {
+                _logger.LogWarning("Payment with order code {OrderCode} not found", webhookData.Data.OrderCode);
+                return false;
+            }
+            if (existingPayment.Status == PaymentEnums.Completed)
+            {
+                _logger.LogWarning("Payment with order code {OrderCode} has already been completed", webhookData.Data.OrderCode);
+                return false;
+            }
+
+            //load subscription plan
+            if (existingPayment.SubscriptionPlanId == ObjectId.Empty)
+            {
+                _logger.LogWarning("Payment with order code {OrderCode} has no subscription plan id", webhookData.Data.OrderCode);
+                return false;
+            }
+            var subscriptionPlan = await _subscriptionPlanRepository.FindAsync(x => x.Id == existingPayment.SubscriptionPlanId);
+            if (subscriptionPlan == null)
+            {
+                _logger.LogWarning("Subscription plan with id {SubscriptionPlanId} not found", existingPayment.SubscriptionPlanId);
+                return false;
+            }
+
+            //add new subscription if payment is successful
+            var businessSubscription = await _subscriptionRepository
+                .FindAsync(x => x.BusinessId == existingPayment.BussinessId && x.EndDate > DateTimeOffset.UtcNow && x.Status == StatusEnums.Active);
+            if (businessSubscription != null)
+            {
+                _logger.LogWarning("Business with id {BusinessId} already has an active subscription for subscription plan id {SubscriptionPlanId}"
+                    , existingPayment.BussinessId, existingPayment.SubscriptionPlanId);
+                return false;
+            }
+
             await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                //check if payment with order code exists
-                var existingPayment = await _paymentRepository.FindAsync(x => x.OrderCode == webhookData.Data.OrderCode);
-                if (existingPayment == null)
-                {
-                    _logger.LogWarning("Payment with order code {OrderCode} not found", webhookData.Data.OrderCode);
-                    return false;
-                }
-                if (existingPayment.Status == PaymentEnums.Completed)
-                {
-                    _logger.LogWarning("Payment with order code {OrderCode} has already been completed", webhookData.Data.OrderCode);
-                    return false;
-                }
-                //load subscription plan
-                if (existingPayment.SubscriptionPlanId == ObjectId.Empty)
-                {
-                    _logger.LogWarning("Payment with order code {OrderCode} has no subscription plan id", webhookData.Data.OrderCode);
-                    return false;
-                }
-                var subscriptionPlan = await _subscriptionPlanRepository.FindAsync(x => x.Id == existingPayment.SubscriptionPlanId);
-                if (subscriptionPlan == null)
-                {
-                    _logger.LogWarning("Subscription plan with id {SubscriptionPlanId} not found", existingPayment.SubscriptionPlanId);
-                    return false;
-                }
-
-
-                //add new subscription if payment is successful
-                var subscription = new BusinessSubscription
-                {
-                    Id = ObjectId.GenerateNewId(),
-                    BusinessId = existingPayment.BussinessId,
-                    SubscriptionPlanId = existingPayment.SubscriptionPlanId,
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddDays(subscriptionPlan.Duration),
-                    Status = StatusEnums.Active
-                };
-
-                var businessQuotaId = ObjectId.GenerateNewId();
-                var businessQuota = new BusinessQuota
-                {
-                    Id = businessQuotaId,
-                    BusinessId = existingPayment.BussinessId,
-                    BusinessSubscriptionId = subscription.Id,
-                    TokenLimit = subscriptionPlan.TokenLimit,
-                    MessageLimit = subscriptionPlan.MessageLimit,
-                    ResetDate = DateTime.UtcNow.AddDays(subscriptionPlan.Duration),
-                    UsedMessages = 0,
-                    UsedTokens = 0
-                };
                 switch (data.Code)
                 {
                     case "00":
+                        // Only create subscription and quota for successful payments
+                        var now = DateTimeOffset.UtcNow;
+                        var businessSubscriptionId = ObjectId.GenerateNewId();
+                        var subscription = new BusinessSubscription
+                        {
+                            Id = businessSubscriptionId,
+                            BusinessId = existingPayment.BussinessId,
+                            SubscriptionPlanId = existingPayment.SubscriptionPlanId,
+                            StartDate = now,
+                            EndDate = now.AddDays(subscriptionPlan.Duration),
+                            Status = StatusEnums.Active
+                        };
+
+                        var businessQuota = new BusinessQuota
+                        {
+                            Id = ObjectId.GenerateNewId(),
+                            BusinessId = existingPayment.BussinessId,
+                            BusinessSubscriptionId = businessSubscriptionId,
+                            TokenLimit = subscriptionPlan.TokenLimit,
+                            MessageLimit = subscriptionPlan.MessageLimit,
+                            ResetDate = now.AddDays(subscriptionPlan.Duration),
+                            UsedMessages = 0,
+                            UsedTokens = 0
+                        };
+
                         existingPayment.Status = PaymentEnums.Completed;
                         await _subscriptionRepository.AddAsync(subscription);
-                        await _unitOfWork.SaveChangesAsync();
                         await _businessQuotaRepository.AddAsync(businessQuota);
                         break;
                     case "01":
@@ -224,7 +248,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 return false;
             }
         }
-        public async Task<Result<Payment>> TestPaymentSuccessfull(long orderCode)
+        public async Task<Result<Payment>> TestPaymentSuccessful(long orderCode)
         {
 
             //check if payment with order code exists
