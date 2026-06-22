@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.SubscriptionUpdate
+namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
 {
     public class SubscriptionUpdateCommandHandler : IRequestHandler<SubscriptionUpdateCommand, Result<SubscriptionResponse>>
     {

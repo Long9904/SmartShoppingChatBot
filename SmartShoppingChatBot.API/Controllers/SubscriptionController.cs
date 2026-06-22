@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.CreateSubscription;
 using SmartShoppingChatBot.Application.Features.DeleteSubscription;
 using SmartShoppingChatBot.Application.Features.GetAllSubscription;
-using SmartShoppingChatBot.Application.Features.SubscriptionAdd;
-using SmartShoppingChatBot.Application.Features.SubscriptionUpdate;
+using SmartShoppingChatBot.Application.Features.UpdateSubscription;
 using SmartShoppingChatBot.Domain.Commons;
 
 namespace SmartShoppingChatBot.API.Controllers

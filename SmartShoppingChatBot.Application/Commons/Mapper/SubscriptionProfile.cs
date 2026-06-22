@@ -13,6 +13,8 @@ namespace SmartShoppingChatBot.Application.Commons.Mapper
         public SubscriptionProfile() { 
             CreateMap<SubscriptionPlan, SubscriptionResponse>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id.ToString()));
+            CreateMap<SubscriptionPlan, PlanResponse>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id.ToString()));
         }
     }
 }

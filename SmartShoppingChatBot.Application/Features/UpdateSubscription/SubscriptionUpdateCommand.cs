@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.SubscriptionUpdate
+namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
 {
     public record SubscriptionUpdateCommand : IRequest<Result<SubscriptionResponse>> 
     {

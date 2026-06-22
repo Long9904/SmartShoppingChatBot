@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.SubscriptionAdd
+namespace SmartShoppingChatBot.Application.Features.CreateSubscription
 {
     public record SubscriptionAddCommand : IRequest<Result<SubscriptionResponse>> 
     {
