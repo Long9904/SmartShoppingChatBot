@@ -1,7 +1,6 @@
 using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Domain.Enums;
 
 namespace SmartShoppingChatBot.Application.Features.CreateSystemContent;
 

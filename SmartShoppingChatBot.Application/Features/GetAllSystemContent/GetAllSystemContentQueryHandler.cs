@@ -15,7 +15,7 @@ namespace SmartShoppingChatBot.Application.Features.GetAllSystemContent
         private readonly IMapper _mapper;
 
         public GetAllSystemContentQueryHandler(
-            ISystemContentRepository systemContentRepository, 
+            ISystemContentRepository systemContentRepository,
             IMapper mapper)
         {
             _systemContentRepository = systemContentRepository;
@@ -27,8 +27,8 @@ namespace SmartShoppingChatBot.Application.Features.GetAllSystemContent
             var filter = request.Filter ?? new();
 
             var query = _systemContentRepository.AsQueryable()
-                .Where(sc => 
-                sc.Status != SystemContentStatus.Deleted 
+                .Where(sc =>
+                sc.Status != SystemContentStatus.Deleted
                 && sc.DeletedAt == null);
 
             if (!string.IsNullOrEmpty(filter.Title))

@@ -1,6 +1,4 @@
-﻿using SmartShoppingChatBot.Domain.Enums;
-
-namespace SmartShoppingChatBot.Application.Events
+﻿namespace SmartShoppingChatBot.Application.Events
 {
     public class EmployeeRegistrationConfirmedEvent
     {

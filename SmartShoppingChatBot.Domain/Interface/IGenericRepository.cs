@@ -1,6 +1,6 @@
-﻿using System.Linq.Expressions;
-using AutoMapper;
+﻿using AutoMapper;
 using SmartShoppingChatBot.Domain.Commons;
+using System.Linq.Expressions;
 
 namespace SmartShoppingChatBot.Domain.Interface;
 

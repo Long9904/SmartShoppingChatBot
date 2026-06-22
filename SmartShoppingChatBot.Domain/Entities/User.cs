@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace SmartShoppingChatBot.Domain.Entities
 {

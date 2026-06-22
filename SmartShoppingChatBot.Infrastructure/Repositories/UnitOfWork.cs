@@ -11,7 +11,7 @@ public class UnitOfWork : IUnitOfWork
     public IBusinessRepository BusinessRepository { get; private set; }
 
     public UnitOfWork(
-        MongoDbContext context, 
+        MongoDbContext context,
         IBusinessRepository businessRepository)
     {
         _context = context;

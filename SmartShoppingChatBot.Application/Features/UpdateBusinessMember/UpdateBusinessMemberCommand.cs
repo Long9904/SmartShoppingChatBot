@@ -1,8 +1,8 @@
-using System.Text.Json.Serialization;
 using MediatR;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using System.Text.Json.Serialization;
 
 namespace SmartShoppingChatBot.Application.Features.UpdateBusinessMember;
 

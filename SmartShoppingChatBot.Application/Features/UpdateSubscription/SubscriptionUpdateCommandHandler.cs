@@ -33,7 +33,7 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
             _mapper = mapper;
         }
 
-        public async Task<Result<SubscriptionResponse>> Handle( SubscriptionUpdateCommand request, CancellationToken cancellationToken)
+        public async Task<Result<SubscriptionResponse>> Handle(SubscriptionUpdateCommand request, CancellationToken cancellationToken)
         {
             if (ObjectId.TryParse(request.Id, out var subscriptionId) == false)
             {
@@ -56,27 +56,27 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
                 existingSubscription.Name = request.Name;
                 isUpdate = true;
             }
-            if(!string.IsNullOrEmpty(request.Description) && existingSubscription.Description != request.Description)
+            if (!string.IsNullOrEmpty(request.Description) && existingSubscription.Description != request.Description)
             {
                 existingSubscription.Description = request.Description;
                 isUpdate = true;
             }
-            if(request.Price >= 0 && existingSubscription.Price != request.Price)
+            if (request.Price >= 0 && existingSubscription.Price != request.Price)
             {
                 existingSubscription.Price = request.Price;
                 isUpdate = true;
             }
-            if(request.Duration > 0 && existingSubscription.Duration != request.Duration)
+            if (request.Duration > 0 && existingSubscription.Duration != request.Duration)
             {
                 existingSubscription.Duration = request.Duration;
                 isUpdate = true;
             }
-            if(request.TokenLimit >= 0 && existingSubscription.TokenLimit != request.TokenLimit)
+            if (request.TokenLimit >= 0 && existingSubscription.TokenLimit != request.TokenLimit)
             {
                 existingSubscription.TokenLimit = request.TokenLimit;
                 isUpdate = true;
             }
-            if(request.MessageLimit >= 0 && existingSubscription.MessageLimit != request.MessageLimit)
+            if (request.MessageLimit >= 0 && existingSubscription.MessageLimit != request.MessageLimit)
             {
                 existingSubscription.MessageLimit = request.MessageLimit;
                 isUpdate = true;
