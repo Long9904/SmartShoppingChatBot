@@ -4,7 +4,14 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.BusinessRegistration;
+using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
 {
@@ -44,7 +51,7 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
                 return Result<SubscriptionResponse>.Failure(409, "A subscription plan with the same name already exists.");
             }
             var isUpdate = false;
-            if (!string.IsNullOrEmpty(request.Name) && existingSubscription.Name != request.Name)
+            if(!string.IsNullOrEmpty(request.Name) && existingSubscription.Name != request.Name)
             {
                 existingSubscription.Name = request.Name;
                 isUpdate = true;

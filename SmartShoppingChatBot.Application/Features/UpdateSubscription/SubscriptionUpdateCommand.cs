@@ -1,11 +1,16 @@
 ﻿using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
 {
-    public record SubscriptionUpdateCommand : IRequest<Result<SubscriptionResponse>>
+    public record SubscriptionUpdateCommand : IRequest<Result<SubscriptionResponse>> 
     {
         [JsonIgnore]
         public string Id { get; set; } = string.Empty;
