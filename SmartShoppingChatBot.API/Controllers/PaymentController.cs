@@ -69,7 +69,7 @@ namespace SmartShoppingChatBot.API.Controllers
         [HttpGet("order/{orderCode}")]
         public async Task<IActionResult> GetPaymentByOrderCode([FromRoute] long orderCode)
         {
-            var query = new GetPaymentByLoginQuery { OrderCode = orderCode };
+            var query = new GetPaymentByOrderCodeQuery { OrderCode = orderCode };
             var result = await _mediator.Send(query);
             if (result.IsSuccess)
                 return StatusCode(StatusCodes.Status200OK, ApiResponse<PaymentResponse>.Ok(result.Data!, result.Message));
