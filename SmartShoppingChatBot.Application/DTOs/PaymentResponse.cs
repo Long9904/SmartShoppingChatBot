@@ -1,11 +1,4 @@
-﻿using MongoDB.Bson;
-using SmartShoppingChatBot.Domain.Entities;
-using SmartShoppingChatBot.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SmartShoppingChatBot.Domain.Enums;
 
 namespace SmartShoppingChatBot.Application.DTOs
 {

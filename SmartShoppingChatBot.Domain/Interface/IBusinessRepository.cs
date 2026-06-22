@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-using SmartShoppingChatBot.Domain.Commons;
-using SmartShoppingChatBot.Domain.Entities;
+﻿using SmartShoppingChatBot.Domain.Entities;
 
 namespace SmartShoppingChatBot.Domain.Interface
 {

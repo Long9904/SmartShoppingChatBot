@@ -1,6 +1,4 @@
-﻿using SmartShoppingChatBot.Domain.Enums;
-
-namespace SmartShoppingChatBot.Application.DTOs;
+﻿namespace SmartShoppingChatBot.Application.DTOs;
 
 public class LoginResponse
 {

@@ -1,13 +1,8 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PayOS.Models.V2.PaymentRequests;
-using PayOS.Models.Webhooks;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.GetAllPayment;
-using SmartShoppingChatBot.Application.Features.GetAllSubscription;
-using SmartShoppingChatBot.Application.Features.GetPaymentByOrderCode;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 
@@ -77,5 +72,5 @@ namespace SmartShoppingChatBot.API.Controllers
                 return StatusCode(StatusCodes.Status200OK, ApiResponse<PaymentResponse>.Ok(result.Data!, result.Message));
             return StatusCode(StatusCodes.Status404NotFound, ApiResponse<PaymentResponse>.Fail("Payment not found.", null));
         }
-    } 
+    }
 }

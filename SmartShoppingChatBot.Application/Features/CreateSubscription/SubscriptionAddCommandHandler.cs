@@ -4,14 +4,8 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Features.BusinessRegistration;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Features.CreateSubscription
 {
@@ -23,7 +17,7 @@ namespace SmartShoppingChatBot.Application.Features.CreateSubscription
         private readonly TimeProvider _time;
         private readonly IMapper _mapper;
 
-        public SubscriptionAddCommandHandler(ISubscriptionPlanRepository subscriptionRepository, 
+        public SubscriptionAddCommandHandler(ISubscriptionPlanRepository subscriptionRepository,
             IUnitOfWork unitOfWork, ILogger<SubscriptionAddCommandHandler> logger, TimeProvider time, IMapper mapper)
         {
             _subscriptionRepository = subscriptionRepository;
@@ -39,12 +33,12 @@ namespace SmartShoppingChatBot.Application.Features.CreateSubscription
             var existingSubscription = await _subscriptionRepository.FindAsync(s => s.Name == request.Name);
             if (existingSubscription != null)
             {
-                return Result<SubscriptionResponse>.Failure(400,"A subscription with this name already exists.");
+                return Result<SubscriptionResponse>.Failure(400, "A subscription with this name already exists.");
             }
 
             var subscriptionId = ObjectId.GenerateNewId();
             var subscription = new SubscriptionPlan
-            {            
+            {
                 Id = subscriptionId,
                 Name = request.Name,
                 Description = request.Description,

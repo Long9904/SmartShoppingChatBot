@@ -4,14 +4,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Features.BusinessRegistration;
-using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
 {
@@ -33,7 +26,7 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
             _mapper = mapper;
         }
 
-        public async Task<Result<SubscriptionResponse>> Handle( SubscriptionUpdateCommand request, CancellationToken cancellationToken)
+        public async Task<Result<SubscriptionResponse>> Handle(SubscriptionUpdateCommand request, CancellationToken cancellationToken)
         {
             if (ObjectId.TryParse(request.Id, out var subscriptionId) == false)
             {
@@ -51,32 +44,32 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
                 return Result<SubscriptionResponse>.Failure(409, "A subscription plan with the same name already exists.");
             }
             var isUpdate = false;
-            if(!string.IsNullOrEmpty(request.Name) && existingSubscription.Name != request.Name)
+            if (!string.IsNullOrEmpty(request.Name) && existingSubscription.Name != request.Name)
             {
                 existingSubscription.Name = request.Name;
                 isUpdate = true;
             }
-            if(!string.IsNullOrEmpty(request.Description) && existingSubscription.Description != request.Description)
+            if (!string.IsNullOrEmpty(request.Description) && existingSubscription.Description != request.Description)
             {
                 existingSubscription.Description = request.Description;
                 isUpdate = true;
             }
-            if(request.Price >= 0 && existingSubscription.Price != request.Price)
+            if (request.Price >= 0 && existingSubscription.Price != request.Price)
             {
                 existingSubscription.Price = request.Price;
                 isUpdate = true;
             }
-            if(request.Duration > 0 && existingSubscription.Duration != request.Duration)
+            if (request.Duration > 0 && existingSubscription.Duration != request.Duration)
             {
                 existingSubscription.Duration = request.Duration;
                 isUpdate = true;
             }
-            if(request.TokenLimit >= 0 && existingSubscription.TokenLimit != request.TokenLimit)
+            if (request.TokenLimit >= 0 && existingSubscription.TokenLimit != request.TokenLimit)
             {
                 existingSubscription.TokenLimit = request.TokenLimit;
                 isUpdate = true;
             }
-            if(request.MessageLimit >= 0 && existingSubscription.MessageLimit != request.MessageLimit)
+            if (request.MessageLimit >= 0 && existingSubscription.MessageLimit != request.MessageLimit)
             {
                 existingSubscription.MessageLimit = request.MessageLimit;
                 isUpdate = true;

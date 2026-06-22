@@ -26,9 +26,9 @@ public static class InfrastructureDI
         services.AddScoped<UserSeeder>();
 
         // Repo
-        services.AddScoped<IBusinessRepository, BusinessRepository>();  
+        services.AddScoped<IBusinessRepository, BusinessRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<ITokenRepository, TokenRepository>();       
+        services.AddScoped<ITokenRepository, TokenRepository>();
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
         services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();

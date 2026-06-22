@@ -3,13 +3,7 @@ using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
-using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Interface;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Features.GetPaymentByOrderCode
 {
@@ -42,7 +36,7 @@ namespace SmartShoppingChatBot.Application.Features.GetPaymentByOrderCode
             var payment = await _paymentRepository.FindAsync(x => x.OrderCode == request.OrderCode && x.BussinessId == businessLogin.Data.Id);
             if (payment == null)
             {
-                return Result<PaymentResponse>.Failure(404,"Payment not found");
+                return Result<PaymentResponse>.Failure(404, "Payment not found");
             }
             var response = _mapper.Map<PaymentResponse>(payment);
 
@@ -61,7 +55,7 @@ namespace SmartShoppingChatBot.Application.Features.GetPaymentByOrderCode
             {
                 response.SubscriptionPlan = _mapper.Map<PlanResponse>(plan);
             }
-            
+
             return Result<PaymentResponse>.Success(response);
         }
     }

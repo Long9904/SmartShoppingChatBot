@@ -18,7 +18,7 @@ public class UpdateSystemContentCommandValidator : AbstractValidator<UpdateSyste
 
         RuleFor(command => command.ContentType)
             .Must(x => Enum.TryParse<ContentType>(x, true, out _))
-            .WithMessage($"ContentType must be one of the following: {string.Join(", ",Enum.GetNames<ContentType>())}.");
+            .WithMessage($"ContentType must be one of the following: {string.Join(", ", Enum.GetNames<ContentType>())}.");
 
         RuleFor(command => command.Status)
             .Must(status => Enum.TryParse<SystemContentStatus>(status, true, out _))

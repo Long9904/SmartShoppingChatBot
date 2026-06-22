@@ -1,6 +1,4 @@
-﻿using SmartShoppingChatBot.Application.DTOs;
-
-namespace SmartShoppingChatBot.Application.Commons.Results
+﻿namespace SmartShoppingChatBot.Application.Commons.Results
 {
     public class ApiResponse<T>
     {
