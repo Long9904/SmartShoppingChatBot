@@ -6,11 +6,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.CreateSubscription
+namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
 {
-    public class SubscriptionAddCommandValidator : AbstractValidator<SubscriptionAddCommand>
+    public class SubscriptionUpdateCommandValidator : AbstractValidator<SubscriptionUpdateCommand>
     {
-        public SubscriptionAddCommandValidator()
+        public SubscriptionUpdateCommandValidator()
         {
             RuleFor(x => x.Name)
                 .Cascade(CascadeMode.Stop)

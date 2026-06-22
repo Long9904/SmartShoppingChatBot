@@ -13,18 +13,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.SubscriptionAdd
+namespace SmartShoppingChatBot.Application.Features.CreateSubscription
 {
     public class SubscriptionAddCommandHandler : IRequestHandler<SubscriptionAddCommand, Result<SubscriptionResponse>>
     {
         private readonly ISubscriptionPlanRepository _subscriptionRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<BusinessRegistrationCommandHandler> _logger;
+        private readonly ILogger<SubscriptionAddCommandHandler> _logger;
         private readonly TimeProvider _time;
         private readonly IMapper _mapper;
 
         public SubscriptionAddCommandHandler(ISubscriptionPlanRepository subscriptionRepository, 
-            IUnitOfWork unitOfWork, ILogger<BusinessRegistrationCommandHandler> logger, TimeProvider time, IMapper mapper)
+            IUnitOfWork unitOfWork, ILogger<SubscriptionAddCommandHandler> logger, TimeProvider time, IMapper mapper)
         {
             _subscriptionRepository = subscriptionRepository;
             _unitOfWork = unitOfWork;
@@ -50,6 +50,8 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionAdd
                 Description = request.Description,
                 Price = request.Price,
                 Duration = request.Duration,
+                TokenLimit = request.TokenLimit,
+                MessageLimit = request.MessageLimit,
                 Status = Domain.Enums.StatusEnums.Active,
             };
 
