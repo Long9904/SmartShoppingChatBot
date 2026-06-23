@@ -46,6 +46,7 @@ namespace SmartShoppingChatBot.Application.Features.CreateSubscription
                 Duration = request.Duration,
                 TokenLimit = request.TokenLimit,
                 MessageLimit = request.MessageLimit,
+                MaxProductAllowed = request.MaxProductAllowed,
                 Status = Domain.Enums.StatusEnums.Active,
             };
 
