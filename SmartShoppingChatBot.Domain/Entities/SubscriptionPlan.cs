@@ -20,6 +20,7 @@ namespace SmartShoppingChatBot.Domain.Entities
         //Monthly token limit for the subscription plan
         public long TokenLimit { get; set; } = 0;
         public int MessageLimit { get; set; } = 0;
+        public int MaxProductAllowed { get; set; } = 0;
 
 
     }
