@@ -41,6 +41,7 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusiness
                 query = query.Where(b => b.CreatedAt >= request.Filter.CreatedFrom.Value);
             }
 
+            query = query.OrderByDescending(b => b.CreatedAt);
 
             var pagingList = await _businessRepository.PaginatedListAsync(
                 query,

@@ -1,5 +1,10 @@
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SmartShoppingChatBot.API.Extensions;
@@ -9,10 +14,6 @@ using SmartShoppingChatBot.Application.Commons.Behaviors;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Infrastructure;
 using SmartShoppingChatBot.Infrastructure.Seeders;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,11 +37,15 @@ builder.Services.AddMongoDbConfig(builder.Configuration);
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo("/keys"))
+    .SetApplicationName("SmartShoppingChatBot");
 
 // BusinessEmail settings configuration
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<EmailTokenSettings>(builder.Configuration.GetSection("EmailTokenSettings"));
+builder.Services.Configure<ApiConfigs>(builder.Configuration.GetSection("ApiConfigs"));
 
 builder.Services.AddEndpointsApiExplorer();
 
