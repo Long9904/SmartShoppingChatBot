@@ -2,7 +2,7 @@
 
 public static class QueryHelper
 {
-  
+
     public static string GetValidFields<TDto>(string? fields)
     {
         var allowedFields = typeof(TDto).GetProperties()

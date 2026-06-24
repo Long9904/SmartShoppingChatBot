@@ -1,5 +1,4 @@
 ﻿using FluentValidation;
-using SmartShoppingChatBot.Domain.Enums;
 
 namespace SmartShoppingChatBot.Application.Features.ConfirmBusinessRegistration
 {

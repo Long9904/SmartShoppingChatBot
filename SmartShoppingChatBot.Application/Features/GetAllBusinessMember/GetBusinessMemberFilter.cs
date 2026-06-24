@@ -13,7 +13,7 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusinessMember
         public int? Gender { get; set; }
 
         public UserStatus? UserStatus { get; set; }
-        
+
         public string? OrderBy { get; set; }
 
     }

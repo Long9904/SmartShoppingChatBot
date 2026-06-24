@@ -1,6 +1,4 @@
-﻿using static System.Runtime.InteropServices.JavaScript.JSType;
-
-namespace SmartShoppingChatBot.Application.Commons.Results;
+﻿namespace SmartShoppingChatBot.Application.Commons.Results;
 
 public class Result<T>
 {
@@ -12,10 +10,10 @@ public class Result<T>
     public Dictionary<string, string>? Errors { get; set; }
 
     private Result(
-        bool isSuccess, 
-        int statusCode, 
-        T? data, 
-        string? message = null, 
+        bool isSuccess,
+        int statusCode,
+        T? data,
+        string? message = null,
         Dictionary<string, string>? errors = null)
     {
         IsSuccess = isSuccess;

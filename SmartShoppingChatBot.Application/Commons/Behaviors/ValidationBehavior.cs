@@ -1,8 +1,8 @@
-﻿using System.Reflection;
-using System.Text.Json;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
+using System.Reflection;
+using System.Text.Json;
 
 namespace SmartShoppingChatBot.Application.Commons.Behaviors
 {
@@ -56,8 +56,8 @@ namespace SmartShoppingChatBot.Application.Commons.Behaviors
                     {
                         return (TResponse)method.Invoke(null, new object?[]
                         {
-                            400, 
-                            "Validation failed", 
+                            400,
+                            "Validation failed",
                             errorsDictionary
                         })!;
                     }

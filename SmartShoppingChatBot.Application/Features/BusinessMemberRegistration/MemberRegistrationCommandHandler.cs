@@ -32,15 +32,15 @@ namespace SmartShoppingChatBot.Application.Features.BusinessMemberRegistration
         private readonly ITokenRepository _tokenRepository;
 
         public MemberRegistrationCommandHandler(
-            IUserRepository userRepository, 
-            IUnitOfWork unitOfWork, 
-            IMapper mapper, 
-            ILogger<MemberRegistrationCommandHandler> logger, 
-            TimeProvider time, 
-            ICurrentUserService currentUserService, 
-            IPublishEndpoint publishEndpoint, 
-            ITokenService tokenService, 
-            ITokenRepository tokenRepository, 
+            IUserRepository userRepository,
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ILogger<MemberRegistrationCommandHandler> logger,
+            TimeProvider time,
+            ICurrentUserService currentUserService,
+            IPublishEndpoint publishEndpoint,
+            ITokenService tokenService,
+            ITokenRepository tokenRepository,
             IOptions<EmailTokenSettings> emailTokenSettingsOptions)
         {
             _userRepository = userRepository;
@@ -116,7 +116,8 @@ namespace SmartShoppingChatBot.Application.Features.BusinessMemberRegistration
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while registering employee.");
                 await _unitOfWork.RollBackAsync(cancellationToken);
@@ -126,7 +127,7 @@ namespace SmartShoppingChatBot.Application.Features.BusinessMemberRegistration
             var buildURL = $"{_emailTokenSettings.UrlBase}{Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(employee.Email)}";
 
 
-            await _publishEndpoint.Publish(new EmployeeRegistrationConfirmedEvent 
+            await _publishEndpoint.Publish(new EmployeeRegistrationConfirmedEvent
             {
                 BusinessName = businessOwner.Business.BusinessName,
                 EmployeeName = employee.FullName,

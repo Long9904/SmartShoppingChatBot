@@ -17,13 +17,13 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusinessMember
         private readonly IMapper _mapper;
 
         public GetBusinessMemberQueryHandler(
-            IUserRepository userRepository, 
-            ICurrentUserService currentUserService, 
+            IUserRepository userRepository,
+            ICurrentUserService currentUserService,
             IMapper mapper)
         {
             _userRepository = userRepository;
             _currentUserService = currentUserService;
-            _mapper = mapper;   
+            _mapper = mapper;
         }
 
         public async Task<Result<BasePaginatedList<object>>> Handle(GetBusinessMemberQuery request, CancellationToken cancellationToken)
@@ -34,8 +34,13 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusinessMember
                 return Result<BasePaginatedList<object>>.Failure(business.StatusCode, business.Message);
             }
 
-            var query =  _userRepository.AsQueryable();
+            var query = _userRepository.AsQueryable();
             query = query.Where(x => x.Business.Id == business.Data.Id && x.Business.Role == RoleEnums.CATALOG_TEAM && x.UserStatus != UserStatus.DELETED);
+
+            if (string.IsNullOrWhiteSpace(request.Filter.OrderBy))
+            {
+                request.Filter.OrderBy = "JoinedAt desc";
+            }
 
             if (request.Filter.UserStatus != null)
             {
@@ -62,7 +67,7 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusinessMember
                 query = query.Where(x => x.Gender == request.Filter.Gender.Value);
             }
 
-            var mapperConfig =_mapper.ConfigurationProvider;
+            var mapperConfig = _mapper.ConfigurationProvider;
 
             var paginatedList = await _userRepository
                 .GetAllWithPaggingSortSelectionFieldAsync<User, ProfileResponse>

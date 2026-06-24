@@ -1,16 +1,10 @@
-﻿using MongoDB.Bson;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
 
 namespace SmartShoppingChatBot.Application.DTOs
 {
     public class CreatePaymentRequest
     {
-        public string SubscriptionPlantId { get; set; } = string.Empty;
+        public string SubscriptionPlanId { get; set; } = string.Empty;
         public string BussinessId { get; set; } = string.Empty;
         public string? ReturnUrlDomain { get; set; }
 

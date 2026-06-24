@@ -11,6 +11,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features\CreateSystemContent\" />
+    <Folder Include="Features\DeleteSystemContent\" />
+    <Folder Include="Features\GetSystemContentByKey\" />
+    <Folder Include="Features\GetSystemContentById\" />
+    <Folder Include="Features\UpdateSystemContent\" />
     <Folder Include="Plugins\" />
   </ItemGroup>
 

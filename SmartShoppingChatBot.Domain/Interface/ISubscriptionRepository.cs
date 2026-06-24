@@ -1,13 +1,8 @@
 ﻿using SmartShoppingChatBot.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Domain.Interface
 {
-    public interface ISubscriptionRepository : IGenericRepository<Subscription>
+    public interface ISubscriptionRepository : IGenericRepository<BusinessSubscription>
     {
     }
 }

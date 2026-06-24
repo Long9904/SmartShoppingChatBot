@@ -6,7 +6,7 @@ namespace SmartShoppingChatBot.API.Extensions
     public static class MongoDbExtensions
     {
         public static IServiceCollection AddMongoDbConfig(
-            this IServiceCollection services, 
+            this IServiceCollection services,
             IConfiguration configuration)
         {
             var connectionString = configuration.GetConnectionString("MongoDb");
@@ -16,7 +16,7 @@ namespace SmartShoppingChatBot.API.Extensions
             {
                 throw new ArgumentNullException("Mongo db configuration is invalid");
             }
-            
+
             services.AddDbContext<MongoDbContext>(options =>
             {
                 options.UseMongoDB(connectionString, databaseName);

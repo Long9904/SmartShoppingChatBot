@@ -1,10 +1,11 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.CreateSubscription;
+using SmartShoppingChatBot.Application.Features.DeleteSubscription;
 using SmartShoppingChatBot.Application.Features.GetAllSubscription;
-using SmartShoppingChatBot.Application.Features.SubscriptionAdd;
+using SmartShoppingChatBot.Application.Features.UpdateSubscription;
 using SmartShoppingChatBot.Domain.Commons;
 
 namespace SmartShoppingChatBot.API.Controllers
@@ -19,8 +20,9 @@ namespace SmartShoppingChatBot.API.Controllers
         {
             _mediator = mediator;
         }
+
         [HttpPost]
-        [EndpointSummary("Add a new subscription.")]
+        [EndpointSummary("Admin add a new subscription.")]
         [EndpointDescription("Add a new subscription.")]
         public async Task<IActionResult> AddSubscription([FromBody] SubscriptionAddCommand command)
         {
@@ -30,8 +32,9 @@ namespace SmartShoppingChatBot.API.Controllers
 
             return StatusCode(result.StatusCode, result);
         }
+
         [HttpGet]
-        [EndpointSummary("Get all subscriptions with optional filters.")]
+        [EndpointSummary(" Get all subscriptions with optional filters.")]
         [EndpointDescription("Get all subscriptions with optional filters.")]
         public async Task<IActionResult> GetSubscriptions([FromQuery] GetSubscriptionQuery query)
         {
@@ -40,5 +43,28 @@ namespace SmartShoppingChatBot.API.Controllers
                 return StatusCode(result.StatusCode, ApiResponse<BasePaginatedList<SubscriptionResponse>>.Ok(result.Data!, result.Message));
             return StatusCode(result.StatusCode, result);
         }
-    } 
+
+        [HttpPut("{id}")]
+        [EndpointSummary("Admin update an existing subscription.")]
+        public async Task<IActionResult> UpdateSubscription([FromRoute] string id, [FromBody] SubscriptionUpdateCommand command)
+        {
+            command.Id = id;
+            var result = await _mediator.Send(command);
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<SubscriptionResponse>.Ok(result.Data!, result.Message));
+
+            return StatusCode(result.StatusCode, result);
+        }
+
+        [HttpDelete("{id}")]
+        [EndpointSummary("Admin Delete a subscription by ID.")]
+        public async Task<IActionResult> DeleteSubscription([FromRoute] string id)
+        {
+            var command = new DeleteSubscriptionCommand { Id = id };
+            var result = await _mediator.Send(command);
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<string>.Ok(result.Data!, result.Message));
+            return StatusCode(result.StatusCode, result);
+        }
+    }
 }

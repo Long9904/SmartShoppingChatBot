@@ -10,10 +10,15 @@ public class MongoDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
-    public DbSet<Subscription> Subscriptions { get; set; }
+    public DbSet<BusinessSubscription> BusinessSubscriptions { get; set; }
     public DbSet<Payment> Payment { get; set; }
+    public DbSet<BusinessQuota> BusinessQuota { get; set; }
 
     public DbSet<Token> Tokens { get; set; }
+
+    public DbSet<SystemContent> SystemContents { get; set; }
+
+    public DbSet<ApiKey> ApiKeys { get; set; }
 
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
@@ -32,7 +37,11 @@ public class MongoDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Email).IsUnique();
         });
-
+        modelBuilder.Entity<BusinessQuota>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.BusinessSubscriptionId);
+        });
         modelBuilder.Entity<Token>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -43,13 +52,24 @@ public class MongoDbContext : DbContext
             entity.HasKey(e => e.Id);
         });
 
-        modelBuilder.Entity<Subscription>(entity =>
+        modelBuilder.Entity<BusinessSubscription>(entity =>
         {
             entity.HasKey(e => e.Id);
         });
         modelBuilder.Entity<Payment>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<SystemContent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<ApiKey>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.KeyId).IsUnique();
         });
     }
 }

@@ -3,7 +3,6 @@ using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Domain.Commons;
-using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Application.Features.GetAllBusiness
@@ -42,6 +41,7 @@ namespace SmartShoppingChatBot.Application.Features.GetAllBusiness
                 query = query.Where(b => b.CreatedAt >= request.Filter.CreatedFrom.Value);
             }
 
+            query = query.OrderByDescending(b => b.CreatedAt);
 
             var pagingList = await _businessRepository.PaginatedListAsync(
                 query,

@@ -1,12 +1,12 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SmartShoppingChatBot.Infrastructure.Services;
 
