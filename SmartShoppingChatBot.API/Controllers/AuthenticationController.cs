@@ -4,6 +4,7 @@ using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.GetMyProfile;
 using SmartShoppingChatBot.Application.Features.Login;
+using SmartShoppingChatBot.Application.Features.UpdateMyProfile;
 
 namespace SmartShoppingChatBot.API.Controllers;
 
@@ -33,6 +34,15 @@ public class AuthenticationController : ControllerBase
     public async Task<IActionResult> GetMyProfile()
     {
         var result = await _mediator.Send(new GetMyProfileCommand());
+        if (result.IsSuccess)
+            return StatusCode(result.StatusCode, ApiResponse<ProfileResponse>.Ok(result.Data!, result.Message));
+        return StatusCode(result.StatusCode, ApiResponse<ProfileResponse>.Fail(result.Message!, result.Errors));
+    }
+    [HttpPut("update-profile")]
+    [EndpointDescription("Update My Profile")]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileCommand command)
+    {
+        var result = await _mediator.Send(command);
         if (result.IsSuccess)
             return StatusCode(result.StatusCode, ApiResponse<ProfileResponse>.Ok(result.Data!, result.Message));
         return StatusCode(result.StatusCode, ApiResponse<ProfileResponse>.Fail(result.Message!, result.Errors));
