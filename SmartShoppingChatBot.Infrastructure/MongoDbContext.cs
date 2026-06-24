@@ -18,6 +18,8 @@ public class MongoDbContext : DbContext
 
     public DbSet<SystemContent> SystemContents { get; set; }
 
+    public DbSet<ApiKey> ApiKeys { get; set; }
+
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
@@ -62,6 +64,12 @@ public class MongoDbContext : DbContext
         modelBuilder.Entity<SystemContent>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<ApiKey>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.KeyId).IsUnique();
         });
     }
 }

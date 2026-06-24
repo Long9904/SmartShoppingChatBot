@@ -51,11 +51,13 @@ namespace SmartShoppingChatBot.Application.Features.UserManagement.GetAllUser
                 query = query.Where(x => x.UserStatus == request.UserStatus.Value);
             }
 
+            var orderBy = request.OrderBy ?? "BusinessName asc, JoinedAt desc";
+
             var mapperConfig = _mapper.ConfigurationProvider;
 
             var paginatedList = await _userRepository
              .GetAllWithPaggingSortSelectionFieldAsync<User, ProfileResponse>
-             (query, mapperConfig, request.OrderBy, null, request.PageIndex, request.PageSize);
+             (query, mapperConfig, orderBy, null, request.PageIndex, request.PageSize);
 
             return Result<BasePaginatedList<object>>.Success(paginatedList, 200, "Get all user successfully");
         }

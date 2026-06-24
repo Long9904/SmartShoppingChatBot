@@ -16,6 +16,7 @@ public static class InfrastructureDI
 
         // Services
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
+        services.AddSingleton<IHashService, HashService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPasswordService, PasswordService>();
@@ -34,6 +35,7 @@ public static class InfrastructureDI
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<ISystemContentRepository, SystemContentRepository>();
         services.AddScoped<IBusinessQuotaRepository, BusinessQuotaRepository>();
+        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
 
 
         return services;
