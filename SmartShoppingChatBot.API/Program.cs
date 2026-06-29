@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -18,6 +19,17 @@ using SmartShoppingChatBot.Infrastructure.Seeders;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("gemini", c => {
+    c.Timeout = TimeSpan.FromSeconds(30);
+    c.DefaultRequestHeaders.Accept.Add(
+        new MediaTypeWithQualityHeaderValue("application/json"));
+});
+
+builder.Services.AddHttpClient("qwen", c => {
+    c.Timeout = TimeSpan.FromSeconds(30);
+    c.DefaultRequestHeaders.Accept.Add(
+        new MediaTypeWithQualityHeaderValue("application/json"));
+});
 
 // Configure Logging
 builder.Logging.ClearProviders();
@@ -41,11 +53,13 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/keys"))
     .SetApplicationName("SmartShoppingChatBot");
 
-// BusinessEmail settings configuration
+// Settings configuration
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<EmailTokenSettings>(builder.Configuration.GetSection("EmailTokenSettings"));
 builder.Services.Configure<ApiConfigs>(builder.Configuration.GetSection("ApiConfigs"));
+builder.Services.Configure<GoogleConfigs>(builder.Configuration.GetSection("Google"));
+builder.Services.Configure<QwenConfigs>(builder.Configuration.GetSection("Qwen"));
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -162,7 +176,10 @@ builder.Services.AddMassTransit(x =>
 });
 
 
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").GetChildren()
+    .Select(x => x.Value!)
+    .Where(v => !string.IsNullOrEmpty(v))
+    .ToArray();
 
 builder.Services.AddCors(options =>
 {
@@ -177,6 +194,11 @@ builder.Services.AddCors(options =>
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
+
+// Set the environment variable for Google Application Credentials
+Environment.SetEnvironmentVariable(
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    builder.Configuration["Google:CredentialsPath"]);
 
 using var scope = app.Services.CreateScope();
 
@@ -194,7 +216,7 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-
+app.UseCors("AllowSpecificOrigins");
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthentication();
