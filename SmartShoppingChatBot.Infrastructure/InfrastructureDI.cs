@@ -22,6 +22,8 @@ public static class InfrastructureDI
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IGeminiService, GeminiService>();
+        services.AddScoped<IQwenService, QwenService>();
 
         // Seeder
         services.AddScoped<UserSeeder>();
