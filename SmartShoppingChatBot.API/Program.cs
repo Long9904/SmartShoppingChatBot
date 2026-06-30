@@ -1,8 +1,4 @@
-using System.Net.Http.Headers;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using CloudinaryDotNet;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
@@ -15,6 +11,11 @@ using SmartShoppingChatBot.Application.Commons.Behaviors;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Infrastructure;
 using SmartShoppingChatBot.Infrastructure.Seeders;
+using System.Net.Http.Headers;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,7 +63,14 @@ builder.Services.Configure<GoogleConfigs>(builder.Configuration.GetSection("Goog
 builder.Services.Configure<QwenConfigs>(builder.Configuration.GetSection("Qwen"));
 
 builder.Services.AddEndpointsApiExplorer();
+//Cloudinary
+var cloudName = builder.Configuration["Cloudinary:CloudName"];
+var apiKey = builder.Configuration["Cloudinary:ApiKey"];
+var apiSecret = builder.Configuration["Cloudinary:ApiSecret"];
 
+var account = new Account(cloudName, apiKey, apiSecret);
+var cloudinary = new Cloudinary(account);
+builder.Services.AddSingleton<ICloudinary>(sp => cloudinary);
 // Swagger configuration with JWT support
 builder.Services.AddSwaggerGen(c =>
 {

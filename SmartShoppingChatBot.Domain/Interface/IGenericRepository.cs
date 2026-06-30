@@ -28,5 +28,6 @@ public interface IGenericRepository<T> where T : class
     Task<BasePaginatedList<T>> PaginatedListAsync(IQueryable<T> query, int index, int pageSize);
 
     Task<T?> GetByIdAsync(object id);
+    Task AddRangeAsync(IEnumerable<T> entities);
 
 }

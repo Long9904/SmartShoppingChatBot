@@ -125,4 +125,8 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         _dbSet.Update(entity);
         return Task.CompletedTask;
     }
+    public Task AddRangeAsync(IEnumerable<T> entities)
+    {
+        return _dbSet.AddRangeAsync(entities);
+    }
 }
