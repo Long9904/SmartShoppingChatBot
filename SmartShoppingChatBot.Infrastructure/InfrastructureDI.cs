@@ -29,6 +29,7 @@ public static class InfrastructureDI
 
         // Seeder
         services.AddScoped<UserSeeder>();
+        services.AddScoped<SubscriptionSeeder>();
         services.AddScoped<QdrantCollectionInitializer>();
 
         // Repo

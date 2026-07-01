@@ -134,4 +134,14 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
         return _dbSet.AddRangeAsync(entities);
     }
+    public async Task<IList<T>> FilterByAsync(
+    Expression<Func<T, bool>> predicate,
+    Func<IQueryable<T>, IQueryable<T>>? include = null)
+    {
+        IQueryable<T> query = _dbSet;
+        if (include != null)
+            query = include(query);
+
+        return await query.Where(predicate).ToListAsync();
+    }
 }

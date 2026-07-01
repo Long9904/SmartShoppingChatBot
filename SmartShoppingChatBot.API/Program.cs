@@ -235,6 +235,9 @@ using var scope = app.Services.CreateScope();
 var userSeeder = scope.ServiceProvider.GetRequiredService<UserSeeder>();
 await userSeeder.SeedUsersAsync();
 
+var subscriptionSeeder = scope.ServiceProvider.GetRequiredService<SubscriptionSeeder>();
+await subscriptionSeeder.SeedSubscriptionsAsync();
+
 var db = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
 
 await db.Database.EnsureCreatedAsync();
