@@ -29,10 +29,14 @@
     <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.8" />
     <PackageReference Include="MediatR" Version="14.1.0" />
+    <PackageReference Include="Qdrant.Client" Version="1.18.1" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="Credentials\google-credentials.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Prompts\SemanticEmbedding.md">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

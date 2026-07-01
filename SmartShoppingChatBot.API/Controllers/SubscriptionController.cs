@@ -12,6 +12,7 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/subscriptions")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "internal")]
     public class SubscriptionController : ControllerBase
     {
         private readonly IMediator _mediator;

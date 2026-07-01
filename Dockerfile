@@ -33,6 +33,9 @@ COPY --from=publish /app/publish .
 # Copy credentials
 COPY SmartShoppingChatBot.Application/Credentials/google-credentials.json /app/credentials/google-credentials.json
 
+# Prompts
+COPY SmartShoppingChatBot.Application/Prompts/SemanticEmbedding.md /app/prompts/SemanticEmbedding.md
+
 # Expose port
 EXPOSE 80
 EXPOSE 443

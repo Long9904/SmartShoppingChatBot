@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Qdrant.Client;
 using SmartShoppingChatBot.API.Extensions;
 using SmartShoppingChatBot.API.Middlewares;
 using SmartShoppingChatBot.Application;
@@ -20,13 +21,15 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient();
-builder.Services.AddHttpClient("gemini", c => {
+builder.Services.AddHttpClient("gemini", c =>
+{
     c.Timeout = TimeSpan.FromSeconds(30);
     c.DefaultRequestHeaders.Accept.Add(
         new MediaTypeWithQualityHeaderValue("application/json"));
 });
 
-builder.Services.AddHttpClient("qwen", c => {
+builder.Services.AddHttpClient("qwen", c =>
+{
     c.Timeout = TimeSpan.FromSeconds(30);
     c.DefaultRequestHeaders.Accept.Add(
         new MediaTypeWithQualityHeaderValue("application/json"));
@@ -99,7 +102,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
-    c.SwaggerDoc("v1", new OpenApiInfo
+    c.SwaggerDoc("external", new OpenApiInfo
     {
         Title = "Smart Shopping ChatBot API",
         Version = "v1",
@@ -108,6 +111,17 @@ builder.Services.AddSwaggerGen(c =>
                        "- BO: Business Owner\n\n" +
                        "- CT: Catalog Team",
     });
+
+    c.SwaggerDoc("internal", new OpenApiInfo
+    {
+        Title = "Smart Shopping ChatBot Internal API",
+        Version = "v1",
+        Description = "Internal API documentation for Smart Shopping ChatBot\n\n\n" +
+                       "Definition and Acronyms: \n\n" +
+                       "- BO: Business Owner\n\n" +
+                       "- CT: Catalog Team",
+    });
+
 });
 
 // JWT configuration
@@ -184,6 +198,14 @@ builder.Services.AddMassTransit(x =>
 });
 
 
+// Qdrant configuration
+builder.Services.AddSingleton(_ =>
+    new QdrantClient(
+        host: builder.Configuration["Qdrant:Host"] ?? "localhost",
+        port: int.Parse(builder.Configuration["Qdrant:Port"] ?? "6334")
+    ));
+
+
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").GetChildren()
     .Select(x => x.Value!)
     .Where(v => !string.IsNullOrEmpty(v))
@@ -217,8 +239,29 @@ var db = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
 
 await db.Database.EnsureCreatedAsync();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+var qdrantInitializer = scope.ServiceProvider
+    .GetRequiredService<QdrantCollectionInitializer>();
+
+await qdrantInitializer.EnsureAsync();
+
+app.UseSwagger(c =>
+{
+    c.RouteTemplate = "swagger/{documentName}/swagger.json";
+});
+
+app.UseSwaggerUI(c =>
+{
+    c.RoutePrefix = "swagger/internal";
+
+    c.SwaggerEndpoint("/swagger/internal/swagger.json", "Internal API");
+});
+
+app.UseSwaggerUI(c =>
+{
+    c.RoutePrefix = "swagger/external";
+
+    c.SwaggerEndpoint("/swagger/external/swagger.json", "External API");
+});
 
 app.UseHttpsRedirection();
 

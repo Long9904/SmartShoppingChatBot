@@ -16,6 +16,7 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/system-contents")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "internal")]
     public class SystemContentsController : ControllerBase
     {
         private readonly IMediator _mediator;
