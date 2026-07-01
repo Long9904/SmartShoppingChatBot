@@ -24,9 +24,11 @@ public static class InfrastructureDI
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IGeminiService, GeminiService>();
         services.AddScoped<IQwenService, QwenService>();
+        services.AddScoped<IQdrantService, QdrantService>();
 
         // Seeder
         services.AddScoped<UserSeeder>();
+        services.AddScoped<QdrantCollectionInitializer>();
 
         // Repo
         services.AddScoped<IBusinessRepository, BusinessRepository>();
@@ -38,6 +40,7 @@ public static class InfrastructureDI
         services.AddScoped<ISystemContentRepository, SystemContentRepository>();
         services.AddScoped<IBusinessQuotaRepository, BusinessQuotaRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
 
 
         return services;

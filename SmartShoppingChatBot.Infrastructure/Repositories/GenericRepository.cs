@@ -125,4 +125,9 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         _dbSet.Update(entity);
         return Task.CompletedTask;
     }
+
+    public async Task<int> CountAsync(Expression<Func<T, bool>> predicate)
+    {
+        return await _dbSet.CountAsync(predicate);
+    }
 }

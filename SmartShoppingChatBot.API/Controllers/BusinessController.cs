@@ -15,6 +15,7 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/businesses")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "internal")]
     public class BusinessController : ControllerBase
     {
         private readonly IMediator _mediator;
