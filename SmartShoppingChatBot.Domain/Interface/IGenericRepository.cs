@@ -29,4 +29,6 @@ public interface IGenericRepository<T> where T : class
 
     Task<T?> GetByIdAsync(object id);
 
+    Task<int> CountAsync(Expression<Func<T, bool>> predicate);
+
 }

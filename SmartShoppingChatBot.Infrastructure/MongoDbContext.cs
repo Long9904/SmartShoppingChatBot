@@ -20,6 +20,7 @@ public class MongoDbContext : DbContext
 
     public DbSet<ApiKey> ApiKeys { get; set; }
 
+    public DbSet<Product> Products { get; set; }
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
@@ -70,6 +71,12 @@ public class MongoDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.KeyId).IsUnique();
+        });
+
+        modelBuilder.Entity<Product>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.QdrantPointId).IsUnique();
         });
     }
 }

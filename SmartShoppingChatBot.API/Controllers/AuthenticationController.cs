@@ -9,6 +9,7 @@ namespace SmartShoppingChatBot.API.Controllers;
 
 [Route("api/v1/auth")]
 [ApiController]
+[ApiExplorerSettings(GroupName = "internal")]
 public class AuthenticationController : ControllerBase
 {
     private readonly IMediator _mediator;

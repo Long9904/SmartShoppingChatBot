@@ -14,6 +14,7 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/api-keys")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "internal")]
     public class ApiKeysController : ControllerBase
     {
         private readonly IMediator _mediator;

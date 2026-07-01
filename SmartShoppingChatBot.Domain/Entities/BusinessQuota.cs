@@ -17,6 +17,8 @@ namespace SmartShoppingChatBot.Domain.Entities
         // Usage
         public long UsedTokens { get; set; }
         public int UsedMessages { get; set; }
+
+        public int MaxProductAllowed { get; set; }
         // Reset quota day
         public DateTimeOffset ResetDate { get; set; }
 

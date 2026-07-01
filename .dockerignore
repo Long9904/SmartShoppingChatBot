@@ -26,3 +26,5 @@ secrets.json
 **/bin/Release/
 **/obj/Debug/
 **/obj/Release/
+.codex
+docs

@@ -15,6 +15,7 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/catalog-teams")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "internal")]
     public class CatalogTeamsController : ControllerBase
     {
         private readonly IMediator _mediator;
