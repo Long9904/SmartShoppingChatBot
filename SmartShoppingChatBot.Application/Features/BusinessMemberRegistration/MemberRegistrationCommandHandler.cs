@@ -66,6 +66,12 @@ namespace SmartShoppingChatBot.Application.Features.BusinessMemberRegistration
 
             var businessOwner = isUser.Data;
 
+            var emailExists = await _userRepository.FindAsync(u => u.Email == request.Email && u.Business.Id == businessOwner.Business.Id);
+
+            if (emailExists != null)
+            {
+                return Result<BusinessMemberRegistrationResponse>.Failure(409, "Email already exists for this business.");
+            }
 
             var dateNow = _time.GetUtcNow();
 
