@@ -17,6 +17,8 @@ public class Product
 
     public string ExternalId { get; set; } = default!;
 
+    public string ExternalProductUrl { get; set; } = default!;
+
     public string Name { get; set; } = default!;
 
     public string? Description { get; set; }
@@ -87,18 +89,6 @@ public class Product
 
         return string.Join("\n", embeddingText);
     }
-
-
-    public string BuildSearchIntent(string userRequirement)
-    {
-        return $"Người dùng sẽ tìm kiếm sản phẩm này khi cần: \n {userRequirement}";
-    }
-
-    public string BuildUseCase(string usecase)
-    {
-        return $"Phù hợp cho: \n {usecase}";
-    }
-
 }
 
 
