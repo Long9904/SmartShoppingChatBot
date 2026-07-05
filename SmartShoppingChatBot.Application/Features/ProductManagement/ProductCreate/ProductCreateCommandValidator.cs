@@ -16,6 +16,13 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 .NotEmpty().WithMessage("Name is required.")
                 .MaximumLength(200).WithMessage("Name cannot exceed 200 characters.");
 
+            RuleFor(x => x.Description)
+                .NotEmpty().WithMessage("Description is required")
+                .MaximumLength(500).WithMessage("Description cannot exxcedd 200 characrer.");
+
+            RuleFor(x => x.ExternalProductUrl)
+                .NotEmpty().WithMessage("External product url cannot null");
+
             RuleFor(x => x.Price)
                 .GreaterThanOrEqualTo(0).WithMessage("Price must be greater than or equal to 0.");
 
