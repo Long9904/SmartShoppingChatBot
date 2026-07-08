@@ -1,13 +1,7 @@
 ﻿using MassTransit;
 using MediatR;
-using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.Events;
 using SmartShoppingChatBot.Application.Features.DocumentManagement.EmbeddingDocument;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Consumers
 {
@@ -27,14 +21,9 @@ namespace SmartShoppingChatBot.Application.Consumers
                 DocumentId = context.Message.DocumentId,
                 BusinessId = context.Message.BusinessId
             };
-            var result = await _mediator.Send(command);
-            if (result.IsSuccess)
-            {
-                return;
-            }else
-            {
+            var result = await _mediator.Send(command, context.CancellationToken);
+            if (!result.IsSuccess)
                 throw new Exception(result.Message);
-            }
         }
     }
 }

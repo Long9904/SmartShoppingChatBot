@@ -35,7 +35,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         }
 
 
-        public async Task<Result<double[]>> EmbeddingsAsync(string text)
+        public async Task<Result<double[]>> EmbeddingsAsync(string text, string taskType = "RETRIEVAL_QUERY")
         {
             try
             {
@@ -59,7 +59,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                             }
                         }
                     },
-                    taskType = "RETRIEVAL_QUERY",
+                    taskType,
                     outputDimensionality = _config.OutputDimensionality,
                     autoTruncate = true
                 };

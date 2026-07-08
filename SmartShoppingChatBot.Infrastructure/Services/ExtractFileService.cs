@@ -11,6 +11,18 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 {
     public class ExtractFileService : IExtractFileService
     {
+        public Task<string> ExtractMarkdownAsync(Stream stream, string fileType)
+        {
+            var normalizedType = fileType.Trim().TrimStart('.').ToLowerInvariant();
+
+            return normalizedType switch
+            {
+                "docx" => ExtractDocxAsync(stream),
+                "txt" => ExtractTxtAsync(stream),
+                "pdf" => ExtractPdfAsync(stream),
+                _ => throw new NotSupportedException($"Unsupported document type: {fileType}")
+            };
+        }
 
         public async Task<string> ExtractDocxAsync(Stream stream)
         {
@@ -19,7 +31,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             using var document = WordprocessingDocument.Open(stream, false);
 
-            var body = document.MainDocumentPart?.Document.Body;
+            var body = document.MainDocumentPart?.Document?.Body;
             if (body == null) return string.Empty;
 
             var sb = new StringBuilder();
@@ -68,9 +80,19 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             return true;
         }
+
+        public Task<string> ExtractPdfAsync(Stream stream)
+        {
+            throw new NotSupportedException("PDF extraction is not implemented yet.");
+        }
+
         public Task<string> ExtractTxtAsync(Stream stream)
         {
-            throw new NotImplementedException();
+            if (stream.CanSeek)
+                stream.Position = 0;
+
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            return reader.ReadToEndAsync();
         }
     }
 }

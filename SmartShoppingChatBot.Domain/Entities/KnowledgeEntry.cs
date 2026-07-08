@@ -18,6 +18,10 @@ namespace SmartShoppingChatBot.Domain.Entities
         public string QdrantPointId { get; set; } = default!;
 
         public int ChunkIndex { get; set; }
+        public string? SectionId { get; set; }
+        public int? SectionIndex { get; set; }
+        public string? SectionTitle { get; set; }
+        public string? SectionSummary { get; set; }
 
         public string Content { get; set; } = default!;
         public string ContextualContent { get; set; } = default!;
@@ -25,6 +29,8 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public string? HeadingPath { get; set; }
         public int? TokenCount { get; set; }
+        public int? PageStart { get; set; }
+        public int? PageEnd { get; set; }
 
         public string FileName { get; set; } = default!;
         public string SourceType { get; set; } = "knowledge_document";
