@@ -36,6 +36,9 @@
     <None Update="Credentials\google-credentials.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Prompts\DocContextual.md">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Prompts\SemanticEmbedding.md">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

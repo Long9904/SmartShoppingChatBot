@@ -7,6 +7,7 @@ using SmartShoppingChatBot.Application.Interface;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,6 +20,18 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         public CloudinaryService(ICloudinary cloudinary)
         {
             _cloudinary = cloudinary;
+        }
+
+        public async Task<Result<Stream>> DownloadFileAsync(string urlFile)
+        {
+            var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync(urlFile);
+            if (!response.IsSuccessStatusCode)
+            {
+                return Result<Stream>.Failure((int)response.StatusCode, "Cant download file");
+            }
+            var stream = await response.Content.ReadAsStreamAsync();
+            return Result<Stream>.Success(stream);
         }
 
         public async Task<Result<UploadedFileResponse>> UploadFileAsync(IFormFile file, string businessId, string folderName)

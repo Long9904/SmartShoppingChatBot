@@ -9,10 +9,8 @@ namespace SmartShoppingChatBot.Domain.Enums
     public enum KnowledgeDocumentStatus
     {
         Uploaded,
-        Extracting,
-        Chunking,
-        Embedding,
-        Completed,
+        Processing,
+        Embedded,
         Failed
     }
 }

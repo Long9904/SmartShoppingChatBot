@@ -1,7 +1,9 @@
-﻿using MediatR;
+﻿using MassTransit;
+using MediatR;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Events;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
@@ -22,18 +24,20 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
         private readonly IKnowledgeDocumentRepository _repository;
         private readonly ICurrentUserService _currentUserService;
         private readonly IUnitOfWork _unitOfWork;
-
+        private readonly IPublishEndpoint _publisher;
 
         public UploadDocCommandHandler(
             ICloudinaryService cloudinaryService,
             IKnowledgeDocumentRepository repository,
             ICurrentUserService currentUserService,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IPublishEndpoint publisher)
         {
             _cloudinaryService = cloudinaryService;
             _repository = repository;
             _currentUserService = currentUserService;
             _unitOfWork = unitOfWork;
+            _publisher = publisher;
         }
 
 
@@ -52,9 +56,11 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
             {
                 return Result<BasePaginatedList<UploadedKnowledgeDocResponse>>.Failure(400, "No files were uploaded");
             }
+            // Limit the number of concurrent uploads to 5
             var semaphore = new SemaphoreSlim(5);
-            var responseList = new List<UploadedKnowledgeDocResponse>();
+            var responseList = new ConcurrentBag<UploadedKnowledgeDocResponse>();
             var documents = new ConcurrentBag<KnowledgeDocument>();
+            // Process each file upload concurrently
             var task = request.Files.Select(async file =>
             {
                 await semaphore.WaitAsync(cancellationToken);
@@ -116,18 +122,28 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
 
             if (documents.Count > 0)
             {
-                await _repository.AddRangeAsync(documents.ToList());
+                var documentsList = documents.ToList();
+                await _repository.AddRangeAsync(documentsList);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                // Publish events for each uploaded document
+                foreach (var doc in documentsList)
+                {
+                    await _publisher.Publish(new DocumentUploadedEvent
+                    {
+                        DocumentId = doc.Id.ToString(),
+                        BusinessId = doc.BusinessId.ToString(),
+                    },cancellationToken);
+                }
             }
-            var orderFail = responseList.OrderBy(r => r.Status == Domain.Enums.KnowledgeDocumentStatus.Failed).ToList();
+            var items = responseList.OrderBy(r => r.Status == KnowledgeDocumentStatus.Failed).ToList();
 
             return Result<BasePaginatedList<UploadedKnowledgeDocResponse>>.Success(new BasePaginatedList<UploadedKnowledgeDocResponse>
             {
-                Items = responseList,
-                TotalItems = responseList.Count,
+                Items = items,
+                TotalItems = items.Count,
                 TotalPages = 1,
                 PageIndex = 1,
-                PageSize = responseList.Count
+                PageSize = items.Count
             }, 201, "Upload document successfully");
         } 
        

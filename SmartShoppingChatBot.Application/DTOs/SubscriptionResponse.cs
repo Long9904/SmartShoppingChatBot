@@ -1,4 +1,6 @@
-﻿namespace SmartShoppingChatBot.Application.DTOs
+﻿using SmartShoppingChatBot.Domain.Enums;
+
+namespace SmartShoppingChatBot.Application.DTOs
 {
     public class SubscriptionResponse
     {
@@ -11,5 +13,6 @@
         public int MessageLimit { get; set; }
         public int MaxProductAllowed { get; set; }
         public int MaxDocumentAllowed { get; set; }
+        public StatusEnums Status { get; set; }
     }
 }

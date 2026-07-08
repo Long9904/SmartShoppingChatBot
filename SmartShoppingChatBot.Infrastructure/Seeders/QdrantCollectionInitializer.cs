@@ -31,7 +31,16 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 }, ct);
 
             // Ensure other collections if needed
-
+            await _qdrantService.EnsureCollectionAsync(
+                QdrantCollections.Documents,
+                new VectorParamsMap
+                {
+                    Map =
+                    {
+                    [DocumentVectorNames.DocumentTechnical] = NewVectorParams(),
+                    [DocumentVectorNames.SemanticSearch] = NewVectorParams(),
+                    }
+                }, ct);
 
         }
 

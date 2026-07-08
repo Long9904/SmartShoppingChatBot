@@ -1,0 +1,18 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SmartShoppingChatBot.Application.DTOs
+{
+    public class MarkdownChunkResult
+    {
+        public int ChunkIndex { get; set; }
+        public string Content { get; set; } = default!;
+        public string ContextualContent { get; set; } = default!;
+        public string EmbeddingText { get; set; } = default!;
+        public string? HeadingPath { get; set; }
+        public int? TokenCount { get; set; }
+    }
+}
