@@ -32,8 +32,9 @@ namespace SmartShoppingChatBot.API.Controllers
         {
             var result = await _mediator.Send(command);
             if (result.IsSuccess)
-                return StatusCode(result.StatusCode, ApiResponse<CreateApiKeyResponse>.Ok(result.Data!, result.Message));
-            return StatusCode(result.StatusCode, ApiResponse<CreateApiKeyResponse>.Fail(result.Message!, result.Errors));
+                return StatusCode(result.StatusCode, ApiResponse<CreateApiKeyResponse>.Ok(result.Data!, result.Message, result.MessageCode));
+
+            return StatusCode(result.StatusCode, ApiResponse<CreateApiKeyResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
         }
 
 

@@ -98,7 +98,7 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.CreateNewKe
                 CreatedAt = apiKey.CreatedAt,
             };
 
-            return Result<CreateApiKeyResponse>.Success(response, 201, "API key created successfully.");
+            return Result<CreateApiKeyResponse>.Success(response, 201, "API key tạo thành công", "MG_APIKEY_201");
         }
 
 
