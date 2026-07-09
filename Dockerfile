@@ -35,6 +35,7 @@ COPY SmartShoppingChatBot.Application/Credentials/google-credentials.json /app/c
 
 # Prompts
 COPY SmartShoppingChatBot.Application/Prompts/SemanticEmbedding.md /app/prompts/SemanticEmbedding.md
+COPY SmartShoppingChatBot.Application/Prompts/SectionSummary.md /app/prompts/SectionSummary.md
 
 # Expose port
 EXPOSE 80

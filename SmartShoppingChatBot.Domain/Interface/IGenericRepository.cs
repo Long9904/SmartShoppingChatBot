@@ -28,7 +28,8 @@ public interface IGenericRepository<T> where T : class
     Task<BasePaginatedList<T>> PaginatedListAsync(IQueryable<T> query, int index, int pageSize);
 
     Task<T?> GetByIdAsync(object id);
-
+    Task AddRangeAsync(IEnumerable<T> entities);
+    Task<IList<T>> FilterByAsync(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<T>>? include = null);
     Task<int> CountAsync(Expression<Func<T, bool>> predicate);
 
 }

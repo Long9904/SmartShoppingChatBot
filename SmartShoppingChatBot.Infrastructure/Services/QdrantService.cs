@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Interface;
