@@ -3,6 +3,7 @@ using MediatR;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.EnumMessageCode;
 using SmartShoppingChatBot.Application.Events;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
@@ -54,7 +55,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
 
             if (request.Files == null || request.Files.Count == 0)
             {
-                return Result<BasePaginatedList<UploadedKnowledgeDocResponse>>.Failure(400, "No files were uploaded");
+                return Result<BasePaginatedList<UploadedKnowledgeDocResponse>>.Failure(500, "No files were uploaded", null,DocumentMessageCode.UploadFailed);
             }
             // Limit the number of concurrent uploads to 5
             var semaphore = new SemaphoreSlim(5);

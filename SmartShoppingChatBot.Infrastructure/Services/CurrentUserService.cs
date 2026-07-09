@@ -31,24 +31,24 @@ public class CurrentUserService : ICurrentUserService
 
         if (businessId == null)
         {
-            return Result<Business>.Failure(401, "Token is invalid.");
+            return Result<Business>.Failure(401, "Token is invalid", messageCode: "MG_AUTH_401");
         }
 
         var isValidId = ObjectId.TryParse(businessId, out var objectId);
         if (!isValidId)
         {
-            return Result<Business>.Failure(401, "Token is invalid.");
+            return Result<Business>.Failure(401, "Token is invalid", messageCode: "MG_AUTH_401");
         }
         var business = await _businessRepository.FindAsync(b => b.Id == objectId);
         if (business == null)
         {
-            return Result<Business>.Failure(404, "Business not found.");
+            return Result<Business>.Failure(404, "Business not found", messageCode: "MG_AUTH_401");
         }
 
         return business.BusinessStatus switch
         {
-            BusinessEnums.ACTIVE => Result<Business>.Success(business, 200, "Business retrieved successfully."),
-            BusinessEnums.PENDING_APPROVAL => Result<Business>.Failure(403, "Business is pending approval."),
+            BusinessEnums.ACTIVE => Result<Business>.Success(business, 200, "Get business success", "MG_BUSINESS_200"),
+            BusinessEnums.PENDING_APPROVAL => Result<Business>.Failure(403, "Business is waiting to approve", messageCode: "MG_AUTH_401"),
             BusinessEnums.REJECTED => Result<Business>.Failure(403, "Business is rejected."),
             BusinessEnums.DELETED => Result<Business>.Failure(403, "Business is deleted."),
             _ => Result<Business>.Failure(401, "Token is invalid.")

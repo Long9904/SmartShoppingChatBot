@@ -18,7 +18,38 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var currentLevel = 1;
             var currentTitle = "Document";
             var currentHeadingPath = currentTitle;
+            
+            //=========
+            //start processing lines
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.Trim();  
 
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+                //check heading 
+                if (IsMarkdownHeading(line, out var level, out var title))
+                {
+                    Flush();
+
+                    headingStack[level] = title;
+
+                    foreach (var key in headingStack.Keys.Where(k => k > level).ToList())
+                        headingStack.Remove(key);
+
+                    currentLevel = level;
+                    currentTitle = title;
+                    //1# > 2## > 3### 
+                    currentHeadingPath = string.Join(" > ",headingStack.OrderBy(x => x.Key).Select(x => x.Value));
+                    continue;
+                }
+
+                currentContent.AppendLine(line);
+            }
+
+            Flush();
+
+            //when match new heading, flush the current content to a new section
             void Flush()
             {
                 var content = currentContent.ToString().Trim();
@@ -39,36 +70,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
                 currentContent.Clear();
             }
-
-            foreach (var rawLine in lines)
-            {
-                var line = rawLine.Trim();
-
-                if (string.IsNullOrWhiteSpace(line))
-                    continue;
-
-                if (IsMarkdownHeading(line, out var level, out var title))
-                {
-                    Flush();
-
-                    headingStack[level] = title;
-
-                    foreach (var key in headingStack.Keys.Where(k => k > level).ToList())
-                        headingStack.Remove(key);
-
-                    currentLevel = level;
-                    currentTitle = title;
-                    currentHeadingPath = string.Join(" > ",
-                        headingStack.OrderBy(x => x.Key).Select(x => x.Value));
-
-                    continue;
-                }
-
-                currentContent.AppendLine(line);
-            }
-
-            Flush();
-
             return await Task.FromResult(sections);
         }
 
@@ -80,13 +81,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             int maxCharsPerChunk = 1800)
         {
             var entries = new List<KnowledgeEntry>();
-
+            //scan each section
             foreach (var section in sections)
             {
                 var content = new StringBuilder();
-
+                //flush content to entries 
                 void Flush()
-                {
+                 {
                     var chunkContent = content.ToString().Trim();
 
                     if (string.IsNullOrWhiteSpace(chunkContent))
@@ -105,7 +106,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         BusinessId = businessId,
                         DocumentId = documentId,
 
-                        QdrantPointId = Guid.NewGuid().ToString(),
+                        QdrantPointId = CreateDeterministicPointId(documentId, entries.Count),
                         ChunkIndex = entries.Count,
 
                         SectionId = section.SectionId,
@@ -170,6 +171,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             return await ChunkSectionsAsync(sections, fileName, businessId, documentId, maxCharsPerChunk);
         }
 
+        //Note: Check Markdown
         private bool IsMarkdownHeading(string line, out int level, out string title)
         {
             level = 0;
@@ -199,10 +201,44 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
         private static IEnumerable<string> SplitLongText(string text, int maxChars)
         {
-            for (var i = 0; i < text.Length; i += maxChars)
+            if (maxChars <= 0)
+                yield break;
+
+            var remaining = text.Trim();
+
+            while (remaining.Length > maxChars)
             {
-                yield return text.Substring(i, Math.Min(maxChars, text.Length - i));
+                // Find the nearest split index
+                var splitIndex = FindNearestSplitIndex(remaining, maxChars);
+                var chunkLength = splitIndex > 0 ? splitIndex : maxChars;
+                var chunk = remaining[..chunkLength].Trim();
+
+                if (!string.IsNullOrWhiteSpace(chunk))
+                    yield return chunk;
+
+                remaining = remaining[chunkLength..].TrimStart();
             }
+
+            if (!string.IsNullOrWhiteSpace(remaining))
+                yield return remaining;
+        }
+
+        private static int FindNearestSplitIndex(string text, int maxChars)
+        {
+            var limit = Math.Min(maxChars, text.Length);
+
+            for (var i = limit - 1; i >= 0; i--)
+            {
+                if (IsChunkDelimiter(text[i]))//check ". ! ? \n ;"
+                    return i + 1;
+            }
+
+            return -1;
+        }
+
+        private static bool IsChunkDelimiter(char character)
+        {
+            return character is '.' or '!' or '?' or '\n' or ';';
         }
 
         private static string BuildSectionSummary(string content)
@@ -221,6 +257,16 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 return 0;
 
             return (int)Math.Ceiling(text.Length / 4.0);
+        }
+        private static string CreateDeterministicPointId(ObjectId documentId, int chunkIndex)
+        {
+            var input = Encoding.UTF8.GetBytes($"{documentId}:{chunkIndex}");
+            var hash = System.Security.Cryptography.MD5.HashData(input);
+
+            hash[6] = (byte)((hash[6] & 0x0F) | 0x30);
+            hash[8] = (byte)((hash[8] & 0x3F) | 0x80);
+
+            return new Guid(hash).ToString();
         }
     }
 }

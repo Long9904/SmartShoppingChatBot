@@ -3,11 +3,13 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Commons.Results;
+using SmartShoppingChatBot.Application.EnumMessageCode;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 using SmartShoppingChatBot.Domain.QdrantConfig;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SmartShoppingChatBot.Application.Features.DocumentManagement.EmbeddingDocument
 {
@@ -52,27 +54,28 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
 
         public async Task<Result<string>> Handle(EmbeddingDocumentCommand request, CancellationToken cancellationToken)
         {
+            //parse id request to ObjectId
             if (!ObjectId.TryParse(request.BusinessId, out var businessId) ||
                 !ObjectId.TryParse(request.DocumentId, out var documentId))
             {
-                return Result<string>.Failure(400, "Invalid business or document id.");
+                return Result<string>.Failure(400, "Invalid business or document id.",null,DocumentMessageCode.Invalid);
             }
-
+            //check business 
             var business = await _businessRepository.FindAsync(x =>
                 x.Id == businessId &&
                 x.BusinessStatus == Domain.Enums.BusinessEnums.ACTIVE);
 
             if (business == null)
-                return Result<string>.Failure(404, "Business not found.");
-
+                return Result<string>.Failure(404, "Business not found.",null,DocumentMessageCode.NotFound);
+            //check document
             var document = await _knowledgeDocumentRepository.FindAsync(x =>
                 x.Id == documentId &&
                 x.BusinessId == business.Id &&
                 x.Status == KnowledgeDocumentStatus.Uploaded);
 
             if (document == null)
-                return Result<string>.Failure(404, "Uploaded document not found.");
-
+                return Result<string>.Failure(404, "Uploaded document not found.",null,DocumentMessageCode.NotFound);
+            //update document processing 
             document.Status = KnowledgeDocumentStatus.Processing;
             document.ErrorMessage = null;
             document.ProcessedAt = DateTimeOffset.UtcNow;
@@ -80,17 +83,28 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
 
             try
             {
+                //download doc form cloudinary
                 var downloadDoc = await _cloudinaryService.DownloadFileAsync(document.FileUrl);
                 if (!downloadDoc.IsSuccess || downloadDoc.Data == null)
                     throw new InvalidOperationException(downloadDoc.Message ?? "Could not download document.");
-
+                //excute extract markdown from doc
                 using var stream = downloadDoc.Data;
                 var markdown = await _extractFileService.ExtractMarkdownAsync(stream, document.Type);
 
                 if (string.IsNullOrWhiteSpace(markdown))
                     throw new InvalidOperationException("Document content is empty after extraction.");
-
+                //cut markdown by heading(create object of this heading)
                 var sections = await _chunkService.SplitMarkdownByHeadingAsync(markdown);
+                
+                foreach (var section in sections)
+                {
+                    var embeddingText = await GenerateSectionSummaryAsync(section.MarkdownContent);
+                    if (string.IsNullOrWhiteSpace(embeddingText.Data))
+                        continue;
+                    //llm summarize each section to get summary
+                    section.SectionSummary = embeddingText.Data;
+                }
+                //cut section to chunk
                 var entries = await _chunkService.ChunkSectionsAsync(
                     sections,
                     document.FileName,
@@ -104,25 +118,39 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
 
                 foreach (var entry in entries)
                 {
-                    var vector = await _geminiService.EmbeddingsAsync(entry.EmbeddingText, DocumentEmbeddingTaskType);
-                    if (!vector.IsSuccess || vector.Data == null)
-                        throw new InvalidOperationException(vector.Message ?? "Failed to generate document embedding.");
+                    //generate embedding for each chunk
+                    var technicalVector = await _geminiService.EmbeddingsAsync(entry.EmbeddingText, DocumentEmbeddingTaskType);
+                    if (!technicalVector.IsSuccess || technicalVector.Data == null)
+                        throw new InvalidOperationException(technicalVector.Message ?? "Failed to generate document embedding.");
 
-                    points.Add(BuildQdrantPoint(entry, vector.Data));
+                    var semanticText = BuildDocumentSemanticSearchText(entry);
+                    var semanticVector = await _geminiService.EmbeddingsAsync(semanticText,DocumentEmbeddingTaskType);
+                    if(!semanticVector.IsSuccess || semanticVector.Data == null)
+                        throw new InvalidOperationException(semanticVector.Message ?? "Failed to generate semantic embedding.");
+                    //create point for qdrant
+                    points.Add(BuildQdrantPoint(entry, technicalVector.Data, semanticVector.Data));
                 }
+           
+                //save entries to mongo
+                await _knowledgeEntryRepository.AddRangeAsync(entries);
+                //update document status
+                document.ChunkCount = entries.Count;
+                document.Status = KnowledgeDocumentStatus.Processing;
+                document.ErrorMessage = null;
+                document.ProcessedAt = DateTimeOffset.UtcNow;
+                await _knowledgeDocumentRepository.UpdateAsync(document);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+                //upsert points to qdrant collection
                 await _qdrantService.UpsertAsync(
                     QdrantCollections.Documents,
                     points,
                     cancellationToken);
 
-                await _knowledgeEntryRepository.AddRangeAsync(entries);
-
-                document.ChunkCount = entries.Count;
+                //update document status to embedded
                 document.Status = KnowledgeDocumentStatus.Embedded;
-                document.ErrorMessage = null;
                 document.ProcessedAt = DateTimeOffset.UtcNow;
-
+                await _knowledgeDocumentRepository.UpdateAsync(document);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result<string>.Success(
@@ -133,17 +161,18 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to embed document {DocumentId}", document.Id);
-
+                await _knowledgeEntryRepository.DeleteAsync(document.Id);
                 document.Status = KnowledgeDocumentStatus.Failed;
                 document.ErrorMessage = ex.Message;
                 document.ProcessedAt = DateTimeOffset.UtcNow;
+                await _knowledgeDocumentRepository.UpdateAsync(document);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result<string>.Failure(400, ex.Message);
             }
         }
 
-        private static PointStruct BuildQdrantPoint(KnowledgeEntry entry, IEnumerable<double> vector)
+        private static PointStruct BuildQdrantPoint(KnowledgeEntry entry, IEnumerable<double> vector, IEnumerable<double> semanticVector)
         {
             var point = new PointStruct
             {
@@ -154,7 +183,8 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                     {
                         Vectors =
                         {
-                            [DocumentVectorNames.DocumentTechnical] = ToQdrantDenseVector(vector)
+                            [DocumentVectorNames.DocumentTechnical] = ToQdrantDenseVector(vector),
+                            [DocumentVectorNames.SemanticSearch] = ToQdrantDenseVector(semanticVector)
                         }
                     }
                 },
@@ -183,7 +213,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
 
             return point;
         }
-
+        //convert double to vector
         private static Vector ToQdrantDenseVector(IEnumerable<double> values)
         {
             var denseVector = new DenseVector();
@@ -194,7 +224,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 Dense = denseVector
             };
         }
-
+        // Truncate the payload value to a maximum length
         private static string TruncatePayload(string value, int maxLength)
         {
             if (value.Length <= maxLength)
@@ -202,5 +232,51 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
 
             return value[..maxLength];
         }
+        private static string BuildDocumentSemanticSearchText(KnowledgeEntry entry)
+        {
+            return $"""
+                    Tài liệu: {entry.FileName}
+                    Mục: {entry.HeadingPath}
+                    Tóm tắt: {entry.SectionSummary}
+
+                    Nội dung:
+                    {entry.Content}
+                    """;
+        }
+        private async Task<Result<string>> GenerateSectionSummaryAsync(string embeddingText)
+        {
+            var systemPrompt = await File.ReadAllTextAsync("prompts/SectionSummary.md");
+
+            var prompt = systemPrompt + $"\n\ndocument data: \n{embeddingText}";
+            try
+            {
+                var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
+                if (response.IsSuccess)
+                {
+                    _logger.LogInformation($"Data generated using QwenService: {response.Data}");
+                    return Result<string>.Success(response.Data);
+                }
+                else
+                {
+                    var fallbackResponse = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
+                    return Result<string>.Success(fallbackResponse.Data);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate semantic search text using QwenService. Falling back to GeminiService.");
+
+                var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
+                if (!response.IsSuccess)
+                {
+                    _logger.LogError("GeminiService also failed to generate semantic search text.");
+                    return Result<string>.Failure(500, "Failed to generate semantic search text using both QwenService and GeminiService.");
+                }
+
+                return Result<string>.Success(response.Data);
+            }
+        }
+
     }
 }

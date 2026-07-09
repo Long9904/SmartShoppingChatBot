@@ -11,6 +11,8 @@ public class UpdateBusinessMemberCommand : IRequest<Result<ProfileResponse>>
     [JsonIgnore]
     public ObjectId MemberId { get; set; }
     public string FullName { get; init; } = string.Empty;
+
+    public string Email { get; init; } = string.Empty;
     public string? PhoneNumber { get; init; }
     public DateTime? DateOfBirth { get; init; }
     public int? Gender { get; init; }

@@ -63,30 +63,31 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
 
             if (existingProduct != null)
             {
-                return Result<ProductResponse>.Failure(409, "A product with the same external ID already exists.");
+                return Result<ProductResponse>.Failure(409, "Id của sản phẫm tồn tại");
             }
 
 
             var businessQuota = await _businessQuotaRepository.FindAsync(b => b.BusinessId == business.Data.Id);
             if (businessQuota == null) 
-                return Result<ProductResponse>.Failure(404, "Business quota not found.");
+                return Result<ProductResponse>.Failure(404, "Hạn mức của doanh nghiệp không thể tìm thấy");
 
             var productCount = await _productRepository.CountAsync(p => p.BusinessId == business.Data.Id && p.Status != ProductStatus.Deleted);
 
             if (productCount >= businessQuota.MaxProductAllowed)
             {
-                return Result<ProductResponse>.Failure(400, "Product limit reached for this business.");
+                return Result<ProductResponse>.Failure(400, "Doanh nghiệp đã đạt tới giới hạn tạo sản phẩm");
             }
 
             var pointId = Guid.NewGuid();
             var dateNow = _time.GetUtcNow();
             var productId = ObjectId.GenerateNewId();
-
+             
             var product = new Product
             {
                 Id = productId,
                 BusinessId = business.Data!.Id,
                 ExternalId = request.ExternalId,
+                ExternalProductUrl = request.ExternalProductUrl,
                 Name = request.Name,
                 Description = request.Description,
                 Price = request.Price,
@@ -148,15 +149,15 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                     CreatedAt = product.CreatedAt,
                     Metadata = product.Metadata
                 },
-                message: "Product created successfully."
+                message: "Sản phẩm được tạo thành công"
                 );
 
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while creating product.");
+                _logger.LogError(ex, "Lỗi xảy ra trong quá trình lưu sản phẩm");
                 await _unitOfWork.RollBackAsync();
-                return Result<ProductResponse>.Failure(500, "An error occurred while creating the product.");
+                return Result<ProductResponse>.Failure(500, "Lỗi server");
             }
         }
 
