@@ -21,6 +21,6 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
         public long TokenLimit { get; set; }
         public int MessageLimit { get; set; }
         public int MaxProductAllowed { get; set; }
-
+        public int MaxDocumentAllowed { get; set; }
     }
 }

@@ -213,7 +213,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                             MessageLimit = subscriptionPlan.MessageLimit,
                             ResetDate = now.AddDays(subscriptionPlan.Duration),
                             UsedMessages = 0,
-                            UsedTokens = 0
+                            UsedTokens = 0,
+                            MaxProductAllowed = subscriptionPlan.MaxProductAllowed
                         };
 
                         existingPayment.Status = PaymentEnums.Completed;
@@ -300,7 +301,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 MessageLimit = subscriptionPlan.MessageLimit,
                 ResetDate = now.AddDays(subscriptionPlan.Duration),
                 UsedMessages = 0,
-                UsedTokens = 0
+                UsedTokens = 0,
+                MaxProductAllowed = subscriptionPlan.MaxProductAllowed
             };
 
             await _unitOfWork.BeginTransactionAsync();

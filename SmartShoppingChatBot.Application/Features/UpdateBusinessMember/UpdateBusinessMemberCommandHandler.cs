@@ -74,6 +74,7 @@ public class UpdateBusinessMemberCommandHandler : IRequestHandler<UpdateBusiness
         member.DateOfBirth = request.DateOfBirth;
         member.Gender = request.Gender;
         member.UpdatedAt = _time.GetUtcNow();
+        member.Email = request.Email.Trim();
         member.UpdatedBy = new UserEmbedded
         {
             Id = currentUserResult.Data!.Id,

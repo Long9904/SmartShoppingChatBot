@@ -6,6 +6,6 @@ namespace SmartShoppingChatBot.Application.Interface
     {
         Task<Result<string>> GenerateTextAsync(string prompt, int maxTokens, double temperature);
 
-        Task<Result<double[]>> EmbeddingsAsync(string text);
+        Task<Result<double[]>> EmbeddingsAsync(string text, string taskType = "RETRIEVAL_QUERY");
     }
 }

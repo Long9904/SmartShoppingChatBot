@@ -86,6 +86,11 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
                 existingSubscription.MaxProductAllowed = request.MaxProductAllowed;
                 isUpdate = true;
             }
+            if(request.MaxDocumentAllowed >= 0 && existingSubscription.MaxDocumentAllowed != request.MaxDocumentAllowed)
+            {
+                existingSubscription.MaxDocumentAllowed = request.MaxDocumentAllowed;
+                isUpdate = true;
+            }
             if (!isUpdate)
             {
                 return Result<SubscriptionResponse>.Success(_mapper.Map<SubscriptionResponse>(existingSubscription), 200, "No changes to update.");

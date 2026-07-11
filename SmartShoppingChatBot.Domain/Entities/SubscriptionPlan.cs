@@ -21,7 +21,7 @@ namespace SmartShoppingChatBot.Domain.Entities
         public long TokenLimit { get; set; } = 0;
         public int MessageLimit { get; set; } = 0;
         public int MaxProductAllowed { get; set; } = 0;
-
+        public int MaxDocumentAllowed { get; set; } = 0;
 
     }
 }

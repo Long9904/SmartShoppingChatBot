@@ -30,8 +30,10 @@ WORKDIR /app
 # Copy published application
 COPY --from=publish /app/publish .
 
-# Copy credentials
-COPY SmartShoppingChatBot.Application/Credentials/google-credentials.json /app/credentials/google-credentials.json
+
+# Prompts
+COPY SmartShoppingChatBot.Application/Prompts/SemanticEmbedding.md /app/prompts/SemanticEmbedding.md
+COPY SmartShoppingChatBot.Application/Prompts/SectionSummary.md /app/prompts/SectionSummary.md
 
 # Expose port
 EXPOSE 80

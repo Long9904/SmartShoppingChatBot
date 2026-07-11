@@ -6,6 +6,7 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/ai-test")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "internal")]
     public class TestAIController : ControllerBase
     {
         private readonly IGeminiService _service;

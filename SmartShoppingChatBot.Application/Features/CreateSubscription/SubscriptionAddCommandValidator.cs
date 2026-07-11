@@ -23,6 +23,8 @@ namespace SmartShoppingChatBot.Application.Features.CreateSubscription
                 .GreaterThan(0).WithMessage("Message limit must be greater than 0.");
             RuleFor(x => x.MaxProductAllowed)
                 .GreaterThan(0).WithMessage("Max product allowed must be greater than 0.");
+            RuleFor(x => x.MaxDocmentAllowed)
+                .GreaterThan(0).WithMessage("Max document allowed must be greater than 0.");
         }
     }
 }
