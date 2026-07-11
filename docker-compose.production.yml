@@ -19,7 +19,7 @@ services:
         condition: service_healthy
 
       qdrant:
-        condition: service_healthy
+        condition: service_started
 
     volumes:
       - dataprotection_keys:/keys
@@ -89,12 +89,6 @@ services:
 
     volumes:
       - qdrant_storage:/qdrant/storage
-
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
     networks:
       - lunar_network
