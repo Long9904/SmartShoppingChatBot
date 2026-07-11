@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/Long9904/smartshoppingchatbot-api:latest
+    image: ghcr.io/long9904/smartshoppingchatbot-api:latest
     container_name: smartshoppingchatbot-api
 
     restart: unless-stopped
