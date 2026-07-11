@@ -2,8 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
@@ -14,8 +13,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Convert owner to lowercase
+        id: owner
+        run: |
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Login GHCR
         uses: docker/login-action@v3
@@ -24,12 +27,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Image
+      - name: Build
         run: |
           docker build \
-            -t ghcr.io/${{ github.repository_owner }}/smartshoppingchatbot-api:latest \
+            -t ghcr.io/${{ steps.owner.outputs.owner }}/smartshoppingchatbot-api:latest \
             .
 
-      - name: Push Image
+      - name: Push
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/smartshoppingchatbot-api:latest
+          docker push ghcr.io/${{ steps.owner.outputs.owner }}/smartshoppingchatbot-api:latest
