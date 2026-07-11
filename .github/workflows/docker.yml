@@ -36,3 +36,15 @@ jobs:
       - name: Push
         run: |
           docker push ghcr.io/${{ steps.owner.outputs.owner }}/smartshoppingchatbot-api:latest
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/lunar
+            docker compose -f docker-compose.production.yml pull
+            docker compose -f docker-compose.production.yml up -d
+            docker image prune -f
