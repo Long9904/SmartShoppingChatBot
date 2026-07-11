@@ -1,0 +1,113 @@
+services:
+  api:
+    image: ghcr.io/Long9904/smartshoppingchatbot-api:latest
+    container_name: smartshoppingchatbot-api
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    ports:
+      - "5000:80"
+
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+      qdrant:
+        condition: service_healthy
+
+    volumes:
+      - dataprotection_keys:/keys
+
+      - ./credentials/google-credentials.json:/app/credentials/google-credentials.json:ro
+
+    networks:
+      - lunar_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+    networks:
+      - lunar_network
+
+  redis:
+    image: redis:7
+    container_name: redis
+
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - lunar_network
+
+  qdrant:
+    image: qdrant/qdrant:v1.15.5
+    container_name: qdrant
+
+    restart: unless-stopped
+
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - lunar_network
+
+volumes:
+  rabbitmq_data:
+
+  redis_data:
+
+  qdrant_storage:
+
+  dataprotection_keys:
+
+networks:
+  lunar_network:
+    driver: bridge
