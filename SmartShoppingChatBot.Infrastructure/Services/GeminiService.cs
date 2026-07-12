@@ -100,7 +100,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error generating embeddings from Gemini API");
-                return Result<double[]>.Failure(500, "Error generating embeddings from Gemini API");
+                return Result<double[]>.Failure(500, "Error generating embeddings from Gemini API", messageCode: "MG_SERVER_500");
             }
         }
 
@@ -199,7 +199,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 // Other options:
                 // 1. Handle with other recall
                 // 2. Call other LLM API
-                return Result<string>.Failure(500, "Error generating text from Gemini API");
+                return Result<string>.Failure(500, "Error generating text from Gemini API", messageCode: "MG_SERVER_500");
             }
         }
     }

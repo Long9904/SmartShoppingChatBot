@@ -15,11 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\CreateSystemContent\" />
-    <Folder Include="Features\DeleteSystemContent\" />
-    <Folder Include="Features\GetSystemContentByKey\" />
-    <Folder Include="Features\GetSystemContentById\" />
-    <Folder Include="Features\UpdateSystemContent\" />
+    <Folder Include="Features\SystemContentManagement\CreateSystemContent\" />
+    <Folder Include="Features\SystemContentManagement\DeleteSystemContent\" />
+    <Folder Include="Features\SystemContentManagement\GetSystemContentByKey\" />
+    <Folder Include="Features\SystemContentManagement\GetSystemContentById\" />
+    <Folder Include="Features\SystemContentManagement\UpdateSystemContent\" />
     <Folder Include="Plugins\" />
   </ItemGroup>
 
@@ -27,6 +27,7 @@
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
+    <PackageReference Include="Google.Cloud.AIPlatform.V1" Version="3.72.0" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.8" />
     <PackageReference Include="MediatR" Version="14.1.0" />
     <PackageReference Include="Qdrant.Client" Version="1.18.1" />
