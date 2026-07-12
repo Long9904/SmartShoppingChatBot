@@ -98,7 +98,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error generating text from Qwen API");
 
-                return Result<string>.Failure(500, "Error generating text from Qwen: " + ex.Message);
+                return Result<string>.Failure(500, "Error generating text from Qwen: " + ex.Message, messageCode: "MG_SERVER_500");
             }
         }
     }

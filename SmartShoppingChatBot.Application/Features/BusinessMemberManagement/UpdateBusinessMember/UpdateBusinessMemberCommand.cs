@@ -1,0 +1,19 @@
+using MediatR;
+using MongoDB.Bson;
+using SmartShoppingChatBot.Application.Commons.Results;
+using SmartShoppingChatBot.Application.DTOs;
+using System.Text.Json.Serialization;
+
+namespace SmartShoppingChatBot.Application.Features.BusinessMemberManagement.UpdateBusinessMember;
+
+public class UpdateBusinessMemberCommand : IRequest<Result<ProfileResponse>>
+{
+    [JsonIgnore]
+    public ObjectId MemberId { get; set; }
+    public string FullName { get; init; } = string.Empty;
+
+    public string Email { get; init; } = string.Empty;
+    public string? PhoneNumber { get; init; }
+    public DateTime? DateOfBirth { get; init; }
+    public int? Gender { get; init; }
+}

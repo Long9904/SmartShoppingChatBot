@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Features.BusinessMemberRegistration;
-using SmartShoppingChatBot.Application.Features.DeleteBusinessMember;
-using SmartShoppingChatBot.Application.Features.GetAllBusinessMember;
-using SmartShoppingChatBot.Application.Features.GetBusinessMemberById;
-using SmartShoppingChatBot.Application.Features.UpdateBusinessMember;
+using SmartShoppingChatBot.Application.Features.BusinessMemberManagement.BusinessMemberRegistration;
+using SmartShoppingChatBot.Application.Features.BusinessMemberManagement.DeleteBusinessMember;
+using SmartShoppingChatBot.Application.Features.BusinessMemberManagement.GetAllBusinessMember;
+using SmartShoppingChatBot.Application.Features.BusinessMemberManagement.GetBusinessMemberById;
+using SmartShoppingChatBot.Application.Features.BusinessMemberManagement.UpdateBusinessMember;
 using SmartShoppingChatBot.Domain.Commons;
 
 namespace SmartShoppingChatBot.API.Controllers
