@@ -34,6 +34,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             IUnitOfWork unitOfWork,
             IPublishEndpoint publisher,
             TimeProvider timeProvider, 
+            IHttpContextAccessor httpContextAccessor,
             IBusinessQuotaRepository businessQuotaRepository)
         {
             _logger = logger;
@@ -54,13 +55,6 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 return Result<ProductResponse>.Failure(business.StatusCode, business.Message, null, business.MessageCode);
             }
 
-            var user = await _currentUserService.GetUser();
-
-            if (!user.IsSuccess || user.Data == null)
-            {
-                return Result<ProductResponse>.Failure(user.StatusCode, user.Message);
-            }
-
             var existingProduct = await _productRepository.FindAsync(p => 
             p.BusinessId == business.Data.Id 
             && p.ExternalId == request.ExternalId
@@ -74,7 +68,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
 
             var businessQuota = await _businessQuotaRepository.FindAsync(b => b.BusinessId == business.Data.Id);
             if (businessQuota == null) 
-                return Result<ProductResponse>.Failure(404, "Hạn mức của doanh nghiệp không thể tìm thấy");
+                return Result<ProductResponse>.Failure(404, "Business quota not found", null , BusinessQuotaMessageCode.NotFound);
 
             var productCount = await _productRepository.CountAsync(p => p.BusinessId == business.Data.Id && p.Status != ProductStatus.Deleted);
 

@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
@@ -13,7 +12,7 @@ namespace SmartShoppingChatBot.API.Controllers
     [Route("api/v1/payments")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;

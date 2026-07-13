@@ -24,7 +24,7 @@ namespace SmartShoppingChatBot.API.Controllers
         [EndpointDescription("Create a new product - internal api")]
         [EndpointSummary("Create a new product")]
         [ApiExplorerSettings(GroupName = "internal")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "BUSINESS_OWNER, CATALOG_TEAM")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "BUSI NESS_OWNER, CATALOG_TEAM")]
         public async Task<IActionResult> CreateProductInternal([FromBody] ProductCreateCommand command)
         {
             var result = await _mediator.Send(command);
@@ -39,6 +39,7 @@ namespace SmartShoppingChatBot.API.Controllers
         [HttpPost("partner/products")]
         [EndpointDescription("Create a new product - external api")]
         [EndpointSummary("Create a new product")]
+        [ApiExplorerSettings(GroupName = "external")]
         [Authorize(AuthenticationSchemes = "ApiKey")]
         public async Task<IActionResult> CreateProductExternal([FromBody] ProductCreateCommand command)
         {
