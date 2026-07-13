@@ -12,6 +12,7 @@ namespace SmartShoppingChatBot.API.Controllers
     [Route("api/v1/payments")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
+
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;

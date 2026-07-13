@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
@@ -17,6 +18,7 @@ namespace SmartShoppingChatBot.API.Controllers
     [Route("api/v1/system-contents")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class SystemContentsController : ControllerBase
     {
         private readonly IMediator _mediator;

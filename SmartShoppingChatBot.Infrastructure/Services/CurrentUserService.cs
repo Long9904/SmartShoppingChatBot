@@ -1,12 +1,13 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Security.Authentication;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using MongoDB.Bson;
+using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
-using System.Security.Authentication;
-using System.Security.Claims;
 
 namespace SmartShoppingChatBot.Infrastructure.Services;
 
@@ -31,31 +32,31 @@ public class CurrentUserService : ICurrentUserService
 
         if (businessId == null)
         {
-            return Result<Business>.Failure(401, "Token is invalid", messageCode: "MG_AUTH_401");
+            return Result<Business>.Failure(401, "Token is invalid", messageCode: AuthMessageCode.InvalidAuthentication);
         }
 
         var isValidId = ObjectId.TryParse(businessId, out var objectId);
         if (!isValidId)
         {
-            return Result<Business>.Failure(401, "Token is invalid", messageCode: "MG_AUTH_401");
+            return Result<Business>.Failure(401, "Token is invalid", messageCode: AuthMessageCode.InvalidAuthentication);
         }
         var business = await _businessRepository.FindAsync(b => b.Id == objectId);
         if (business == null)
         {
-            return Result<Business>.Failure(404, "Business not found", messageCode: "MG_BUSINESS_404");
+            return Result<Business>.Failure(404, "Business not found", messageCode: BusinessMessageCode.NotFound);
         }
 
         return business.BusinessStatus switch
         {
-            BusinessEnums.ACTIVE => Result<Business>.Success(business, 200, "Get business success", "MG_BUSINESS_200"),
+            BusinessEnums.ACTIVE => Result<Business>.Success(business, 200, "Get business success", BusinessMessageCode.Sucess),
 
-            BusinessEnums.PENDING_APPROVAL => Result<Business>.Failure(400, "Business is waiting to approve", messageCode: "MG_BUSINESS_APPROVE_400"),
+            BusinessEnums.PENDING_APPROVAL => Result<Business>.Failure(400, "Business is waiting to approve", messageCode: BusinessMessageCode.WattingApprove),
 
-            BusinessEnums.REJECTED => Result<Business>.Failure(400, "Business is rejected.", messageCode: "MG_BUSINESS_REJECT_400"),
+            BusinessEnums.REJECTED => Result<Business>.Failure(400, "Business is rejected.", messageCode: BusinessMessageCode.IsRejected),
 
-            BusinessEnums.DELETED => Result<Business>.Failure(404, "Business not found.", null, "MG_BUSINESS_404"),
+            BusinessEnums.DELETED => Result<Business>.Failure(404, "Business not found.", null, BusinessMessageCode.NotFound),
 
-            _ => Result<Business>.Failure(401, "Token is invalid.", messageCode: "MG_AUTH_401")
+            _ => Result<Business>.Failure(401, "Token is invalid.", messageCode: AuthMessageCode.InvalidAuthentication)
         };
     }
 
@@ -64,31 +65,31 @@ public class CurrentUserService : ICurrentUserService
         var userId = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
         {
-            return Result<User>.Failure(401, "Token is invalid.", messageCode: "MG_AUTH_401");
+            return Result<User>.Failure(401, "Token is invalid.", messageCode: AuthMessageCode.InvalidAuthentication);
         }
 
         var isValidId = ObjectId.TryParse(userId, out var objectId);
         if (!isValidId)
         {
-            return Result<User>.Failure(401, "Token is invalid.", messageCode: "MG_AUTH_401");
+            return Result<User>.Failure(401, "Token is invalid.", messageCode: AuthMessageCode.InvalidAuthentication);
         }
 
         var user = await _userRepository.FindAsync(u => u.Id == objectId);
-        if (user == null) return Result<User>.Failure(404, "User not found.", messageCode: "MG_USER_404");
+        if (user == null) return Result<User>.Failure(404, "User not found.", messageCode: UserMessageCode.NotFound);
 
         return user.UserStatus switch
         {
-            UserStatus.ACTIVE => Result<User>.Success(user, 200, "User retrieved successfully.", messageCode: "MG_USER_200"),
+            UserStatus.ACTIVE => Result<User>.Success(user, 200, "User retrieved successfully.", messageCode: UserMessageCode.Success),
 
-            UserStatus.PENDING_APPROVAL => Result<User>.Failure(400, "User is pending approval.", messageCode: "MG_USER_APPROVE"),
+            UserStatus.PENDING_APPROVAL => Result<User>.Failure(400, "User is pending approval.", messageCode: UserMessageCode.WattingApprove),
 
-            UserStatus.PENDING_PROFILE_COMPLETION => Result<User>.Failure(400, "User is pending profile completion.", messageCode: "MG_USER_PENDING_PROFILE_400"),
+            UserStatus.PENDING_PROFILE_COMPLETION => Result<User>.Failure(400, "User is pending profile completion.", messageCode: UserMessageCode.ProfilePending),
 
-            UserStatus.REJECTED => Result<User>.Failure(400, "User is rejected.", messageCode: "MG_USER_REJECT_400"),
+            UserStatus.REJECTED => Result<User>.Failure(400, "User is rejected.", messageCode: UserMessageCode.IsRejected),
 
-            UserStatus.DELETED => Result<User>.Failure(404, "User not found.", messageCode: "MG_USER_404"),
+            UserStatus.DELETED => Result<User>.Failure(404, "User not found.", messageCode: UserMessageCode.NotFound),
 
-            _ => Result<User>.Failure(401, "Token is invalid.", messageCode: "MG_AUTH_401")
+            _ => Result<User>.Failure(401, "Token is invalid.", messageCode: AuthMessageCode.InvalidAuthentication)
         };
     }
 
