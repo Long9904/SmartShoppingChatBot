@@ -1,5 +1,6 @@
-﻿using MassTransit;
-using MassTransit.Mediator;
+﻿
+using MassTransit;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using SmartShoppingChatBot.Application.Events;
 using SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCompleted;

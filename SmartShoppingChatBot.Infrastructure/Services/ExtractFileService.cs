@@ -11,21 +11,21 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 {
     public class ExtractFileService : IExtractFileService
     {
-        public Task<string> ExtractMarkdownAsync(Stream stream, string fileType)
+        public async Task<string> ExtractMarkdownAsync(Stream stream, string fileType)
         {
             //categorize file type
             var normalizedType = fileType.Trim().TrimStart('.').ToLowerInvariant();
 
             return normalizedType switch
             {
-                "docx" => ExtractDocxAsync(stream),
-                "txt" => ExtractTxtAsync(stream),
-                "pdf" => ExtractPdfAsync(stream), //recently not implemented
+                "docx" => await ExtractDocxAsync(stream),
+                "txt" => await ExtractTxtAsync(stream),
+                "pdf" => await ExtractPdfAsync(stream), //recently not implemented
                 _ => throw new NotSupportedException($"Unsupported document type: {fileType}")
             };
         }
 
-        public async Task<string> ExtractDocxAsync(Stream stream)
+        public Task<string> ExtractDocxAsync(Stream stream)
         {
             //make position to 0
             if (stream.CanSeek)
@@ -34,7 +34,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             using var document = WordprocessingDocument.Open(stream, false);
             //get the content BODY of the document
             var body = document.MainDocumentPart?.Document?.Body;
-            if (body == null) return string.Empty;
+            if (body == null) return Task.FromResult(string.Empty);
 
             var sb = new StringBuilder();
             //scan each element in the body(heading,paragraph,...)
@@ -67,7 +67,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     }
                 }
             }
-            return sb.ToString().Trim();
+            return Task.FromResult(sb.ToString().Trim());
         }
         //check if the style is heading and return the number of heading
         private bool IsHeading(string? styleId, out int level)
