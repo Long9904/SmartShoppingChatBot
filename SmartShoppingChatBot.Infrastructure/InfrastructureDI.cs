@@ -28,6 +28,7 @@ public static class InfrastructureDI
         services.AddScoped<IQdrantService, QdrantService>();
         services.AddScoped<IExtractFileService, ExtractFileService>();
         services.AddScoped<IChunkService, ChunkService>();
+        services.AddScoped<IAuthService, AuthService>();
 
         // Seeder
         services.AddScoped<UserSeeder>();

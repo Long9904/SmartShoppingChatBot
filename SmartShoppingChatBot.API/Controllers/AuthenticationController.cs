@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
@@ -33,6 +35,7 @@ public class AuthenticationController : ControllerBase
 
     [HttpGet("me")]
     [EndpointDescription("Get My Profile")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<IActionResult> GetMyProfile()
     {
         var result = await _mediator.Send(new GetMyProfileCommand());
