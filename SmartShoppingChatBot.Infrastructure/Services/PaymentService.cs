@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using PayOS;
 using PayOS.Models.V2.PaymentRequests;
-using PayOS.Models.Webhooks;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Events;

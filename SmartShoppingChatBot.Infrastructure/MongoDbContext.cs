@@ -20,7 +20,7 @@ public class MongoDbContext : DbContext
 
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<KnowledgeDocument> KnowledgeDocuments { get; set; }
-    public DbSet<KnowledgeEntry> KnowledgeEntries { get; set; } 
+    public DbSet<KnowledgeEntry> KnowledgeEntries { get; set; }
     public DbSet<Product> Products { get; set; }
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {

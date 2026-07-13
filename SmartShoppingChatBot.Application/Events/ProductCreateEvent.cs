@@ -1,7 +1,4 @@
-﻿using MongoDB.Bson;
-using SmartShoppingChatBot.Domain.Entities;
-
-namespace SmartShoppingChatBot.Application.Events
+﻿namespace SmartShoppingChatBot.Application.Events
 {
     public class ProductCreateEvent
     {

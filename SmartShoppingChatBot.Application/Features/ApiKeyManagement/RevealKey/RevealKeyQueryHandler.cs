@@ -13,8 +13,8 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.RevealKey
         private readonly IHashService _hashService;
 
         public RevealKeyQueryHandler(
-            IApiKeyRepository apiKeyRepository, 
-            ICurrentUserService currentUserService, 
+            IApiKeyRepository apiKeyRepository,
+            ICurrentUserService currentUserService,
             IHashService hashService)
         {
             _apiKeyRepository = apiKeyRepository;
@@ -34,10 +34,10 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.RevealKey
 
             if (apiKey == null) return Result<string>.Failure(404, "API key not found.");
 
-            if (apiKey.BusinessId != business.Data.Id) 
+            if (apiKey.BusinessId != business.Data.Id)
                 return Result<string>.Failure(403, "You do not have permission to reveal this API key.");
 
-            if (apiKey.Status != KeyStatus.Active) 
+            if (apiKey.Status != KeyStatus.Active)
                 return Result<string>.Failure(400, "API key is not active.");
 
             var secret = _hashService.Decrypt(apiKey.EncryptedSecret);

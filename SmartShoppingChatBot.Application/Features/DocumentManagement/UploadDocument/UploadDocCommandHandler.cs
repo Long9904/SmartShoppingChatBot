@@ -10,12 +10,7 @@ using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDocument
 {
@@ -55,7 +50,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
 
             if (request.Files == null || request.Files.Count == 0)
             {
-                return Result<BasePaginatedList<UploadedKnowledgeDocResponse>>.Failure(500, "No files were uploaded", null,DocumentMessageCode.UploadFailed);
+                return Result<BasePaginatedList<UploadedKnowledgeDocResponse>>.Failure(500, "No files were uploaded", null, DocumentMessageCode.UploadFailed);
             }
             // Limit the number of concurrent uploads to 5
             var semaphore = new SemaphoreSlim(5);
@@ -69,7 +64,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
                 {
                     var uploadResult = await _cloudinaryService.UploadFileAsync(file, currentBusiness.Data.Id.ToString(), "knowledge-documents");
                     if (!uploadResult.IsSuccess || uploadResult.Data == null)
-                    {                   
+                    {
                         responseList.Add(new UploadedKnowledgeDocResponse
                         {
                             FileName = file.FileName,
@@ -133,7 +128,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
                     {
                         DocumentId = doc.Id.ToString(),
                         BusinessId = doc.BusinessId.ToString(),
-                    },cancellationToken);
+                    }, cancellationToken);
                 }
             }
             var items = responseList.OrderBy(r => r.Status == KnowledgeDocumentStatus.Failed).ToList();
@@ -146,7 +141,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
                 PageIndex = 1,
                 PageSize = items.Count
             }, 201, "Upload document successfully");
-        } 
-       
+        }
+
     }
 }

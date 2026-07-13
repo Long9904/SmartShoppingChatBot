@@ -6,11 +6,6 @@ using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCompleted
 {
@@ -28,7 +23,7 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCo
 
         public SendBillCompletedCommandHandler(IPaymentRepository paymentRepository, IEmailService emailService,
             IUnitOfWork unitOfWork, ISubscriptionPlanRepository subscriptionPlanRepository, ILogger<SendBillCompletedCommandHandler> logger
-            , IEmailTemplateService templateService, IUserRepository userRepository, IBusinessRepository businessRepository, ISubscriptionRepository subscriptionRepository )
+            , IEmailTemplateService templateService, IUserRepository userRepository, IBusinessRepository businessRepository, ISubscriptionRepository subscriptionRepository)
         {
             _paymentRepository = paymentRepository;
             _emailService = emailService;
@@ -58,7 +53,7 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCo
                 return Result<string>.Failure(404, "Business not found");
             }
             var user = await _userRepository.FindAsync(x => x.Business.Id == payment.BussinessId);
-            if(user  == null)
+            if (user == null)
             {
                 return Result<string>.Failure(404, "Business not found");
             }
@@ -84,7 +79,7 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCo
                 SubscriptionName = subscriptionPlan.Name,
                 SubscriptionStartDate = subscription.StartDate,
                 SubscriptionEndDate = subscription.EndDate,
-                SupportEmail ="support@lunarAI.com",
+                SupportEmail = "support@lunarAI.com",
                 InvoiceId = payment.Id.ToString(),
                 InvoiceUrl = $"https://lunarai.com/invoice/{payment.Id}"
 

@@ -1,9 +1,9 @@
-﻿using System.Security.Cryptography;
-using System.Text;
+﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.Interface;
-using Microsoft.AspNetCore.DataProtection;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SmartShoppingChatBot.Infrastructure.Services
 {

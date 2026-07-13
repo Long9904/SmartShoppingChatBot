@@ -17,7 +17,7 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.Creat
         private readonly TimeProvider _time;
         private readonly IMapper _mapper;
 
-        public SubscriptionAddCommandHandler(ISubscriptionPlanRepository subscriptionRepository, 
+        public SubscriptionAddCommandHandler(ISubscriptionPlanRepository subscriptionRepository,
             IUnitOfWork unitOfWork, ILogger<SubscriptionAddCommandHandler> logger, TimeProvider time, IMapper mapper)
         {
             _subscriptionRepository = subscriptionRepository;

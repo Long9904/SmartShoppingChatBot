@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using MediatR;
+﻿using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
@@ -9,13 +8,13 @@ using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.GetAllApiKey
 {
-    public class GetAllApiKeyQueryHandler : IRequestHandler<GetAllApiKeyQuery,Result<BasePaginatedList<ApiKeyResponse>>>
+    public class GetAllApiKeyQueryHandler : IRequestHandler<GetAllApiKeyQuery, Result<BasePaginatedList<ApiKeyResponse>>>
     {
         private readonly ICurrentUserService _currentUserService;
         private readonly IApiKeyRepository _apiKeyRepository;
 
         public GetAllApiKeyQueryHandler(
-            ICurrentUserService currentUserService, 
+            ICurrentUserService currentUserService,
             IApiKeyRepository apiKeyRepository)
         {
             _currentUserService = currentUserService;
@@ -31,15 +30,16 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.GetAllApiKe
                 return Result<BasePaginatedList<ApiKeyResponse>>.Failure(business.StatusCode, business.Message, business.Errors);
             }
 
-            var query = _apiKeyRepository.AsQueryable().Where(x => 
-            x.BusinessId == business.Data.Id 
+            var query = _apiKeyRepository.AsQueryable().Where(x =>
+            x.BusinessId == business.Data.Id
             && x.Status == KeyStatus.Active);
 
             query = query.OrderByDescending(x => x.CreatedAt);
 
             var listApiKeys = await _apiKeyRepository.PaginatedListAsync(query, request.PageIndex, request.PageSize);
 
-            var response = new BasePaginatedList<ApiKeyResponse> {
+            var response = new BasePaginatedList<ApiKeyResponse>
+            {
                 Items = listApiKeys.Items.Select(x => new ApiKeyResponse
                 {
                     Id = x.Id.ToString(),

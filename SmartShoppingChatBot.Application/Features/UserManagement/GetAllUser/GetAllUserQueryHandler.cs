@@ -2,7 +2,6 @@
 using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;

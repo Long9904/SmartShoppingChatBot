@@ -55,7 +55,7 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetPayment
             {
                 response.SubscriptionPlan = _mapper.Map<PlanResponse>(plan);
             }
-            
+
             return Result<PaymentResponse>.Success(response);
         }
     }

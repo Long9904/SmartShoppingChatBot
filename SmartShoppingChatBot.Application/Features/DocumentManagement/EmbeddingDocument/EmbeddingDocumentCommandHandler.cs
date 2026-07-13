@@ -9,7 +9,6 @@ using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 using SmartShoppingChatBot.Domain.QdrantConfig;
-using static System.Collections.Specialized.BitVector32;
 
 namespace SmartShoppingChatBot.Application.Features.DocumentManagement.EmbeddingDocument
 {
@@ -58,7 +57,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
             if (!ObjectId.TryParse(request.BusinessId, out var businessId) ||
                 !ObjectId.TryParse(request.DocumentId, out var documentId))
             {
-                return Result<string>.Failure(400, "Invalid business or document id.",null,DocumentMessageCode.Invalid);
+                return Result<string>.Failure(400, "Invalid business or document id.", null, DocumentMessageCode.Invalid);
             }
             //check business 
             var business = await _businessRepository.FindAsync(x =>
@@ -66,7 +65,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 x.BusinessStatus == Domain.Enums.BusinessEnums.ACTIVE);
 
             if (business == null)
-                return Result<string>.Failure(404, "Business not found.",null,DocumentMessageCode.NotFound);
+                return Result<string>.Failure(404, "Business not found.", null, DocumentMessageCode.NotFound);
             //check document
             var document = await _knowledgeDocumentRepository.FindAsync(x =>
                 x.Id == documentId &&
@@ -74,7 +73,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 x.Status == KnowledgeDocumentStatus.Uploaded);
 
             if (document == null)
-                return Result<string>.Failure(404, "Uploaded document not found.",null,DocumentMessageCode.NotFound);
+                return Result<string>.Failure(404, "Uploaded document not found.", null, DocumentMessageCode.NotFound);
             //update document processing 
             document.Status = KnowledgeDocumentStatus.Processing;
             document.ErrorMessage = null;
@@ -95,7 +94,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                     throw new InvalidOperationException("Document content is empty after extraction.");
                 //cut markdown by heading(create object of this heading)
                 var sections = await _chunkService.SplitMarkdownByHeadingAsync(markdown);
-                
+
                 foreach (var section in sections)
                 {
                     var embeddingText = await GenerateSectionSummaryAsync(section.HeadingPath, section.MarkdownContent);
@@ -124,13 +123,13 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                         throw new InvalidOperationException(technicalVector.Message ?? "Failed to generate document embedding.");
 
                     var semanticText = BuildDocumentSemanticSearchText(entry);
-                    var semanticVector = await _geminiService.EmbeddingsAsync(semanticText,DocumentEmbeddingTaskType);
-                    if(!semanticVector.IsSuccess || semanticVector.Data == null)
+                    var semanticVector = await _geminiService.EmbeddingsAsync(semanticText, DocumentEmbeddingTaskType);
+                    if (!semanticVector.IsSuccess || semanticVector.Data == null)
                         throw new InvalidOperationException(semanticVector.Message ?? "Failed to generate semantic embedding.");
                     //create point for qdrant
                     points.Add(BuildQdrantPoint(entry, technicalVector.Data, semanticVector.Data));
                 }
-           
+
                 //save entries to mongo
                 await _knowledgeEntryRepository.AddRangeAsync(entries);
                 //update document status

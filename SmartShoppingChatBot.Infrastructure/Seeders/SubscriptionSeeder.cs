@@ -1,15 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Math;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Infrastructure.Seeders
 {
@@ -28,7 +21,7 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
 
         public async Task SeedSubscriptionsAsync()
         {
-            
+
             var subscriptionBasic = new SubscriptionPlan
             {
                 Id = MongoDB.Bson.ObjectId.GenerateNewId(),
@@ -72,7 +65,7 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 MaxDocumentAllowed = 100,
             };
             var existingSubscriptions = await _context.SubscriptionPlans.FirstOrDefaultAsync(u => u.Name == subscriptionBasic.Name || u.Name == subscriptionPro.Name || u.Name == subscriptionEnterprise.Name);
-            if(existingSubscriptions != null)
+            if (existingSubscriptions != null)
             {
                 _logger.LogInformation("Subscription plans already exist in the database. Skipping seeding.");
                 return;

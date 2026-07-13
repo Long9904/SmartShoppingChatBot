@@ -4,11 +4,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using SmartShoppingChatBot.Application.Events;
 using SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCompleted;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Application.Consumers
 {

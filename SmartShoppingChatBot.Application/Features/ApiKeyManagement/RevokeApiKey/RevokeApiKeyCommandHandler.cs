@@ -17,10 +17,10 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.RevokeApiKe
         private readonly ILogger<RevokeApiKeyCommandHandler> _logger;
 
         public RevokeApiKeyCommandHandler(
-            IApiKeyRepository apiKeyRepository, 
-            ICurrentUserService currentUserService, 
+            IApiKeyRepository apiKeyRepository,
+            ICurrentUserService currentUserService,
             IUnitOfWork unitOfWork,
-            TimeProvider time, 
+            TimeProvider time,
             ILogger<RevokeApiKeyCommandHandler> logger)
         {
             _apiKeyRepository = apiKeyRepository;
@@ -33,8 +33,8 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.RevokeApiKe
         public async Task<Result<string>> Handle(RevokeApiKeyCommand request, CancellationToken cancellationToken)
         {
             var business = await _currentUserService.GetBusiness();
-            
-            if(!business.IsSuccess)
+
+            if (!business.IsSuccess)
             {
                 return Result<string>.Failure(business.StatusCode, business.Message);
             }
