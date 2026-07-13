@@ -7,7 +7,7 @@ using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
 
-namespace SmartShoppingChatBot.Application.Features.CreateSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.CreateSubscription
 {
     public class SubscriptionAddCommandHandler : IRequestHandler<SubscriptionAddCommand, Result<SubscriptionResponse>>
     {
@@ -44,6 +44,7 @@ namespace SmartShoppingChatBot.Application.Features.CreateSubscription
                 Description = request.Description,
                 Price = request.Price,
                 Duration = request.Duration,
+                Level = request.Level,
                 TokenLimit = request.TokenLimit,
                 MessageLimit = request.MessageLimit,
                 MaxProductAllowed = request.MaxProductAllowed,

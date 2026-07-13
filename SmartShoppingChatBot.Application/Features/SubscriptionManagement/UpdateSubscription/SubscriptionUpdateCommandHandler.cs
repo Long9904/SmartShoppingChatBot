@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.UpdateSubscription
 {
     public class SubscriptionUpdateCommandHandler : IRequestHandler<SubscriptionUpdateCommand, Result<SubscriptionResponse>>
     {
@@ -89,6 +89,11 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
             if(request.MaxDocumentAllowed >= 0 && existingSubscription.MaxDocumentAllowed != request.MaxDocumentAllowed)
             {
                 existingSubscription.MaxDocumentAllowed = request.MaxDocumentAllowed;
+                isUpdate = true;
+            }
+            if(request.Level > 0 && existingSubscription.Level != request.Level)
+            {
+                existingSubscription.Level = request.Level;
                 isUpdate = true;
             }
             if (!isUpdate)

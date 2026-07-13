@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace SmartShoppingChatBot.Application.Features.CreateSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.CreateSubscription
 {
     public class SubscriptionAddCommandValidator : AbstractValidator<SubscriptionAddCommand>
     {

@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 
-namespace SmartShoppingChatBot.Application.Features.DeleteSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.DeleteSubscription
 {
     public class DeleteSubscriptionCommand : IRequest<Result<string>>
     {

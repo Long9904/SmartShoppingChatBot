@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.GetAllPayment
+namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPayment
 {
     public class GetPaymentQueryHandler : IRequestHandler<GetPaymentQuery, Result<BasePaginatedList<PaymentResponse>>>
     {

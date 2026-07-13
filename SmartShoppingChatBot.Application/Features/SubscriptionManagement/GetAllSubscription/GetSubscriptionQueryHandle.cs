@@ -5,7 +5,7 @@ using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Interface;
 
-namespace SmartShoppingChatBot.Application.Features.GetAllSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAllSubscription
 {
     public class GetSubscriptionQueryHandle : IRequestHandler<GetSubscriptionQuery, Result<BasePaginatedList<SubscriptionResponse>>>
     {
@@ -27,6 +27,7 @@ namespace SmartShoppingChatBot.Application.Features.GetAllSubscription
             {
                 subscriptionPlans = subscriptionPlans.Where(s => s.Status == request.Filter.Status);
             }
+            subscriptionPlans = subscriptionPlans.OrderBy(s => s.Level);
             var pagingList = await _subscriptionRepository.PaginatedListAsync(subscriptionPlans, request.Filter?.PageIndex ?? 1, request.Filter?.PageSize ?? 10);
             var responseItems = _mapper.Map<IReadOnlyCollection<SubscriptionResponse>>(pagingList.Items);
 

@@ -98,7 +98,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 
                 foreach (var section in sections)
                 {
-                    var embeddingText = await GenerateSectionSummaryAsync(section.MarkdownContent);
+                    var embeddingText = await GenerateSectionSummaryAsync(section.HeadingPath, section.MarkdownContent);
                     if (string.IsNullOrWhiteSpace(embeddingText.Data))
                         continue;
                     //llm summarize each section to get summary
@@ -243,11 +243,21 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                     {entry.Content}
                     """;
         }
-        private async Task<Result<string>> GenerateSectionSummaryAsync(string embeddingText)
+        private async Task<Result<string>> GenerateSectionSummaryAsync(string headingPath, string markdownContent)
         {
             var systemPrompt = await File.ReadAllTextAsync("prompts/SectionSummary.md");
 
-            var prompt = systemPrompt + $"\n\ndocument data: \n{embeddingText}";
+            var prompt =
+                $"""
+                {systemPrompt}
+
+                SECTION_HEADING_PATH:
+                {headingPath}
+
+                SECTION_CONTENT_BEGIN
+                {markdownContent}
+                SECTION_CONTENT_END
+                """;
             try
             {
                 var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);

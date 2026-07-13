@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.UpdateSubscription
 {
     public class SubscriptionUpdateCommandValidator : AbstractValidator<SubscriptionUpdateCommand>
     {
@@ -31,6 +31,8 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
                 .GreaterThan(0).WithMessage("Max product allowed must be greater than 0.");
             RuleFor(x => x.MaxDocumentAllowed)
                 .GreaterThan(0).WithMessage("Max document allowed must be greater than 0.");
+            RuleFor(x => x.Level)
+                .GreaterThanOrEqualTo(0).WithMessage("Level must be greater than or equal to 0.");
         }
     }
 }
