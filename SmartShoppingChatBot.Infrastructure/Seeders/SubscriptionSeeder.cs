@@ -1,15 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Math;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmartShoppingChatBot.Infrastructure.Seeders
 {
@@ -28,7 +21,7 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
 
         public async Task SeedSubscriptionsAsync()
         {
-            
+
             var subscriptionBasic = new SubscriptionPlan
             {
                 Id = MongoDB.Bson.ObjectId.GenerateNewId(),
@@ -36,6 +29,7 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 Description = "Basic subscription plan with limited features.",
                 Price = 0,
                 Duration = 30,
+                Level = 0,
                 Status = StatusEnums.Active,
                 TokenLimit = 15000000,
                 MessageLimit = 3000,
@@ -49,6 +43,7 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 Description = "Pro subscription plan with advanced features.",
                 Price = 1990000,
                 Duration = 30,
+                Level = 1,
                 Status = StatusEnums.Active,
                 TokenLimit = 60000000,
                 MessageLimit = 10000,
@@ -62,6 +57,7 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 Description = "Enterprise subscription plan with all features.",
                 Price = 4990000,
                 Duration = 30,
+                Level = 2,
                 Status = StatusEnums.Active,
                 TokenLimit = 4000000000,
                 MessageLimit = 50000,
@@ -69,7 +65,7 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 MaxDocumentAllowed = 100,
             };
             var existingSubscriptions = await _context.SubscriptionPlans.FirstOrDefaultAsync(u => u.Name == subscriptionBasic.Name || u.Name == subscriptionPro.Name || u.Name == subscriptionEnterprise.Name);
-            if(existingSubscriptions != null)
+            if (existingSubscriptions != null)
             {
                 _logger.LogInformation("Subscription plans already exist in the database. Skipping seeding.");
                 return;

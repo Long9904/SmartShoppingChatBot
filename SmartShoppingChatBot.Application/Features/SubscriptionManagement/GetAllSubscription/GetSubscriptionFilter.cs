@@ -1,7 +1,7 @@
 ﻿using SmartShoppingChatBot.Application.Commons.Queries;
 using SmartShoppingChatBot.Domain.Enums;
 
-namespace SmartShoppingChatBot.Application.Features.GetAllSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAllSubscription
 {
     public class GetSubscriptionFilter : QueryBase
     {

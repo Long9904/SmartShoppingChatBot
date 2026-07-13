@@ -1,12 +1,13 @@
 ﻿using AutoMapper;
+using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using PayOS;
 using PayOS.Models.V2.PaymentRequests;
-using PayOS.Models.Webhooks;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Events;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
@@ -27,12 +28,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         private readonly ILogger<PaymentService> _logger;
         private readonly IMapper mapper;
         private readonly IPaymentRepository _paymentRepository;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IPublishEndpoint _publishEndpoint;
 
 
         public PaymentService(IUnitOfWork unitOfWork, ILogger<PaymentService> logger,
             IMapper mapper, IPaymentRepository paymentRepository, IConfiguration config,
             IUserRepository userRepository, ISubscriptionPlanRepository subscriptionPlanRepository,
-            ISubscriptionRepository subscriptionRepository, IBusinessRepository businessRepository, IBusinessQuotaRepository businessQuotaRepository)
+            ISubscriptionRepository subscriptionRepository, IBusinessRepository businessRepository,
+            IBusinessQuotaRepository businessQuotaRepository, ICurrentUserService currentUserService, IPublishEndpoint publishEndpoint)
         {
             _payOSClient = new PayOSClient(
                 config["PayOS:ClientId"]!,
@@ -49,49 +53,79 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             _subscriptionRepository = subscriptionRepository;
             _businessRepository = businessRepository;
             _businessQuotaRepository = businessQuotaRepository;
+            _currentUserService = currentUserService;
+            _publishEndpoint = publishEndpoint;
         }
 
 
         public async Task<Result<PaymentResponsed>> CreatePaymentLink(CreatePaymentRequest request)
         {
-            if (ObjectId.TryParse(request.BussinessId, out var businessId) == false)
+            // Validate input parameters
+            var businessLogin = await _currentUserService.GetBusiness();
+            if (businessLogin == null || businessLogin.Data == null)
             {
-                return Result<PaymentResponsed>.Failure(400, "Invalid business id format");
+                return Result<PaymentResponsed>.Failure(404, "Business not found");
             }
             if (ObjectId.TryParse(request.SubscriptionPlanId, out var subscriptionPlanId) == false)
             {
                 return Result<PaymentResponsed>.Failure(400, "Invalid subscription plan id format");
             }
-            var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Random.Shared.Next(1000, 9999);
-            var business = await _businessRepository.FindAsync(x => x.Id == businessId && x.BusinessStatus == BusinessEnums.ACTIVE);
+            var business = await _businessRepository.FindAsync(x => x.Id == businessLogin.Data.Id && x.BusinessStatus == BusinessEnums.ACTIVE);
             if (business == null)
             {
                 return Result<PaymentResponsed>.Failure(404, "Business not found");
             }
-            var subscriptionPlan = await _subscriptionPlanRepository.FindAsync(x => x.Id == subscriptionPlanId && x.Status == StatusEnums.Active);
-            if (subscriptionPlan == null)
+            var selectSubscription = await _subscriptionPlanRepository.FindAsync(x => x.Id == subscriptionPlanId && x.Status == StatusEnums.Active);
+            if (selectSubscription == null)
             {
                 return Result<PaymentResponsed>.Failure(404, "Subscription plan not found");
             }
+            // Check if the business already has an active subscription
+            var currentSubscription = await _subscriptionRepository
+                .FindAsync(x => x.BusinessId == business.Id && x.StartDate <= DateTimeOffset.UtcNow && x.EndDate > DateTimeOffset.UtcNow && x.Status == StatusEnums.Active);
+            if (currentSubscription != null)
+            {
+                var currentPlan = await _subscriptionPlanRepository.FindAsync(x => x.Id == currentSubscription.SubscriptionPlanId);
+                if (currentPlan == null)
+                {
+                    return Result<PaymentResponsed>.Failure(404, "Current subscription plan not found");
+                }
+                if (currentPlan.Id == selectSubscription.Id)
+                {
+                    return Result<PaymentResponsed>.Failure(400, "Business already has an active subscription for this plan");
+                }
+                if (selectSubscription.Level <= currentPlan.Level)
+                {
+                    return Result<PaymentResponsed>.Failure(400, "The selected plan must be a higher tier than the current plan");
+                }
+            }
+            var existingPayment = await _paymentRepository
+                .FindAsync(x => x.BussinessId == business.Id && x.SubscriptionPlanId == selectSubscription.Id && x.Status == PaymentEnums.Pending);
+            if (existingPayment != null)
+            {
+                return Result<PaymentResponsed>.Failure(400, "Business already has a pending payment for this plan");
+            }
+
+            var orderCode = GenerateOrderCode();
             string returnBaseUrl = !string.IsNullOrEmpty(request.ReturnUrlDomain) ? request.ReturnUrlDomain : _config["PayOS:Url"]!;
-            var formatPrice = Math.Floor(subscriptionPlan.Price);
+            var formatPrice = Math.Floor(selectSubscription.Price);
             var paymentRequest = new CreatePaymentLinkRequest
             {
                 Amount = (long)formatPrice,
                 OrderCode = orderCode,
                 ReturnUrl = $"{returnBaseUrl}/payment-success?orderCode={orderCode}",
                 CancelUrl = $"{returnBaseUrl}/payment-cancel?orderCode={orderCode}",
-                Description = $"{subscriptionPlan.Name} {formatPrice} VND"
+                Description = $"{selectSubscription.Name} {formatPrice} VND"
             };
             var paymentId = ObjectId.GenerateNewId();
             var payment = new Payment
             {
                 Id = paymentId,
-                BussinessId = businessId,
+                BussinessId = business.Id,
                 SubscriptionPlanId = subscriptionPlanId,
                 OrderCode = orderCode,
                 Amount = formatPrice,
-                Description = $"{subscriptionPlan.Name} {formatPrice} VND",
+                Description = $"{selectSubscription.Name} {formatPrice} VND",
                 Status = PaymentEnums.Pending,
                 CreatedAt = DateTime.UtcNow
             };
@@ -101,7 +135,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 var result = await _payOSClient.PaymentRequests.CreateAsync(paymentRequest);
                 await _paymentRepository.AddAsync(payment);
                 await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransactionAsync();
                 return Result<PaymentResponsed>.Success(new PaymentResponsed
                 {
                     CheckoutUrl = result.CheckoutUrl,
@@ -111,8 +144,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating payment link");
-                await _unitOfWork.RollBackAsync();
+                _logger.LogError("Error creating payment link: {ErrorMessage}", ex.Message);
                 return Result<PaymentResponsed>.Failure(500, "An error occurred while creating the payment link");
             }
         }
@@ -158,7 +190,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             if (existingPayment.Status == PaymentEnums.Completed)
             {
                 _logger.LogWarning("Payment with order code {OrderCode} has already been completed", webhookData.Data.OrderCode);
-                return false;
+                return true;
             }
 
             //load subscription plan
@@ -174,16 +206,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 return false;
             }
 
-            //add new subscription if payment is successful
-            var businessSubscription = await _subscriptionRepository
-                .FindAsync(x => x.BusinessId == existingPayment.BussinessId && x.EndDate > DateTimeOffset.UtcNow && x.Status == StatusEnums.Active);
-            if (businessSubscription != null)
-            {
-                _logger.LogWarning("Business with id {BusinessId} already has an active subscription for subscription plan id {SubscriptionPlanId}"
-                    , existingPayment.BussinessId, existingPayment.SubscriptionPlanId);
-                return false;
-            }
-
             await _unitOfWork.BeginTransactionAsync();
 
             try
@@ -193,6 +215,16 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     case "00":
                         // Only create subscription and quota for successful payments
                         var now = DateTimeOffset.UtcNow;
+                        var canApplySubscription = await CloseCurrentSubscriptionForUpgradeIfNeededAsync(
+                            existingPayment.BussinessId,
+                            subscriptionPlan,
+                            now);
+                        if (!canApplySubscription)
+                        {
+                            await _unitOfWork.RollBackAsync();
+                            return false;
+                        }
+
                         var businessSubscriptionId = ObjectId.GenerateNewId();
                         var subscription = new BusinessSubscription
                         {
@@ -234,6 +266,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 await _paymentRepository.UpdateAsync(existingPayment);
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
+                if (existingPayment.Status == PaymentEnums.Completed)
+                {
+                    await _publishEndpoint.Publish(new PaymentCompletedEvent
+                    {
+                        PaymentId = existingPayment.Id.ToString()
+                    });
+                }
                 return true;
             }
             catch (Exception ex)
@@ -272,59 +311,58 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 return Result<Payment>.Failure(400, "Subscription plan not found");
             }
 
-            //add new subscription if payment is successful
-            var businessSubscription = await _subscriptionRepository
-                .FindAsync(x => x.BusinessId == existingPayment.BussinessId && x.EndDate > DateTime.UtcNow && x.Status == StatusEnums.Active);
-            if (businessSubscription != null)
+            if (existingPayment.Status != PaymentEnums.Pending)
             {
-                _logger.LogWarning("Business with id {BusinessId} already has an active subscription for subscription plan id {SubscriptionPlanId}", existingPayment.BussinessId, existingPayment.SubscriptionPlanId);
-                return Result<Payment>.Failure(400, "Business already has an active subscription for this subscription plan");
+                _logger.LogWarning("Payment with order code {OrderCode} is not in pending status", orderCode);
+                return Result<Payment>.Failure(400, "Payment is not in pending status");
             }
-            var now = DateTime.UtcNow;
-            var businessSubscriptionId = ObjectId.GenerateNewId();
-            var subscription = new BusinessSubscription
-            {
-                Id = businessSubscriptionId,
-                BusinessId = existingPayment.BussinessId,
-                SubscriptionPlanId = existingPayment.SubscriptionPlanId,
-                StartDate = now,
-                EndDate = now.AddDays(subscriptionPlan.Duration),
-                Status = StatusEnums.Active
-            };
-
-            var businessQuota = new BusinessQuota
-            {
-                Id = ObjectId.GenerateNewId(),
-                BusinessId = existingPayment.BussinessId,
-                BusinessSubscriptionId = businessSubscriptionId,
-                TokenLimit = subscriptionPlan.TokenLimit,
-                MessageLimit = subscriptionPlan.MessageLimit,
-                ResetDate = now.AddDays(subscriptionPlan.Duration),
-                UsedMessages = 0,
-                UsedTokens = 0,
-                MaxProductAllowed = subscriptionPlan.MaxProductAllowed
-            };
 
             await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                if (existingPayment.Status == PaymentEnums.Pending)
+                var now = DateTimeOffset.UtcNow;
+                var canApplySubscription = await CloseCurrentSubscriptionForUpgradeIfNeededAsync(
+                    existingPayment.BussinessId,
+                    subscriptionPlan,
+                    now);
+                if (!canApplySubscription)
                 {
+                    await _unitOfWork.RollBackAsync();
+                    return Result<Payment>.Failure(400, "Business already has an active subscription for this subscription plan");
+                }
 
-                    existingPayment.Status = PaymentEnums.Completed;
-                    await _subscriptionRepository.AddAsync(subscription);
-                    await _businessQuotaRepository.AddAsync(businessQuota);
-                    await _paymentRepository.UpdateAsync(existingPayment);
-                    await _unitOfWork.SaveChangesAsync();
-                    await _unitOfWork.CommitTransactionAsync();
-                    return Result<Payment>.Success(existingPayment);
-                }
-                else
+                var businessSubscriptionId = ObjectId.GenerateNewId();
+                var subscription = new BusinessSubscription
                 {
-                    _logger.LogWarning("Payment with order code {OrderCode} is not in pending status", orderCode);
-                    return Result<Payment>.Failure(400, "Payment is not in pending status");
-                }
+                    Id = businessSubscriptionId,
+                    BusinessId = existingPayment.BussinessId,
+                    SubscriptionPlanId = existingPayment.SubscriptionPlanId,
+                    StartDate = now,
+                    EndDate = now.AddDays(subscriptionPlan.Duration),
+                    Status = StatusEnums.Active
+                };
+
+                var businessQuota = new BusinessQuota
+                {
+                    Id = ObjectId.GenerateNewId(),
+                    BusinessId = existingPayment.BussinessId,
+                    BusinessSubscriptionId = businessSubscriptionId,
+                    TokenLimit = subscriptionPlan.TokenLimit,
+                    MessageLimit = subscriptionPlan.MessageLimit,
+                    ResetDate = now.AddDays(subscriptionPlan.Duration),
+                    UsedMessages = 0,
+                    UsedTokens = 0,
+                    MaxProductAllowed = subscriptionPlan.MaxProductAllowed
+                };
+
+                existingPayment.Status = PaymentEnums.Completed;
+                await _subscriptionRepository.AddAsync(subscription);
+                await _businessQuotaRepository.AddAsync(businessQuota);
+                await _paymentRepository.UpdateAsync(existingPayment);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                return Result<Payment>.Success(existingPayment);
             }
             catch (Exception ex)
             {
@@ -332,6 +370,50 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 await _unitOfWork.RollBackAsync();
                 return Result<Payment>.Failure(500, "An error occurred while testing payment successful");
             }
+        }
+
+        //check update if level of selected plan is higher than current plan
+        private async Task<bool> CloseCurrentSubscriptionForUpgradeIfNeededAsync(
+            ObjectId businessId,
+            SubscriptionPlan selectedPlan,
+            DateTimeOffset now)
+        {
+            var currentSubscription = await _subscriptionRepository
+                .FindAsync(x => x.BusinessId == businessId && x.StartDate <= now && x.EndDate > now && x.Status == StatusEnums.Active);
+            if (currentSubscription == null)
+            {
+                return true;
+            }
+
+            var currentPlan = await _subscriptionPlanRepository.FindAsync(x => x.Id == currentSubscription.SubscriptionPlanId);
+            if (currentPlan == null)
+            {
+                _logger.LogWarning("Current subscription plan with id {SubscriptionPlanId} not found", currentSubscription.SubscriptionPlanId);
+                return false;
+            }
+
+            if (selectedPlan.Level <= currentPlan.Level)
+            {
+                _logger.LogWarning(
+                    "Business with id {BusinessId} cannot change from plan level {CurrentLevel} to plan level {SelectedLevel}",
+                    businessId,
+                    currentPlan.Level,
+                    selectedPlan.Level);
+                return false;
+            }
+
+            currentSubscription.Status = StatusEnums.Inactive;
+            currentSubscription.EndDate = now;
+            await _subscriptionRepository.UpdateAsync(currentSubscription);
+            return true;
+        }
+
+        private static long GenerateOrderCode()
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var randomPart = Random.Shared.Next(100, 999);
+
+            return checked(timestamp * 1000 + randomPart);
         }
     }
 }

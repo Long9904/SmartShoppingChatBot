@@ -3,7 +3,7 @@ using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Domain.Commons;
 
-namespace SmartShoppingChatBot.Application.Features.GetAllSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAllSubscription
 {
     public class GetSubscriptionQuery : IRequest<Result<BasePaginatedList<SubscriptionResponse>>>
     {

@@ -2,7 +2,7 @@
 
 namespace SmartShoppingChatBot.Domain.Interface
 {
-    public interface IProductRepository: IGenericRepository<Product>
+    public interface IProductRepository : IGenericRepository<Product>
     {
     }
 }

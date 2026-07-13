@@ -3,7 +3,7 @@ using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Domain.Interface;
 
-namespace SmartShoppingChatBot.Application.Features.DeleteSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.DeleteSubscription
 {
     public class DeleteSubscriptionCommandHandler : IRequestHandler<DeleteSubscriptionCommand, Result<string>>
     {

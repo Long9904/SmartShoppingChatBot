@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Features.CreateSubscription;
-using SmartShoppingChatBot.Application.Features.DeleteSubscription;
-using SmartShoppingChatBot.Application.Features.GetAllSubscription;
-using SmartShoppingChatBot.Application.Features.UpdateSubscription;
+using SmartShoppingChatBot.Application.Features.SubscriptionManagement.CreateSubscription;
+using SmartShoppingChatBot.Application.Features.SubscriptionManagement.DeleteSubscription;
+using SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAllSubscription;
+using SmartShoppingChatBot.Application.Features.SubscriptionManagement.UpdateSubscription;
 using SmartShoppingChatBot.Domain.Commons;
 
 namespace SmartShoppingChatBot.API.Controllers
