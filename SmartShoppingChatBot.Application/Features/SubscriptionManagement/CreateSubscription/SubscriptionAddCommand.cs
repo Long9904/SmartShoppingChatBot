@@ -2,7 +2,7 @@
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 
-namespace SmartShoppingChatBot.Application.Features.CreateSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.CreateSubscription
 {
     public record SubscriptionAddCommand : IRequest<Result<SubscriptionResponse>>
     {
@@ -10,6 +10,7 @@ namespace SmartShoppingChatBot.Application.Features.CreateSubscription
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public int Duration { get; set; }
+        public int Level { get; set; }
         public long TokenLimit { get; set; }
         public int MessageLimit { get; set; }
         public int MaxProductAllowed { get; set; }

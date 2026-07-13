@@ -1,12 +1,12 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using Google.Apis.Auth.OAuth2;
+﻿using Google.Apis.Auth.OAuth2;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.Interface;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace SmartShoppingChatBot.Infrastructure.Services
 {
@@ -151,7 +151,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
                 var json = JsonSerializer.Serialize(requestBody);
                 var accessToken = await GetAccessTokenAsync();
-      
+
 
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);

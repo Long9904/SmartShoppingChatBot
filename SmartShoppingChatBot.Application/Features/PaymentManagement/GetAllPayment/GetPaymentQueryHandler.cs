@@ -1,18 +1,11 @@
 ﻿using AutoMapper;
 using MediatR;
-using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Domain.Commons;
-using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Application.Features.GetAllPayment
+namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPayment
 {
     public class GetPaymentQueryHandler : IRequestHandler<GetPaymentQuery, Result<BasePaginatedList<PaymentResponse>>>
     {

@@ -7,7 +7,7 @@ using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Domain.Interface;
 
 
-namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
+namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.UpdateSubscription
 {
     public class SubscriptionUpdateCommandHandler : IRequestHandler<SubscriptionUpdateCommand, Result<SubscriptionResponse>>
     {
@@ -45,7 +45,7 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
                 return Result<SubscriptionResponse>.Failure(409, "A subscription plan with the same name already exists.");
             }
             var isUpdate = false;
-            if(!string.IsNullOrEmpty(request.Name) && existingSubscription.Name != request.Name)
+            if (!string.IsNullOrEmpty(request.Name) && existingSubscription.Name != request.Name)
             {
                 existingSubscription.Name = request.Name;
                 isUpdate = true;
@@ -75,14 +75,19 @@ namespace SmartShoppingChatBot.Application.Features.UpdateSubscription
                 existingSubscription.MessageLimit = request.MessageLimit;
                 isUpdate = true;
             }
-            if(request.MaxProductAllowed >= 0 && existingSubscription.MaxProductAllowed != request.MaxProductAllowed)
+            if (request.MaxProductAllowed >= 0 && existingSubscription.MaxProductAllowed != request.MaxProductAllowed)
             {
                 existingSubscription.MaxProductAllowed = request.MaxProductAllowed;
                 isUpdate = true;
             }
-            if(request.MaxDocumentAllowed >= 0 && existingSubscription.MaxDocumentAllowed != request.MaxDocumentAllowed)
+            if (request.MaxDocumentAllowed >= 0 && existingSubscription.MaxDocumentAllowed != request.MaxDocumentAllowed)
             {
                 existingSubscription.MaxDocumentAllowed = request.MaxDocumentAllowed;
+                isUpdate = true;
+            }
+            if (request.Level > 0 && existingSubscription.Level != request.Level)
+            {
+                existingSubscription.Level = request.Level;
                 isUpdate = true;
             }
             if (!isUpdate)

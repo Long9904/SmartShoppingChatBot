@@ -18,12 +18,12 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var currentLevel = 1;
             var currentTitle = "Document";
             var currentHeadingPath = currentTitle;
-            
+
             //=========
             //start processing lines
             foreach (var rawLine in lines)
             {
-                var line = rawLine.Trim();  
+                var line = rawLine.Trim();
 
                 if (string.IsNullOrWhiteSpace(line))
                     continue;
@@ -40,7 +40,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     currentLevel = level;
                     currentTitle = title;
                     //1# > 2## > 3### 
-                    currentHeadingPath = string.Join(" > ",headingStack.OrderBy(x => x.Key).Select(x => x.Value));
+                    currentHeadingPath = string.Join(" > ", headingStack.OrderBy(x => x.Key).Select(x => x.Value));
                     continue;
                 }
 
@@ -87,7 +87,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 var content = new StringBuilder();
                 //flush content to entries 
                 void Flush()
-                 {
+                {
                     var chunkContent = content.ToString().Trim();
 
                     if (string.IsNullOrWhiteSpace(chunkContent))
@@ -246,7 +246,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var normalized = string.Join(" ", SplitParagraphs(content));
 
             if (normalized.Length <= 500)
-                   return normalized;
+                return normalized;
 
             return normalized[..500].TrimEnd() + "...";
         }

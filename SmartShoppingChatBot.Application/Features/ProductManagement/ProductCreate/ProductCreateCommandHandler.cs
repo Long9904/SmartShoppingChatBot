@@ -19,7 +19,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
         private readonly ICurrentUserService _currentUserService;
         private readonly IProductRepository _productRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly TimeProvider _time;  
+        private readonly TimeProvider _time;
         private readonly IBusinessQuotaRepository _businessQuotaRepository;
         private readonly IPublishEndpoint _publisher;
 
@@ -29,7 +29,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             IProductRepository productRepository,
             IUnitOfWork unitOfWork,
             IPublishEndpoint publisher,
-            TimeProvider timeProvider, 
+            TimeProvider timeProvider,
             IBusinessQuotaRepository businessQuotaRepository)
         {
             _logger = logger;
@@ -44,7 +44,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
         public async Task<Result<ProductResponse>> Handle(ProductCreateCommand request, CancellationToken cancellationToken)
         {
             var business = await _currentUserService.GetBusiness();
-            if (!business.IsSuccess || business.Data == null )
+            if (!business.IsSuccess || business.Data == null)
             {
                 return Result<ProductResponse>.Failure(business.StatusCode, business.Message);
             }
@@ -56,8 +56,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 return Result<ProductResponse>.Failure(user.StatusCode, user.Message);
             }
 
-            var existingProduct = await _productRepository.FindAsync(p => 
-            p.BusinessId == business.Data.Id 
+            var existingProduct = await _productRepository.FindAsync(p =>
+            p.BusinessId == business.Data.Id
             && p.ExternalId == request.ExternalId
             && p.Status != ProductStatus.Deleted);
 
@@ -68,7 +68,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
 
 
             var businessQuota = await _businessQuotaRepository.FindAsync(b => b.BusinessId == business.Data.Id);
-            if (businessQuota == null) 
+            if (businessQuota == null)
                 return Result<ProductResponse>.Failure(404, "Hạn mức của doanh nghiệp không thể tìm thấy");
 
             var productCount = await _productRepository.CountAsync(p => p.BusinessId == business.Data.Id && p.Status != ProductStatus.Deleted);
@@ -81,7 +81,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             var pointId = Guid.NewGuid();
             var dateNow = _time.GetUtcNow();
             var productId = ObjectId.GenerateNewId();
-             
+
             var product = new Product
             {
                 Id = productId,

@@ -1,0 +1,138 @@
+@using SmartShoppingChatBot.Application.DTOs
+@using System.Globalization
+@model BillCompletedEmailModel
+
+@{
+    var viCulture = new CultureInfo("vi-VN");
+    var businessName = string.IsNullOrWhiteSpace(Model.BusinessName) ? "doanh nghiệp của bạn" : Model.BusinessName;
+    var invoiceId = !string.IsNullOrWhiteSpace(Model.InvoiceId)
+        ? Model.InvoiceId
+        : (Model.OrderCode > 0 ? $"#{Model.OrderCode}" : "Không có thông tin");
+    var paymentMethod = string.IsNullOrWhiteSpace(Model.PaymentMethod) ? "Không có thông tin" : Model.PaymentMethod;
+    var paymentStatus = string.IsNullOrWhiteSpace(Model.PaymentStatus) ? "Đã thanh toán" : Model.PaymentStatus;
+    var subscriptionName = string.IsNullOrWhiteSpace(Model.SubscriptionName) ? "Gói dịch vụ Lunar AI" : Model.SubscriptionName;
+    var supportEmail = string.IsNullOrWhiteSpace(Model.SupportEmail) ? "support@lunarai.vn" : Model.SupportEmail;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hóa đơn thanh toán Lunar AI</title>
+</head>
+
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:Arial,Helvetica,sans-serif;color:#202124;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+        Hóa đơn @invoiceId của @businessName đã thanh toán thành công cho gói @subscriptionName.
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#f6f7f9;">
+        <tr>
+            <td align="center" style="padding:32px 16px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;">
+                    <tr>
+                        <td style="padding:28px 32px 20px 32px;">
+                            <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;line-height:1;letter-spacing:0;color:#111827;">
+                                Lunar AI
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:0 32px;">
+                            <div style="display:inline-block;padding:6px 10px;border-radius:999px;background:#ecfdf3;color:#067647;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;">
+                                Payment completed
+                            </div>
+
+                            <h1 style="margin:18px 0 12px 0;font-size:28px;line-height:1.25;font-weight:700;color:#111827;">
+                                Hóa đơn thanh toán
+                            </h1>
+
+                            <p style="margin:0;font-size:16px;line-height:1.6;color:#4b5563;">
+                                Xin chào <strong style="color:#111827;">@businessName</strong>, Lunar AI xác nhận thanh toán
+                                cho hóa đơn <strong style="color:#111827;">@invoiceId</strong> đã hoàn tất.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:24px 32px 0 32px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;">
+                                <tr>
+                                    <td style="padding:18px 20px;border-bottom:1px solid #e5e7eb;">
+                                        <div style="font-size:13px;line-height:1.4;color:#6b7280;">Số tiền</div>
+                                        <div style="margin-top:6px;font-size:30px;line-height:1.2;font-weight:700;color:#111827;">
+                                            @Model.Amount.ToString("N0", viCulture) VND
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0 20px;">
+                                        <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                                            <tr>
+                                                <td style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#6b7280;">Tên doanh nghiệp</td>
+                                                <td align="right" style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#111827;font-weight:700;">@businessName</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#6b7280;">Mã đơn hàng / Invoice ID</td>
+                                                <td align="right" style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#111827;font-weight:700;">@invoiceId</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#6b7280;">Thời gian thanh toán</td>
+                                                <td align="right" style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#111827;font-weight:700;">@Model.PaidAt.ToString("dd/MM/yyyy HH:mm", viCulture)</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#6b7280;">Phương thức thanh toán</td>
+                                                <td align="right" style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#111827;font-weight:700;">@paymentMethod</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#6b7280;">Trạng thái thanh toán</td>
+                                                <td align="right" style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#067647;font-weight:700;">@paymentStatus</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#6b7280;">Gói đã mua</td>
+                                                <td align="right" style="padding:14px 0;border-bottom:1px solid #edf0f3;font-size:14px;line-height:1.5;color:#111827;font-weight:700;">@subscriptionName</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:14px 0;font-size:14px;line-height:1.5;color:#6b7280;">Thời hạn subscription</td>
+                                                <td align="right" style="padding:14px 0;font-size:14px;line-height:1.5;color:#111827;font-weight:700;">@Model.SubscriptionStartDate.ToString("dd/MM/yyyy", viCulture) - @Model.SubscriptionEndDate.ToString("dd/MM/yyyy", viCulture)</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:24px 32px 28px 32px;">
+                            @if (!string.IsNullOrWhiteSpace(Model.InvoiceUrl))
+                            {
+                                <a href="@Model.InvoiceUrl" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:700;">
+                                    Xem hóa đơn
+                                </a>
+                            }
+                            else
+                            {
+                                <p style="margin:0;font-size:14px;line-height:1.6;color:#6b7280;">
+                                    Cần hỗ trợ về hóa đơn? Liên hệ
+                                    <a href="mailto:@supportEmail" style="color:#374151;text-decoration:underline;">@supportEmail</a>.
+                                </p>
+                            }
+                        </td>
+                    </tr>
+                </table>
+
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;max-width:600px;">
+                    <tr>
+                        <td style="padding:18px 8px 0 8px;text-align:center;font-size:12px;line-height:1.6;color:#9ca3af;">
+                            Lunar AI · AI Ecommerce SaaS
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

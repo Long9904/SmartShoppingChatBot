@@ -1,7 +1,7 @@
 ﻿using SmartShoppingChatBot.Application.Commons.Queries;
 using SmartShoppingChatBot.Domain.Enums;
 
-namespace SmartShoppingChatBot.Application.Features.GetAllPayment
+namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPayment
 {
     public class GetPaymentFilter : QueryBase
     {

@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography;
-using MediatR;
+﻿using MediatR;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
@@ -8,6 +7,7 @@ using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
+using System.Security.Cryptography;
 
 namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.CreateNewKey
 {
@@ -21,9 +21,9 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.CreateNewKe
         private readonly TimeProvider _time;
 
         public CreateNewKeyCommandHandler(
-            IHashService hashService, 
-            IApiKeyRepository apiKeyRepository, 
-            IUnitOfWork unitOfWork, 
+            IHashService hashService,
+            IApiKeyRepository apiKeyRepository,
+            IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             TimeProvider time)
         {
@@ -46,7 +46,7 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.CreateNewKe
 
             var business = await _currentUserService.GetBusiness();
 
-            if(!business.IsSuccess)
+            if (!business.IsSuccess)
             {
                 return Result<CreateApiKeyResponse>.Failure(business.StatusCode, business.Message);
             }
@@ -82,7 +82,7 @@ namespace SmartShoppingChatBot.Application.Features.ApiKeyManagement.CreateNewKe
                 {
                     Id = user.Data.Id,
                     Name = user.Data.FullName,
-                }   
+                }
             };
 
             await _apiKeyRepository.AddAsync(apiKey);

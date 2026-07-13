@@ -5,9 +5,9 @@ using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Interface;
 
-namespace SmartShoppingChatBot.Application.Features.GetPaymentByBusinessLogin
+namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetPaymentByOrderCode
 {
-    public class GetPaymentByLoginQueryHandler : IRequestHandler<GetPaymentByLoginQuery, Result<PaymentResponse>>
+    public class GetPaymentByOrderCodeQueryHandler : IRequestHandler<GetPaymentByOrderCodeQuery, Result<PaymentResponse>>
     {
         private readonly IPaymentRepository _paymentRepository;
         private readonly IMapper _mapper;
@@ -16,7 +16,7 @@ namespace SmartShoppingChatBot.Application.Features.GetPaymentByBusinessLogin
         private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
 
 
-        public GetPaymentByLoginQueryHandler(IPaymentRepository paymentRepository, IMapper mapper, ICurrentUserService currentUserService,
+        public GetPaymentByOrderCodeQueryHandler(IPaymentRepository paymentRepository, IMapper mapper, ICurrentUserService currentUserService,
             IBusinessRepository businessRepository, ISubscriptionPlanRepository subscriptionPlanRepository)
         {
             _paymentRepository = paymentRepository;
@@ -26,7 +26,7 @@ namespace SmartShoppingChatBot.Application.Features.GetPaymentByBusinessLogin
             _subscriptionPlanRepository = subscriptionPlanRepository;
         }
 
-        public async Task<Result<PaymentResponse>> Handle(GetPaymentByLoginQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PaymentResponse>> Handle(GetPaymentByOrderCodeQuery request, CancellationToken cancellationToken)
         {
             var businessLogin = await _currentUserService.GetBusiness();
             if (!businessLogin.IsSuccess)

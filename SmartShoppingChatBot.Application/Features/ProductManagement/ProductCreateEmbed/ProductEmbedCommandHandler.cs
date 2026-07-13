@@ -5,7 +5,6 @@ using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
-using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
 using SmartShoppingChatBot.Domain.QdrantConfig;
 

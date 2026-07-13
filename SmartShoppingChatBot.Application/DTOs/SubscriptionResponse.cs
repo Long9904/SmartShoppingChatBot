@@ -9,6 +9,7 @@ namespace SmartShoppingChatBot.Application.DTOs
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public int Duration { get; set; }
+        public int Level { get; set; }
         public long TokenLimit { get; set; }
         public int MessageLimit { get; set; }
         public int MaxProductAllowed { get; set; }

@@ -66,8 +66,8 @@ public class ConfirmBusinessCommandHandler :
     {
 
         // Verify business 
-        var business = await _businessRepository.FindAsync(b => 
-        b.Id == request.BusinessId 
+        var business = await _businessRepository.FindAsync(b =>
+        b.Id == request.BusinessId
         && b.BusinessStatus == BusinessEnums.PENDING_APPROVAL);
 
         if (business == null)
@@ -75,8 +75,8 @@ public class ConfirmBusinessCommandHandler :
             return Result<BusinessRegistrationResponse>.Failure(404, "Business not found", null, "MG_BUSINESS_404");
         }
 
-        var owner = await _userRepository.FindAsync(u => 
-        u.Business.Id == request.BusinessId 
+        var owner = await _userRepository.FindAsync(u =>
+        u.Business.Id == request.BusinessId
         && u.Business.Role == RoleEnums.BUSINESS_OWNER);
 
         if (owner == null) return Result<BusinessRegistrationResponse>.Failure(404, "Business not found", null, "MG_BUSINESS_404");

@@ -1,11 +1,9 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Features.GetAllPayment;
-using SmartShoppingChatBot.Application.Features.GetAllSubscription;
-using SmartShoppingChatBot.Application.Features.GetPaymentByOrderCode;
+using SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPayment;
+using SmartShoppingChatBot.Application.Features.PaymentManagement.GetPaymentByOrderCode;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 
@@ -36,10 +34,10 @@ namespace SmartShoppingChatBot.API.Controllers
             return StatusCode(result.StatusCode, ApiResponse<PaymentResponsed>.Fail(result.Message!, result.Errors));
         }
 
-        [HttpGet("callback")]
+        [HttpPost("callback")]
         [EndpointSummary("[DON'T CALL THIS ENDPOINT DIRECTLY] WEBHOOK CALLBACK FOR PAYMENT")]
         [EndpointDescription("Handle payment success callback.")]
-        public async Task<IActionResult> PaymentWebhook(PayOSWebhookRequest webhookData)
+        public async Task<IActionResult> PaymentWebhook([FromBody] PayOSWebhookRequest webhookData)
         {
             var result = await _paymentService.VerifyPaymentWebhook(webhookData);
             if (result)
@@ -52,7 +50,7 @@ namespace SmartShoppingChatBot.API.Controllers
         public async Task<IActionResult> TestPaymentSuccess(long orderCode)
         {
             var payment = await _paymentService.TestPaymentSuccessful(orderCode);
-            if (payment != null)
+            if (payment.IsSuccess)
                 return StatusCode(StatusCodes.Status200OK, "Payment simulated successfully.");
             return StatusCode(StatusCodes.Status400BadRequest, "Failed to simulate payment.");
         }
@@ -76,5 +74,5 @@ namespace SmartShoppingChatBot.API.Controllers
                 return StatusCode(StatusCodes.Status200OK, ApiResponse<PaymentResponse>.Ok(result.Data!, result.Message));
             return StatusCode(StatusCodes.Status404NotFound, ApiResponse<PaymentResponse>.Fail("Payment not found.", null));
         }
-    } 
+    }
 }
