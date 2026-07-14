@@ -5,7 +5,6 @@ namespace SmartShoppingChatBot.Application.DTOs
     public class CreatePaymentRequest
     {
         public string SubscriptionPlanId { get; set; } = string.Empty;
-        public string BussinessId { get; set; } = string.Empty;
         public string? ReturnUrlDomain { get; set; }
 
     }

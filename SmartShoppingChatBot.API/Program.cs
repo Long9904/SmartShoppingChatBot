@@ -1,5 +1,11 @@
+using System.Net.Http.Headers;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CloudinaryDotNet;
 using MassTransit;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
@@ -12,11 +18,6 @@ using SmartShoppingChatBot.Application.Commons.Behaviors;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Infrastructure;
 using SmartShoppingChatBot.Infrastructure.Seeders;
-using System.Net.Http.Headers;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,20 +88,15 @@ builder.Services.AddSwaggerGen(c =>
         BearerFormat = "JWT"
     });
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+    c.AddSecurityDefinition("ApiKey",
+    new OpenApiSecurityScheme
     {
-        {
-            new OpenApiSecurityScheme
-            {
-                Description = @"JWT Authorization Header",
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = ParameterLocation.Header
-            },
-            Array.Empty<string>()
-        }
+        Type = SecuritySchemeType.ApiKey,
+        Name = "x-api-key",
+        In = ParameterLocation.Header
     });
+
+    c.OperationFilter<SwaggerSecurityOperationFilter>();
 
     c.SwaggerDoc("external", new OpenApiInfo
     {
@@ -167,7 +163,15 @@ builder.Services.AddAuthentication(options =>
             ClockSkew = TimeSpan.Zero,
             RoleClaimType = ClaimTypes.Role
         };
-    });
+    })
+
+    .AddScheme<AuthenticationSchemeOptions,
+    ApiKeyAuthenticationHandler>(
+    "ApiKey",
+    options => { });
+
+
+
 
 builder.Services.AddAuthorization();
 

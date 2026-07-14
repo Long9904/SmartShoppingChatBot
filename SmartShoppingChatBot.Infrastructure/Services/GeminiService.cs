@@ -1,12 +1,12 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using Google.Apis.Auth.OAuth2;
+﻿using Google.Apis.Auth.OAuth2;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.Interface;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace SmartShoppingChatBot.Infrastructure.Services
 {
@@ -100,7 +100,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error generating embeddings from Gemini API");
-                return Result<double[]>.Failure(500, "Error generating embeddings from Gemini API");
+                return Result<double[]>.Failure(500, "Error generating embeddings from Gemini API", messageCode: "MG_SERVER_500");
             }
         }
 
@@ -151,7 +151,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
                 var json = JsonSerializer.Serialize(requestBody);
                 var accessToken = await GetAccessTokenAsync();
-      
+
 
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -199,7 +199,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 // Other options:
                 // 1. Handle with other recall
                 // 2. Call other LLM API
-                return Result<string>.Failure(500, "Error generating text from Gemini API");
+                return Result<string>.Failure(500, "Error generating text from Gemini API", messageCode: "MG_SERVER_500");
             }
         }
     }

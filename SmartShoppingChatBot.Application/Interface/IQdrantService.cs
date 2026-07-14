@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Qdrant.Client.Grpc;
+﻿using Qdrant.Client.Grpc;
 
 namespace SmartShoppingChatBot.Application.Interface
 {

@@ -1,8 +1,6 @@
 ﻿using MediatR;
-using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Domain.Entities;
 
 namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCreateEmbed
 {

@@ -27,7 +27,7 @@ namespace SmartShoppingChatBot.Application.Consumers
             var result = await _mediator.Send(command, context.CancellationToken);
             if (!result.IsSuccess)
             {
-                _logger.LogWarning("Document embedding failed for DocumentId {DocumentId}: {Message}",context.Message.DocumentId,result.Message);
+                _logger.LogWarning("Document embedding failed for DocumentId {DocumentId}: {Message}", context.Message.DocumentId, result.Message);
                 return;
             }
         }

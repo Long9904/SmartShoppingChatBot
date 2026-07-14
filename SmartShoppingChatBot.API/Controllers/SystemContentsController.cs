@@ -1,15 +1,16 @@
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Features.CreateSystemContent;
-using SmartShoppingChatBot.Application.Features.DeleteSystemContent;
-using SmartShoppingChatBot.Application.Features.GetAllSystemContent;
-using SmartShoppingChatBot.Application.Features.GetSystemContentById;
-using SmartShoppingChatBot.Application.Features.GetSystemContentByKey;
-using SmartShoppingChatBot.Application.Features.UpdateSystemContent;
+using SmartShoppingChatBot.Application.Features.SystemContentManagement.CreateSystemContent;
+using SmartShoppingChatBot.Application.Features.SystemContentManagement.DeleteSystemContent;
+using SmartShoppingChatBot.Application.Features.SystemContentManagement.GetAllSystemContent;
+using SmartShoppingChatBot.Application.Features.SystemContentManagement.GetSystemContentById;
+using SmartShoppingChatBot.Application.Features.SystemContentManagement.GetSystemContentByKey;
+using SmartShoppingChatBot.Application.Features.SystemContentManagement.UpdateSystemContent;
 using SmartShoppingChatBot.Domain.Commons;
 
 namespace SmartShoppingChatBot.API.Controllers
@@ -17,6 +18,7 @@ namespace SmartShoppingChatBot.API.Controllers
     [Route("api/v1/system-contents")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class SystemContentsController : ControllerBase
     {
         private readonly IMediator _mediator;

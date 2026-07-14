@@ -1,14 +1,15 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Features.BusinessRegistration;
-using SmartShoppingChatBot.Application.Features.ConfirmBusinessRegistration;
-using SmartShoppingChatBot.Application.Features.GetAllBusiness;
-using SmartShoppingChatBot.Application.Features.GetMyBusinessProfile;
-using SmartShoppingChatBot.Application.Features.UpdateBusiness;
+using SmartShoppingChatBot.Application.Features.Auth.GetMyBusinessProfile;
+using SmartShoppingChatBot.Application.Features.BusinessManagement.BOUpdateBusiness;
+using SmartShoppingChatBot.Application.Features.BusinessManagement.BusinessRegistration;
+using SmartShoppingChatBot.Application.Features.BusinessManagement.ConfirmBusinessRegistration;
+using SmartShoppingChatBot.Application.Features.BusinessManagement.GetAllBusiness;
 using SmartShoppingChatBot.Domain.Commons;
 
 namespace SmartShoppingChatBot.API.Controllers

@@ -5,7 +5,7 @@ namespace SmartShoppingChatBot.Application.DTOs
     public class CreateApiKeyResponse
     {
         public string? Id { get; set; }
-       
+
         public string Name { get; set; } = string.Empty;
 
         public string KeyId { get; set; } = string.Empty;
