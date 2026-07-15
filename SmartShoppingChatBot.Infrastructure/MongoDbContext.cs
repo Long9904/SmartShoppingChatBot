@@ -22,6 +22,13 @@ public class MongoDbContext : DbContext
     public DbSet<KnowledgeDocument> KnowledgeDocuments { get; set; }
     public DbSet<KnowledgeEntry> KnowledgeEntries { get; set; }
     public DbSet<Product> Products { get; set; }
+
+    public DbSet<Customer> Customers { get; set; }
+
+    public DbSet<Conversation> Conversations { get; set; }
+
+    public DbSet<Message> Messages { get; set; }
+
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
@@ -88,6 +95,21 @@ public class MongoDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.QdrantPointId).IsUnique();
+        });
+
+        modelBuilder.Entity<Customer>(e =>
+        {
+            e.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Conversation>(e =>
+        {
+            e.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Message>(e =>
+        {
+            e.HasKey(e => e.Id);
         });
     }
 }

@@ -13,5 +13,18 @@ namespace SmartShoppingChatBot.Application.Interface
              string collectionName,
              IReadOnlyList<PointStruct> points,
              CancellationToken ct = default);
+
+        Task SetPayloadAsync(
+             string collectionName,
+             IReadOnlyList<ulong> ids,
+             Dictionary<string, Value> payload,
+             CancellationToken ct = default);
+
+        Task<IReadOnlyList<ScoredPoint>> SearchAsync(
+            string collectionName,
+            ReadOnlyMemory<float> embedding,
+            Filter? filter,
+            int limit,
+            CancellationToken ct = default);
     }
 }

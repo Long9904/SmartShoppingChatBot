@@ -40,7 +40,10 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
 
             if (product == null) return Result<ProductResponse>.Failure(404, "Product not found.");
 
-            var embeddingText = product.BuildEmbeddingText();
+            var embeddingText = product.SearchContent;
+
+            if (embeddingText == null) return Result<ProductResponse>.Failure(404, "Product not found.");
+
             var sematicSearchText = await BuildSematicSearchText(embeddingText);
 
             if (!sematicSearchText.IsSuccess)
@@ -81,6 +84,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                     ["external_id"] = product.ExternalId,
                     ["name"] = product.Name,
                     ["description"] = product.Description ?? "",
+                    ["external_url"] = product.ExternalProductUrl ?? "",
                     ["price"] = product.Price.ToString(),
                     ["currency"] = product.Currency,
                     ["brand"] = product.Brand ?? "",
@@ -93,7 +97,6 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             {
                 qdrantPoint.Payload[$"meta_{meta.Key}"] = meta.Value.ToString()!;
             }
-
 
             try
             {
@@ -127,42 +130,66 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             }
         }
 
+
+
         private async Task<Result<string>> BuildSematicSearchText(string embeddingText)
         {
             var systemPrompt = await File.ReadAllTextAsync("prompts/SemanticEmbedding.md");
 
             var prompt = systemPrompt + $"\n\nproduct data: \n{embeddingText}";
 
-
             try
             {
-                var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
+                var response = await _geminiService.GenerateTextAsyncV2(new GeminiRequest
+                {
+                    Prompt = embeddingText,
+                    GenerationConfig = new()
+                    {
+                        MaxOutputTokens = 5000,
+                        Temperature = 0.2
+                    },
+                    SystemPrompt = systemPrompt,
+                });
+
                 if (response.IsSuccess)
                 {
-                    _logger.LogInformation($"Data generated using QwenService: {response.Data}");
                     return Result<string>.Success(response.Data);
                 }
+
                 else
                 {
-                    var fallbackResponse = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
+                    var fallbackResponse = await _qwenService.GenerateTextAsync(prompt, 5000, 0.2, false);
                     return Result<string>.Success(fallbackResponse.Data);
                 }
 
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate semantic search text using QwenService. Falling back to GeminiService.");
+                _logger.LogError(ex, "Failed to generate semantic search text using Gemini. Falling back to Qwen.");
 
-                var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
+                var response = await _geminiService.GenerateTextAsyncV2(new GeminiRequest
+                {
+                    Prompt = embeddingText,
+                    GenerationConfig = new()
+                    {
+                        MaxOutputTokens = 5000,
+                        Temperature = 0.2
+                    },
+                    SystemPrompt = systemPrompt,
+                });
+
+
                 if (!response.IsSuccess)
                 {
-                    _logger.LogError("GeminiService also failed to generate semantic search text.");
+                    _logger.LogError("Qwen also failed to generate semantic search text.");
                     return Result<string>.Failure(500, "Failed to generate semantic search text using both QwenService and GeminiService.");
                 }
 
                 return Result<string>.Success(response.Data);
             }
         }
+
+
 
         private static Vector ToQdrantDenseVector(IEnumerable<double> values)
         {

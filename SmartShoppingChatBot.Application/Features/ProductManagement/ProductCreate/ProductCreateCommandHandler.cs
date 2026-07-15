@@ -83,6 +83,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             var pointId = Guid.NewGuid();
             var dateNow = _time.GetUtcNow();
             var productId = ObjectId.GenerateNewId();
+
              
             var product = new Product
             {
@@ -144,6 +145,12 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             {
                 return Result<ProductResponse>.Failure(404, "Authentication fail", null, AuthMessageCode.InvalidAuthentication);
             }
+
+
+            // Build search text
+            var embeddingText = product.BuildEmbeddingText();
+            product.SearchContent = embeddingText;
+
 
             try
             {

@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features\ProductManagement\ProductSemanticSearch\" />
     <Folder Include="Features\SystemContentManagement\CreateSystemContent\" />
     <Folder Include="Features\SystemContentManagement\DeleteSystemContent\" />
     <Folder Include="Features\SystemContentManagement\GetSystemContentByKey\" />

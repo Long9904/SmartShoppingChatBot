@@ -32,6 +32,19 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             _logger.LogInformation("Collection {CollectionName} created successfully.", collectionName);
         }
 
+        public async Task SetPayloadAsync(
+            string collectionName,
+            IReadOnlyList<ulong> ids,
+            Dictionary<string, Value> payload,
+            CancellationToken ct = default)
+        {
+            await _qdrantClient.SetPayloadAsync(
+                collectionName: collectionName,
+                payload: payload,
+                ids: ids,
+                cancellationToken: ct);
+        }
+
         public async Task UpsertAsync(
             string collectionName,
             IReadOnlyList<PointStruct> points,
@@ -41,6 +54,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 collectionName: collectionName,
                 points: points,
                 cancellationToken: ct);
+        }
+
+
+
+        public Task<IReadOnlyList<ScoredPoint>> SearchAsync(string collectionName, ReadOnlyMemory<float> embedding, Filter? filter, int limit, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }

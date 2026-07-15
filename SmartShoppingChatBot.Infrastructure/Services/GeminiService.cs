@@ -1,12 +1,17 @@
-﻿using Google.Apis.Auth.OAuth2;
+﻿using System.Diagnostics;
+using System.Linq.Dynamic.Core;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.Commons.Results;
+using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 
 namespace SmartShoppingChatBot.Infrastructure.Services
 {
@@ -107,7 +112,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         public async Task<Result<string>> GenerateTextAsync(
             string prompt,
             int maxTokens = 9000,
-            double temperature = 0.7)
+            double temperature = 0.7,
+            string systemPrompt = "")
         {
             try
             {
@@ -115,6 +121,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 {
                     maxTokens = _config.GeminiMaxTokens;
                 }
+
                 var projectId = _config.ProjectId;
                 var location = _config.Location ?? "asia-southeast1";
                 var model = _config.ModelId ?? "gemini-3.5-flash";
@@ -131,7 +138,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 var requestBody = new
                 {
                     contents = new[]
-    {
+                    {
                          new
                          {
                              role = "user",
@@ -141,6 +148,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                              }
                          }
                     },
+
+                    systemInstruction = new
+                    {
+                        parts = new[]
+                            {
+                                new { text = systemPrompt }
+                            }
+                    },
+
                     generationConfig = new
                     {
                         temperature = temperature,
@@ -202,5 +218,184 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 return Result<string>.Failure(500, "Error generating text from Gemini API", messageCode: "MG_SERVER_500");
             }
         }
+
+        public async Task<Result<string>> GenerateTextAsyncV2(GeminiRequest geminiRequest)
+        {
+            if (geminiRequest.GenerationConfig.MaxOutputTokens > _config.GeminiMaxTokens)
+            {
+                geminiRequest.GenerationConfig.MaxOutputTokens = _config.GeminiMaxTokens;
+            }
+
+            var projectId = _config.ProjectId;
+            var location = _config.Location ?? "asia-southeast1";
+            var model = _config.ModelId ?? "gemini-3.5-flash";
+
+            var host = $"{location}-aiplatform.googleapis.com";
+            if ("global".Equals(location))
+            {
+                host = "aiplatform.googleapis.com";
+            }
+
+            var endpoint = $"https://{host}/v1/projects/{projectId}" +
+                $"/locations/{location}/publishers/google/models/{model}:generateContent";
+
+            var requestBody = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        parts = new []
+                        {
+                            new { text = geminiRequest.Prompt }
+                        }
+                    }
+                },
+                systemInstruction = new
+                {
+                    parts = new[]
+                    {
+                        new { text = geminiRequest.SystemPrompt }
+                    }
+                },
+
+                generationConfig = geminiRequest.GenerationConfig
+            };
+
+
+            try
+            {
+                var json = JsonSerializer.Serialize(requestBody, JsonOptions);
+
+                var accessToken = await GetAccessTokenAsync();
+
+
+                using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var client = _httpClientFactory.CreateClient("gemini");
+
+                var sw = Stopwatch.StartNew();
+
+                using var response = await client.SendAsync(request);
+                sw.Stop();
+                var latencyMs = sw.ElapsedMilliseconds;
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    response.EnsureSuccessStatusCode();
+                }
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(responseContent);
+                var root = doc.RootElement;
+                string? text = null;
+
+                if (root.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
+                {
+                    var first = candidates[0];
+                    if (first.TryGetProperty("content", out var content)
+                        && content.TryGetProperty("parts", out var parts)
+                        && parts.GetArrayLength() > 0
+                        && parts[0].TryGetProperty("text", out var textElem))
+                    {
+                        text = textElem.GetString();
+                    }
+                }
+
+
+                int promptTokenCount = 0;
+                int candidatesTokenCount = 0;
+                int totalTokenCount = 0;
+
+                if (root.TryGetProperty("usageMetadata", out var usageMetadata))
+                {
+                    if (usageMetadata.TryGetProperty("promptTokenCount", out var promptToken))
+                    {
+                        promptTokenCount = promptToken.GetInt32();
+                    }
+
+                    if (usageMetadata.TryGetProperty("candidatesTokenCount", out var candidateToken))
+                    {
+                        candidatesTokenCount = candidateToken.GetInt32();
+                    }
+
+                    if (usageMetadata.TryGetProperty("totalTokenCount", out var totalToken))
+                    {
+                        totalTokenCount = totalToken.GetInt32();
+                    }
+                }
+
+                if (text == null)
+                {
+                    return Result<string>.Failure(500, "No text generated from Gemini API");
+                }
+
+                return Result<string>.Success(text);
+
+            }
+
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating text from Gemini API");
+                return Result<string>.Failure(500, "Error generating text from Gemini API", messageCode: "MG_SERVER_500");
+            }
+
+        }
+
+        public async Task<Result<ICollection<RankedRecord>>> RerankerAsync(
+            string userQuery,
+            IEnumerable<RankRecord> records,
+            CancellationToken ct)
+        {
+            var endpoint =
+            $"https://discoveryengine.googleapis.com/v1/projects/{_config.ProjectId}/locations/global/rankingConfigs/default_ranking_config:rank";
+
+            var req = new RankRequest
+            {
+                Query = userQuery,
+                Records = records.ToList(),
+                Model = "semantic-ranker-fast-004",
+                IgnoreRecordDetailsInResponse = false
+            };
+
+            var token = await GetAccessTokenAsync();
+
+            using var message = new HttpRequestMessage(HttpMethod.Post, endpoint);
+
+            message.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            message.Content = JsonContent.Create(req);
+
+            using var client = _httpClientFactory.CreateClient("gemini");
+
+            try
+            {
+                var response = await client.SendAsync(message, ct);
+
+                response.EnsureSuccessStatusCode();
+
+                var result =
+                    await response.Content.ReadFromJsonAsync<RankResponse>(cancellationToken: ct);
+
+                return Result<ICollection<RankedRecord>>.Success(result.Records, 200, "Reranker success");
+            }
+            catch (Exception ex)
+            {
+
+                _logger.LogError(ex, "Error when reranker");
+                return Result<ICollection<RankedRecord>>.Failure(400, "Reranker fail");
+            }
+        }
+
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
     }
 }
+
