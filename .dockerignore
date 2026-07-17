@@ -28,3 +28,6 @@ secrets.json
 **/obj/Release/
 .codex
 docs
+artifacts
+.agents
+.env

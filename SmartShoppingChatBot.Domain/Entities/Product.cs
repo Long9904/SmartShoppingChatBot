@@ -42,6 +42,8 @@ public class Product
     // Qdrant sync
     public Guid QdrantPointId { get; set; }
 
+    public string SearchContent { get; set; } = default!;
+
     public DateTimeOffset EmbbbedAt { get; set; }
 
     // Log
@@ -72,7 +74,7 @@ public class Product
 
     public string BuildEmbeddingText()
     {
-        var embeddingText = new List<string> { Name };
+        var embeddingText = new List<string> { $"Tên sản phẩm: {Name}" };
 
         if (!string.IsNullOrEmpty(Description))
             embeddingText.Add("Mô tả sản phẩm: " + Description);
@@ -81,7 +83,6 @@ public class Product
             embeddingText.Add("Thương hiệu: " + Brand);
 
         embeddingText.Add("Danh mục: " + Category);
-        embeddingText.Add("Giá: " + Price + " " + Currency);
 
         foreach (var data in Metadata)
             embeddingText.Add(data.Key + ": " + data.Value);

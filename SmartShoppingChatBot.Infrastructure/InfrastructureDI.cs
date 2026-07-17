@@ -29,6 +29,7 @@ public static class InfrastructureDI
         services.AddScoped<IExtractFileService, ExtractFileService>();
         services.AddScoped<IChunkService, ChunkService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IKernelChatService, KernelChatService>();
 
         // Seeder
         services.AddScoped<UserSeeder>();
@@ -48,6 +49,9 @@ public static class InfrastructureDI
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IKnowledgeEntryRepository, KnowledgeEntryRepository>();
         services.AddScoped<IKnowledgeDocumentRepository, KnowledgeDocumentRepository>();
+        services.AddScoped<IConversationRepository, ConversationRepository>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
 
         return services;
     }

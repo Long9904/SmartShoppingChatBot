@@ -10,12 +10,14 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.SemanticKernel;
 using Qdrant.Client;
 using SmartShoppingChatBot.API.Extensions;
 using SmartShoppingChatBot.API.Middlewares;
 using SmartShoppingChatBot.Application;
 using SmartShoppingChatBot.Application.Commons.Behaviors;
 using SmartShoppingChatBot.Application.Commons.Options;
+using SmartShoppingChatBot.Application.Plugins;
 using SmartShoppingChatBot.Infrastructure;
 using SmartShoppingChatBot.Infrastructure.Seeders;
 
@@ -209,6 +211,22 @@ builder.Services.AddSingleton(_ =>
         port: int.Parse(builder.Configuration["Qdrant:Port"] ?? "6334")
     ));
 
+// Semantic Kernel
+builder.Services.AddScoped<ProductPlugin>();
+builder.Services.AddScoped<Kernel>(sp =>
+{
+    var kb = Kernel.CreateBuilder();
+
+    kb.AddOpenAIChatCompletion(
+        modelId: builder.Configuration["OpenAI:ModelId"]!,
+        apiKey: builder.Configuration["OpenAI:ApiKey"]!
+    );
+
+    // Kernel plugin register
+    kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPlugin>(), "Product");
+
+    return kb.Build();
+});
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").GetChildren()
     .Select(x => x.Value!)
