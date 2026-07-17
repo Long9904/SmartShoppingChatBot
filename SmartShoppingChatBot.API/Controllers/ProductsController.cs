@@ -10,7 +10,7 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1")]
     [ApiController]
-    
+
     public class ProductsController : ControllerBase
     {
         private readonly IMediator _mediator;

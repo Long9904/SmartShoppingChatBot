@@ -9,6 +9,8 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public ObjectId BusinessId { get; set; }
 
+        public ObjectId CustomerId { get; set; }
+
         public required string Title { get; set; }
 
         public ConversationStatus Status { get; set; }
@@ -17,6 +19,6 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public DateTimeOffset CreateAt { get; set; }
 
-        public Dictionary<string, string> MetatData { get; set; } = [];
+        public Dictionary<string, string> MetaData { get; set; } = [];
     }
 }

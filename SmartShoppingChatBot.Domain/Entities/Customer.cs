@@ -13,15 +13,11 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public string? Name { get; set; }
 
-        public string? Email { get; set; }
-
-        public string? Phone { get; set; }
-
         public CustomerStatus Status { get; set; } = CustomerStatus.Active;
 
         public DateTimeOffset? CreatedAt { get; set; }
 
-        public DateTimeOffset? UpdatedAt { get;set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
 
         public Dictionary<string, string> PersonalData { get; set; } = [];
     }

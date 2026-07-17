@@ -21,6 +21,6 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public DateTimeOffset CreatedAt { get; set; }
 
-        public Dictionary<string, string> MetatData { get; set; } = [];
+        public Dictionary<string, string> MetaData { get; set; } = [];
     }
 }

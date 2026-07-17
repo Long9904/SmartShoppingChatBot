@@ -2,6 +2,7 @@
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.QdrantConfig;
 
 namespace SmartShoppingChatBot.Infrastructure.Services
 {
@@ -61,6 +62,44 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         public Task<IReadOnlyList<ScoredPoint>> SearchAsync(string collectionName, ReadOnlyMemory<float> embedding, Filter? filter, int limit, CancellationToken ct = default)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<List<ScoredPoint>> HybridSearchAsync(
+            float[] embedding,
+            Filter filter,
+            int candidateLimit,
+            CancellationToken ct)
+        {
+            const ulong semanticLimit = 60;
+            const ulong technicalLimit = 40;
+
+            var prefetch = new List<PrefetchQuery>
+            {
+                new()
+                {
+                    Query = embedding,
+                    Using = ProductVectorNames.SemanticSearch,
+                    Filter = filter,
+                    Limit = semanticLimit
+                },
+                new()
+                {
+                    Query = embedding,
+                    Using = ProductVectorNames.ProductTechnical,
+                    Filter = filter,
+                    Limit = technicalLimit
+                }
+            };
+
+            var points = await _qdrantClient.QueryAsync(
+                collectionName: QdrantCollections.Products,
+                query: Fusion.Rrf,
+                prefetch: prefetch,
+                limit: (ulong)candidateLimit,
+                payloadSelector: true,
+                cancellationToken: ct);
+
+            return points.ToList();
         }
     }
 }

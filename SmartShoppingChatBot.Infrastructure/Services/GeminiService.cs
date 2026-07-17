@@ -40,7 +40,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         }
 
 
-        public async Task<Result<double[]>> EmbeddingsAsync(string text, string taskType = "RETRIEVAL_QUERY")
+        public Task<Result<double[]>> EmbeddingsAsync(string text, string taskType = "RETRIEVAL_QUERY")
+        {
+            return EmbeddingsAsyncV2(text, taskType);
+        }
+
+        public async Task<Result<double[]>> EmbeddingsAsyncV2(
+            string text,
+            string taskType = "RETRIEVAL_QUERY",
+            CancellationToken ct = default)
         {
             try
             {
@@ -79,9 +87,9 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 using var client = _httpClientFactory.CreateClient("gemini");
-                using var response = await client.SendAsync(request);
+                using var response = await client.SendAsync(request, ct);
 
-                var responseContent = await response.Content.ReadAsStringAsync();
+                var responseContent = await response.Content.ReadAsStringAsync(ct);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -101,6 +109,10 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     .ToArray();
 
                 return Result<double[]>.Success(data);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -260,7 +272,11 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     }
                 },
 
-                generationConfig = geminiRequest.GenerationConfig
+                generationConfig = new
+                {
+                    temperature = geminiRequest.GenerationConfig.Temperature,
+                    maxOutputTokens = geminiRequest.GenerationConfig.MaxOutputTokens,
+                }
             };
 
 
@@ -286,7 +302,16 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorBody = await response.Content.ReadAsStringAsync();
-                    response.EnsureSuccessStatusCode();
+
+                    _logger.LogError(
+                        "Gemini Error ({Status})\nRequest:\n{Request}\nResponse:\n{Response}",
+                        response.StatusCode,
+                        json,
+                        errorBody);
+
+                    return Result<string>.Failure(
+                        (int)response.StatusCode,
+                        errorBody);
                 }
 
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -346,7 +371,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
         }
 
-        public async Task<Result<ICollection<RankedRecord>>> RerankerAsync(
+        public Task<Result<ICollection<RankedRecord>>> RerankerAsync(
+            string userQuery,
+            IEnumerable<RankRecord> records,
+            CancellationToken ct)
+        {
+            return RerankerAsyncV2(userQuery, records, ct);
+        }
+
+        public async Task<Result<ICollection<RankedRecord>>> RerankerAsyncV2(
             string userQuery,
             IEnumerable<RankRecord> records,
             CancellationToken ct)
@@ -382,7 +415,16 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 var result =
                     await response.Content.ReadFromJsonAsync<RankResponse>(cancellationToken: ct);
 
+                if (result == null)
+                {
+                    return Result<ICollection<RankedRecord>>.Failure(502, "Reranker returned an empty response");
+                }
+
                 return Result<ICollection<RankedRecord>>.Success(result.Records, 200, "Reranker success");
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {

@@ -100,6 +100,8 @@ public class MongoDbContext : DbContext
         modelBuilder.Entity<Customer>(e =>
         {
             e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.BusinessId, e.CustomerExternalId })
+            .IsUnique();
         });
 
         modelBuilder.Entity<Conversation>(e =>
@@ -110,6 +112,7 @@ public class MongoDbContext : DbContext
         modelBuilder.Entity<Message>(e =>
         {
             e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.ConversationId, e.Id });
         });
     }
 }
