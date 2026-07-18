@@ -17,19 +17,25 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
         private readonly IGeminiService _geminiService;
         private readonly IQwenService _qwenService;
         private readonly IProductRepository _productRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly TimeProvider _timeProvider;
 
         public ProductEmbedCommandHandler(
             ILogger<ProductEmbedCommandHandler> logger,
             IQdrantService qdrantService,
             IGeminiService geminiService,
             IProductRepository productRepository,
-            IQwenService qwenService)
+            IQwenService qwenService,
+            IUnitOfWork unitOfWork,
+            TimeProvider timeProvider)
         {
             _logger = logger;
             _qdrantService = qdrantService;
             _geminiService = geminiService;
             _qwenService = qwenService;
             _productRepository = productRepository;
+            _unitOfWork = unitOfWork;
+            _timeProvider = timeProvider;
 
         }
 
@@ -40,7 +46,10 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
 
             if (product == null) return Result<ProductResponse>.Failure(404, "Product not found.");
 
-            var embeddingText = product.BuildEmbeddingText();
+            var embeddingText = product.SearchContent;
+
+            if (embeddingText == null) return Result<ProductResponse>.Failure(404, "Product not found.");
+
             var sematicSearchText = await BuildSematicSearchText(embeddingText);
 
             if (!sematicSearchText.IsSuccess)
@@ -49,9 +58,15 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             }
 
 
-            var productTechnicalVector = await _geminiService.EmbeddingsAsync(embeddingText);
+            var productTechnicalVector = await _geminiService.EmbeddingsAsyncV2(
+                embeddingText,
+                "RETRIEVAL_DOCUMENT",
+                cancellationToken);
 
-            var productSemanticVector = await _geminiService.EmbeddingsAsync(sematicSearchText.Data!);
+            var productSemanticVector = await _geminiService.EmbeddingsAsyncV2(
+                sematicSearchText.Data!,
+                "RETRIEVAL_DOCUMENT",
+                cancellationToken);
 
 
 
@@ -59,6 +74,11 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             {
                 return Result<ProductResponse>.Failure(500, "Failed to generate embeddings.");
             }
+
+            var embeddedAt = _timeProvider.GetUtcNow();
+            product.Status = Domain.Enums.ProductStatus.Active;
+            product.EmbbbedAt = embeddedAt;
+            product.UpdatedAt = embeddedAt;
 
             var qdrantPoint = new PointStruct
             {
@@ -76,12 +96,17 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 },
                 Payload =
                 {
+                    [ProductPayloadNames.ProductId] = product.Id.ToString(),
+                    [ProductPayloadNames.BusinessId] = product.BusinessId.ToString(),
+                    [ProductPayloadNames.Price] = (double)product.Price,
+                    [ProductPayloadNames.Status] = product.Status.ToString(),
                     ["mongo_id"] = product.Id.ToString(),
                     ["business_id"] = product.BusinessId.ToString(),
                     ["external_id"] = product.ExternalId,
                     ["name"] = product.Name,
                     ["description"] = product.Description ?? "",
-                    ["price"] = product.Price.ToString(),
+                    ["external_url"] = product.ExternalProductUrl ?? "",
+                    ["price"] = (double)product.Price,
                     ["currency"] = product.Currency,
                     ["brand"] = product.Brand ?? "",
                     ["category"] =  product.Category,
@@ -94,13 +119,15 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 qdrantPoint.Payload[$"meta_{meta.Key}"] = meta.Value.ToString()!;
             }
 
-
             try
             {
                 await _qdrantService.UpsertAsync(
                     QdrantCollections.Products,
                     [qdrantPoint],
                     cancellationToken);
+
+                await _productRepository.UpdateAsync(product);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result<ProductResponse>.Success(new ProductResponse
                 {
@@ -122,47 +149,46 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to upsert product embedding to Qdrant.");
-                return Result<ProductResponse>.Failure(500, "Failed to upsert product embedding to Qdrant.");
+                _logger.LogError(ex, "Failed to finalize product embedding.");
+                return Result<ProductResponse>.Failure(500, "Failed to finalize product embedding.");
             }
         }
+
+
 
         private async Task<Result<string>> BuildSematicSearchText(string embeddingText)
         {
             var systemPrompt = await File.ReadAllTextAsync("prompts/SemanticEmbedding.md");
 
-            var prompt = systemPrompt + $"\n\nproduct data: \n{embeddingText}";
-
-
             try
             {
-                var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
+                var response = await _geminiService.GenerateTextAsyncV2(new GeminiRequest
+                {
+                    Prompt = embeddingText,
+                    GenerationConfig = new()
+                    {
+                        MaxOutputTokens = 5000,
+                        Temperature = 0.2
+                    },
+                    SystemPrompt = systemPrompt,
+                });
+
                 if (response.IsSuccess)
                 {
-                    _logger.LogInformation($"Data generated using QwenService: {response.Data}");
                     return Result<string>.Success(response.Data);
-                }
-                else
+                } else
                 {
-                    var fallbackResponse = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
-                    return Result<string>.Success(fallbackResponse.Data);
+                    throw new Exception(response.Message);
                 }
-
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate semantic search text using QwenService. Falling back to GeminiService.");
-
-                var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
-                if (!response.IsSuccess)
-                {
-                    _logger.LogError("GeminiService also failed to generate semantic search text.");
-                    return Result<string>.Failure(500, "Failed to generate semantic search text using both QwenService and GeminiService.");
-                }
-
-                return Result<string>.Success(response.Data);
+                _logger.LogError(ex, "Failed to generate semantic search text using Gemini.");
+                return Result<string>.Failure(500, "Failed to generate semantic search text using GeminiService.");
             }
         }
+
+
 
         private static Vector ToQdrantDenseVector(IEnumerable<double> values)
         {

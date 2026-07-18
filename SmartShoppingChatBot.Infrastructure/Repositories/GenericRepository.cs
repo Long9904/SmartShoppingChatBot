@@ -1,10 +1,10 @@
-﻿using AutoMapper;
+﻿using System.Linq.Dynamic.Core;
+using System.Linq.Expressions;
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Interface;
-using System.Linq.Dynamic.Core;
-using System.Linq.Expressions;
 
 namespace SmartShoppingChatBot.Infrastructure.Repositories;
 
