@@ -54,8 +54,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.Custo
 
             var query = _conversationRepository.AsQueryable()
                 .Where(x => x.BusinessId == businessId && x.CustomerId == customer.Id)
-                .OrderByDescending(x => x.LastMessageAt)
-                .ThenByDescending(x => x.CreateAt);
+                .OrderByDescending(x => x.CreateAt);
 
             var conversations = await _conversationRepository.PaginatedListAsync(
                 query,

@@ -38,7 +38,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         AllowStrictSchemaAdherence = true
                     }),
                 Temperature = 0.2,
-                MaxTokens = 7000,
+                MaxTokens = 10000,
             };
 
             try
@@ -47,8 +47,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 history,
                 settings,
                 _kernel);
-
-
 
                 return Result<string>.Success(response.Content, 200, "Function calling success");
             }
