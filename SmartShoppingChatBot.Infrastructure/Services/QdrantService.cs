@@ -65,7 +65,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         }
 
         public async Task<List<ScoredPoint>> HybridSearchAsync(
-            float[] embedding,
+            float[] embeddingSemantic,
+            float[] embeddingTechnical,
             Filter filter,
             int candidateLimit,
             CancellationToken ct)
@@ -77,14 +78,14 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 new()
                 {
-                    Query = embedding,
+                    Query = embeddingSemantic,
                     Using = ProductVectorNames.SemanticSearch,
                     Filter = filter,
                     Limit = semanticLimit
                 },
                 new()
                 {
-                    Query = embedding,
+                    Query = embeddingTechnical,
                     Using = ProductVectorNames.ProductTechnical,
                     Filter = filter,
                     Limit = technicalLimit

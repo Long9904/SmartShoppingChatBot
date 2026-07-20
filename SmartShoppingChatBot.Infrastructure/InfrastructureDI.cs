@@ -30,6 +30,9 @@ public static class InfrastructureDI
         services.AddScoped<IChunkService, ChunkService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IKernelChatService, KernelChatService>();
+        services.AddScoped<IConversationContextCacheService, RedisConversationContextCacheService>();
+        services.AddScoped<IConversationContextService, ConversationContextService>();
+        services.AddScoped<IProductReferenceCollector, ProductReferenceCollector>();
 
         // Seeder
         services.AddScoped<UserSeeder>();

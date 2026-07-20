@@ -1,0 +1,27 @@
+﻿{
+    "conversationId": "conversation-001",
+    "summary": "Khách đang tìm quần áo nam đi làm, ưu tiên phong cách tối giản và giá dưới 700.000đ.",
+    "recentTurns": [
+        {
+            "turnId": "turn-001",
+            "userMessage": {
+                "messageId": "message-001",
+                "content": "Có quần jean nào dưới 700 nghìn không?",
+                "createdAt": "2026-07-20T05:00:00Z"
+            },
+            "assistantMessage": {
+                "messageId": "message-002",
+                "content": "Shop có hai mẫu phù hợp...",
+                "productReferences": [
+                    {
+                        "productId": "product-001",
+                        "displayName": "Quần jean Canifa"
+                    }
+                ],
+                "createdAt": "2026-07-20T05:00:02Z"
+            },
+            "createdAt": "2026-07-20T05:00:00Z"
+        }
+    ],
+    "updatedAt": "2026-07-20T05:00:02Z"
+}

@@ -12,3 +12,5 @@ public class BusinessResponse
     public BusinessEnums BusinessStatus { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+

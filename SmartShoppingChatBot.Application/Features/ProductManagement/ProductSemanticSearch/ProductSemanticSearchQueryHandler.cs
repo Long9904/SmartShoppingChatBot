@@ -52,28 +52,46 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                     business.MessageCode);
             }
 
-            var embedding = await _geminiService.EmbeddingsAsyncV2(
-                request.Query,
+            var embeddingSemantic = await _geminiService.EmbeddingsAsyncV2(
+                request.SemanticQuery,
                 "RETRIEVAL_QUERY",
                 ct);
 
-            if (!embedding.IsSuccess || embedding.Data == null)
+            if (!embeddingSemantic.IsSuccess || embeddingSemantic.Data == null)
             {
                 return Result<List<ProductResponse>>.Failure(
-                    embedding.StatusCode,
-                    embedding.Message,
-                    embedding.Errors,
-                    embedding.MessageCode);
+                    embeddingSemantic.StatusCode,
+                    embeddingSemantic.Message,
+                    embeddingSemantic.Errors,
+                    embeddingSemantic.MessageCode);
+            }
+
+            var embeddingTechnical = await _geminiService.EmbeddingsAsyncV2(
+                request.TechnicalQuery,
+                "RETRIEVAL_QUERY",
+                ct);
+
+
+            if (!embeddingTechnical.IsSuccess || embeddingTechnical.Data == null)
+            {
+                return Result<List<ProductResponse>>.Failure(
+                    embeddingTechnical.StatusCode,
+                    embeddingTechnical.Message,
+                    embeddingTechnical.Errors,
+                    embeddingTechnical.MessageCode);
             }
 
             var filter = BuildFilter(business.Data.Id, request);
+
             var points = await _qdrantService.HybridSearchAsync(
-                embedding.Data.Select(x => (float)x).ToArray(),
+                embeddingSemantic.Data.Select(x => (float)x).ToArray(),
+                embeddingTechnical.Data.Select(x => (float)x).ToArray(),
                 filter,
                 request.CandidateLimit,
                 ct);
 
             var products = await LoadProductsAsync(points, business.Data.Id);
+
             if (products.Count == 0)
             {
                 return Result<List<ProductResponse>>.Success(
@@ -82,7 +100,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                     "No matching products found.");
             }
 
-            var reranked = await RerankAsync(request.Query, products, request.TopK, ct);
+            var reranked = await RerankAsync(request.SemanticQuery, products, request.TopK, ct);
+
             if (!reranked.IsSuccess || reranked.Data == null)
             {
                 return Result<List<ProductResponse>>.Failure(
@@ -91,6 +110,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                     reranked.Errors,
                     reranked.MessageCode);
             }
+
+            Console.WriteLine(reranked.Data.Select(MapResponse).ToList());
 
             return Result<List<ProductResponse>>.Success(
                 reranked.Data.Select(MapResponse).ToList(),
@@ -183,6 +204,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             CancellationToken ct)
         {
             var productById = products.ToDictionary(x => x.Id.ToString());
+
             var records = products.Select(x => new RankRecord
             {
                 Id = x.Id.ToString(),

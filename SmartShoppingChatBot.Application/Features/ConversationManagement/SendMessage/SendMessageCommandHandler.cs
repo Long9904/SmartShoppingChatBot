@@ -1,13 +1,16 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
+using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
+using SmartShoppingChatBot.Infrastructure.Services;
 
 namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendMessage
 {
@@ -21,6 +24,9 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         private readonly ILogger<SendMessageCommandHandler> _logger;
         private readonly TimeProvider _time;
         private readonly IKernelChatService _kernelChatService;
+        private readonly IProductReferenceCollector _productReferenceCollector;
+        private readonly IConversationContextService _conversationContextService;
+        private readonly RedisOptions _options;
 
         public SendMessageCommandHandler(
             ICustomerRepository customerRepository,
@@ -28,8 +34,11 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             IConversationRepository conversationRepository,
             IUnitOfWork unitOfWork,
             TimeProvider time,
+            IOptions<RedisOptions> options,
             ILogger<SendMessageCommandHandler> logger,
             ICurrentUserService currentUserService,
+            IProductReferenceCollector productReferenceCollector,
+            IConversationContextService conversationContextService,
             IKernelChatService kernelChatService)
 
         {
@@ -40,6 +49,9 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             _currentUserService = currentUserService;
             _time = time;
             _logger = logger;
+            _options = options.Value;
+            _productReferenceCollector = productReferenceCollector;
+            _conversationContextService = conversationContextService;
             _kernelChatService = kernelChatService;
         }
 
@@ -66,6 +78,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
                 await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
+                // 1. Create new or load conversation
 
                 if (string.IsNullOrEmpty(request.ConversationId) || request.ConversationId == null)
                 {
@@ -110,33 +123,110 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
                 await _messageRepository.AddAsync(userMessage);
 
+                // 2. Take conversation context from Redis or load it from the database
+
+                var conversationContext = await _conversationContextService.GetOrLoadAsyncConversationCache(conversation.Id.ToString(), cancellationToken);
+
+                // 3. Send req to semantic kernel + old context summary
                 KernelChatRequest req = new()
                 {
+                    ConversationContextCache = conversationContext,
                     Business = business.Data,
                     UserMessage = request.Message,
                 };
 
                 var sematicKernelResponse = await _kernelChatService.ChatAsync(req);
 
-                if (!sematicKernelResponse.IsSuccess) return Result<ConversationResponse>
-                    .Failure(500, "Xin lỗi, hiện mình chưa thể trả lời câu hỏi này. Bạn vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ nhé.", null, "MG_SERVER_500");
+                if (!sematicKernelResponse.IsSuccess)
+                {
+                    await _unitOfWork.RollBackAsync(cancellationToken);
 
+                    return Result<ConversationResponse>
+                        .Failure(500, "Xin lỗi, hiện mình chưa thể trả lời câu hỏi này. Bạn vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ nhé.", null, "MG_SERVER_500");
+                }
+
+                var kernelResult = sematicKernelResponse.Data!;
+                var responseTime = _time.GetUtcNow();
+
+                // 4. Build AI response
                 var aiMessage = new Message
                 {
                     Id = ObjectId.GenerateNewId(),
                     BusinessId = business.Data!.Id,
                     ConversationId = conversation.Id,
-                    Content = sematicKernelResponse.Data!,
+                    Content = kernelResult.Answer,
                     ContentType = ContentTypeEnum.Text,
-                    CreatedAt = _time.GetUtcNow(),
+                    CreatedAt = responseTime,
                     SenderType = SenderTypeEnum.ChatBot,
                     Status = MessageStatus.Sent,
                 };
+
+                var cacheProduct = _productReferenceCollector.GetProducts();
+
+                aiMessage.CacheProductReference = cacheProduct.Select(cp =>
+                new ProductReference
+                {
+                    DisplayName = cp.Name,
+                    ProductId = cp.Id,
+                }).ToList();
+
+
                 await _messageRepository.AddAsync(aiMessage);
+
+                conversation.Summary = kernelResult.Summary;
+                conversation.SummaryUpdatedAt = responseTime;
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
+
+                // 5. Build turn cache to save orther context to redis
+                var turnCreateTime = _time.GetUtcNow();
+
+
+
+                var turn = new CachedConversationTurn
+                {
+                    TurnId = userMessage.Id.ToString(),
+                    CreatedAt = turnCreateTime,
+
+                    UserMessage = new()
+                    {
+                        Content = userMessage.Content,
+                        CreatedAt = userMessage.CreatedAt,
+                        MessageId = userMessage.Id.ToString()
+                    },
+
+                    AssistantMessage = new()
+                    {
+                        MessageId = aiMessage.Id.ToString(),
+                        Content = aiMessage.Content,
+                        CreatedAt = aiMessage.CreatedAt,
+                        ProductReferences = cacheProduct.Select(cp =>
+                        new CachedProductReference
+                        {
+                            DisplayName = cp.Name,
+                            ProductId = cp.Id,
+                        }).ToList()
+                    }
+                };
+
+                conversationContext.RecentTurns.Add(turn);
+                conversationContext.Summary = kernelResult.Summary;
+
+                // 5. sliding window for maximum RecentTurnLimit for new context
+
+                if (conversationContext.RecentTurns.Count > _options.RecentTurnLimit)
+                {
+                    var overFlowCount = conversationContext.RecentTurns.Count - _options.RecentTurnLimit;
+
+                    conversationContext.RecentTurns.RemoveRange(0, overFlowCount);
+                }
+                conversationContext.UpdatedAt = turnCreateTime;
+
+                // 6. Save turn mới vào reids
+                await _conversationContextService.SaveConversationCacheAsync(conversationContext, cancellationToken);
+
 
                 var response = new ConversationResponse
                 {

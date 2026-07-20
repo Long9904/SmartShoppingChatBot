@@ -53,6 +53,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 
 builder.Services.AddMongoDbConfig(builder.Configuration);
+builder.Services.AddRedisInfrastructure(builder.Configuration);
+
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
 builder.Services.AddHttpContextAccessor();
