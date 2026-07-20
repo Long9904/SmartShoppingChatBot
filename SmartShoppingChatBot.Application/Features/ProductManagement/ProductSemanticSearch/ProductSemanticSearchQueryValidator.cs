@@ -6,9 +6,13 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
     {
         public ProductSemanticSearchQueryValidator()
         {
-            RuleFor(x => x.Request.Query)
+            RuleFor(x => x.Request.SemanticQuery)
                 .NotEmpty().WithMessage("Query is required.")
                 .MaximumLength(500).WithMessage("Query cannot exceed 500 characters.");
+
+            RuleFor(x => x.Request.TechnicalQuery)
+               .NotEmpty().WithMessage("TechnicalQueryis required.")
+               .MaximumLength(500).WithMessage("TechnicalQuery cannot exceed 500 characters.");
 
             RuleFor(x => x.Request.CandidateLimit)
                 .InclusiveBetween(1, 100).WithMessage("CandidateLimit must be between 1 and 100.");

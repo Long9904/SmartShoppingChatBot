@@ -5,6 +5,6 @@ namespace SmartShoppingChatBot.Application.Interface
 {
     public interface IKernelChatService
     {
-        Task<Result<string>> ChatAsync(KernelChatRequest request);
+        Task<Result<KernelChatResult>> ChatAsync(KernelChatRequest request);
     }
 }

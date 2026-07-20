@@ -28,7 +28,8 @@ namespace SmartShoppingChatBot.Application.Interface
             CancellationToken ct = default);
 
         Task<List<ScoredPoint>> HybridSearchAsync(
-            float[] embedding,
+            float[] embeddingSemantic,
+            float[] embeddingTechnical,
             Filter filter,
             int candidateLimit,
             CancellationToken ct);
