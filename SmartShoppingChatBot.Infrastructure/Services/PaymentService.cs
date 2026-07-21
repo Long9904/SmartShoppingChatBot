@@ -1,9 +1,13 @@
 ﻿using AutoMapper;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using PayOS;
+using PayOS.Exceptions;
 using PayOS.Models.V2.PaymentRequests;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
@@ -113,9 +117,9 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 Amount = (long)formatPrice,
                 OrderCode = orderCode,
-                ReturnUrl = $"{returnBaseUrl}/payment-success?orderCode={orderCode}",
-                CancelUrl = $"{returnBaseUrl}/payment-cancel?orderCode={orderCode}",
-                Description = $"{selectSubscription.Name} {formatPrice} VND"
+                ReturnUrl = $"{returnBaseUrl}/payment-success/{orderCode}",
+                CancelUrl = $"{returnBaseUrl}/payment-cancel/{orderCode}",
+                Description = $"{selectSubscription.Name} {formatPrice}"
             };
             var paymentId = ObjectId.GenerateNewId();
             var payment = new Payment
@@ -151,8 +155,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
         public async Task<bool> VerifyPaymentWebhook(PayOSWebhookRequest webhookData)
         {
-            // Verify the webhook signature and data
-            var data = await _payOSClient.Webhooks.VerifyAsync(new PayOS.Models.Webhooks.Webhook
+            //map webhookData to PayOS.Models.Webhooks.Webhook
+            var webhook = new PayOS.Models.Webhooks.Webhook
             {
                 Code = webhookData.Code,
                 Description = webhookData.Desc,
@@ -163,9 +167,36 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     Amount = webhookData.Data.Amount,
                     OrderCode = webhookData.Data.OrderCode,
                     Description = webhookData.Data.Description,
+                    AccountNumber = webhookData.Data.AccountNumber,
+                    Reference = webhookData.Data.Reference,
                     TransactionDateTime = webhookData.Data.TransactionDateTime,
+                    Currency = webhookData.Data.Currency,
+                    PaymentLinkId = webhookData.Data.PaymentLinkId,
+                    Code = webhookData.Data.Code,
+                    Description2 = webhookData.Data.Desc,
+                    CounterAccountBankId = webhookData.Data.CounterAccountBankId,
+                    CounterAccountBankName = webhookData.Data.CounterAccountBankName,
+                    CounterAccountName = webhookData.Data.CounterAccountName,
+                    CounterAccountNumber = webhookData.Data.CounterAccountNumber,
+                    VirtualAccountName = webhookData.Data.VirtualAccountName,
+                    VirtualAccountNumber = webhookData.Data.VirtualAccountNumber,
                 },
-            });
+            };
+            // Verify the webhook signature and data
+            _logger.LogInformation("Verifying webhook for order code {OrderCode}", webhookData.Data.OrderCode);
+            PayOS.Models.Webhooks.WebhookData data;
+            try
+            {
+                data = await _payOSClient.Webhooks.VerifyAsync(webhook);
+            }
+            catch (PayOSException ex)
+            {
+              
+                _logger.LogWarning(
+                    ex,
+                    "PayOS webhook verification failed ");
+                return false;
+            }
 
             // Validate webhook verification result
             if (data == null)
@@ -176,16 +207,18 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             if (!webhookData.Success)
             {
-                _logger.LogWarning("Webhook success flag is false for order code {OrderCode}", webhookData.Data.OrderCode);
-                return false;
+                _logger.LogWarning(
+                    "Verified PayOS webhook has success flag false for order code {OrderCode}. Continuing with payment code {PaymentCode}",
+                    webhookData.Data.OrderCode,
+                    data.Code);
             }
 
             //check if payment with order code exists
             var existingPayment = await _paymentRepository.FindAsync(x => x.OrderCode == webhookData.Data.OrderCode);
             if (existingPayment == null)
             {
-                _logger.LogWarning("Payment with order code {OrderCode} not found", webhookData.Data.OrderCode);
-                return false;
+                _logger.LogWarning("Verified PayOS webhook for unknown order code {OrderCode}", webhookData.Data.OrderCode);
+                return true;
             }
             if (existingPayment.Status == PaymentEnums.Completed)
             {
@@ -414,6 +447,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var randomPart = Random.Shared.Next(100, 999);
 
             return checked(timestamp * 1000 + randomPart);
-        }
+        } 
+        
     }
 }

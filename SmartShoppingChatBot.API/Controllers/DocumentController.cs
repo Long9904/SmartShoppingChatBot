@@ -1,5 +1,7 @@
 ﻿
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
@@ -10,6 +12,8 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/documents")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "internal")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class DocumentController : ControllerBase
     {
         private readonly IMediator _mediator;
