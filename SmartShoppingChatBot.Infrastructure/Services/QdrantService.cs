@@ -101,5 +101,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             return points.ToList();
         }
+
+        public Task<List<ScoredPoint>> HybridSearchAsync(
+            float[] embedding,
+            Filter filter,
+            CancellationToken ct)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
