@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -13,6 +14,11 @@ namespace SmartShoppingChatBot.Infrastructure.Services
     {
         private readonly Kernel _kernel;
         private readonly ILogger<KernelChatService> _logger;
+        private static readonly JsonSerializerOptions JsonOptions =
+            new(JsonSerializerDefaults.Web)
+            {
+                PropertyNameCaseInsensitive = true
+            };
 
         public KernelChatService(Kernel kernel, ILogger<KernelChatService> logger)
         {
@@ -21,13 +27,18 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             _logger = logger;
         }
 
-        public async Task<Result<string>> ChatAsync(KernelChatRequest request)
+        public async Task<Result<KernelChatResult>> ChatAsync(KernelChatRequest request)
         {
             var chatService = _kernel.GetRequiredService<IChatCompletionService>();
             var businessPrompt = await BuildBusinessSystemPrompt(request.Business);
 
             ChatHistory history = new();
             history.AddSystemMessage(businessPrompt);
+
+            var contextJson = JsonSerializer.Serialize(
+                request.ConversationContextCache,
+                JsonOptions);
+            history.AddSystemMessage($"Conversation context:\n{contextJson}");
             history.AddUserMessage(request.UserMessage);
 
             var settings = new OpenAIPromptExecutionSettings
@@ -37,6 +48,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     {
                         AllowStrictSchemaAdherence = true
                     }),
+                ResponseFormat = typeof(KernelChatResult),
                 Temperature = 0.2,
                 MaxTokens = 10000,
             };
@@ -48,12 +60,38 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 settings,
                 _kernel);
 
-                return Result<string>.Success(response.Content, 200, "Function calling success");
+                if (string.IsNullOrWhiteSpace(response.Content)) return Result<KernelChatResult>.Failure(
+                        500, "Kernel returned empty content.");
+
+                KernelChatResult? result;
+
+                try
+                {
+                    result = JsonSerializer.Deserialize<KernelChatResult>(response.Content, JsonOptions);
+                }
+                catch (JsonException exception)
+                {
+                    _logger.LogError(exception, "Could not deserialize kernel structured response");
+
+                    return Result<KernelChatResult>.Failure(500, "Invalid structured response from kernel.");
+                }
+
+                if (result is null || string.IsNullOrWhiteSpace(result.Answer))
+                {
+                    return Result<KernelChatResult>.Failure(500, "Kernel response does not contain an answer.");
+                }
+
+                if (string.IsNullOrWhiteSpace(result.Summary))
+                {
+                    return Result<KernelChatResult>.Failure(500, "Kernel response does not contain a summary.");
+                }
+
+                return Result<KernelChatResult>.Success(result, 200, "Function calling success");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed from function calling");
-                return Result<string>.Failure(500, "Failed from function calling");
+                return Result<KernelChatResult>.Failure(500, "Failed from function calling");
             }
         }
 

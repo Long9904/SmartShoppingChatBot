@@ -1,8 +1,8 @@
-﻿using FluentValidation;
+﻿using System.Reflection;
+using System.Text.Json;
+using FluentValidation;
 using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
-using System.Reflection;
-using System.Text.Json;
 
 namespace SmartShoppingChatBot.Application.Commons.Behaviors
 {
@@ -47,7 +47,8 @@ namespace SmartShoppingChatBot.Application.Commons.Behaviors
                         {
                             typeof(int),
                             typeof(string),
-                            typeof(Dictionary<string, string>)
+                            typeof(Dictionary<string, string>),
+                            typeof(string)
                         },
                         modifiers: null
                     );
@@ -58,7 +59,8 @@ namespace SmartShoppingChatBot.Application.Commons.Behaviors
                         {
                             400,
                             "Validation failed",
-                            errorsDictionary
+                            errorsDictionary,
+                            "MG_VALIDATOR_400"
                         })!;
                     }
                 }

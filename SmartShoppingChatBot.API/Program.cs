@@ -53,6 +53,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 
 builder.Services.AddMongoDbConfig(builder.Configuration);
+builder.Services.AddRedisInfrastructure(builder.Configuration);
+
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
 builder.Services.AddHttpContextAccessor();
@@ -225,7 +227,7 @@ builder.Services.AddScoped<Kernel>(sp =>
 
     // Kernel plugin register
     kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPlugin>(), "Product");
-    kb.Plugins.AddFromObject(sp.GetRequiredService<DocumentPlugin>(), "DocumentPlugin");
+    kb.Plugins.AddFromObject(sp.GetRequiredService<DocumentPlugin>(), "Document");
 
     return kb.Build();
 });

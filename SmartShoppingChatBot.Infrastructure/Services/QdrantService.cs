@@ -65,7 +65,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         }
 
         public async Task<List<ScoredPoint>> HybridSearchAsync(
-            float[] embedding,
+            float[] embeddingSemantic,
+            float[] embeddingTechnical,
             Filter filter,
             int candidateLimit,
             CancellationToken ct)
@@ -77,14 +78,14 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 new()
                 {
-                    Query = embedding,
+                    Query = embeddingSemantic,
                     Using = ProductVectorNames.SemanticSearch,
                     Filter = filter,
                     Limit = semanticLimit
                 },
                 new()
                 {
-                    Query = embedding,
+                    Query = embeddingTechnical,
                     Using = ProductVectorNames.ProductTechnical,
                     Filter = filter,
                     Limit = technicalLimit
@@ -102,12 +103,43 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             return points.ToList();
         }
 
-        public Task<List<ScoredPoint>> HybridSearchAsync(
-            float[] embedding,
+        public async Task<List<ScoredPoint>> HybridDocumentSearchAsync(
+            float[] embeddingSemantic,
+            float[] embeddingTechnical,
+            int candidateLimit,
             Filter filter,
             CancellationToken ct)
         {
-            throw new NotImplementedException();
+            const ulong semanticLimit = 60;
+            const ulong technicalLimit = 40;
+
+            var prefetch = new List<PrefetchQuery>
+            {
+                new()
+                {
+                    Query = embeddingSemantic,
+                    Using = DocumentVectorNames.SemanticSearch,
+                    Filter = filter,
+                    Limit = semanticLimit
+                },
+                new()
+                {
+                    Query = embeddingTechnical,
+                    Using = DocumentVectorNames.DocumentTechnical,
+                    Filter = filter,
+                    Limit = technicalLimit
+                }
+            };
+
+            var points = await _qdrantClient.QueryAsync(
+                collectionName: QdrantCollections.Documents,
+                query: Fusion.Rrf,
+                prefetch: prefetch,
+                limit: (ulong)candidateLimit,
+                payloadSelector: true,
+                cancellationToken: ct);
+
+            return points.ToList();
         }
     }
 }

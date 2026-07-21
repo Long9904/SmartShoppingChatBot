@@ -7,5 +7,7 @@ namespace SmartShoppingChatBot.Application.DTOs
         public required string UserMessage { get; set; }
 
         public required Business Business { get; set; }
+
+        public ConversationContextCache? ConversationContextCache { get; set; }
     }
 }
