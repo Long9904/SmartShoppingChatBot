@@ -19,6 +19,10 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public DateTimeOffset CreateAt { get; set; }
 
+        public string? Summary { get; set; } = string.Empty;
+
+        public DateTimeOffset? SummaryUpdatedAt { get; set; }
+
         public Dictionary<string, string> MetaData { get; set; } = [];
     }
 }

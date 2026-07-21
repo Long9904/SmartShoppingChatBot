@@ -116,7 +116,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
 
             foreach (var meta in product.Metadata)
             {
-                qdrantPoint.Payload[$"meta_{meta.Key}"] = meta.Value.ToString()!;
+                qdrantPoint.Payload[$"{meta.Key}"] = meta.Value.ToString()!;
             }
 
             try
@@ -176,7 +176,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 if (response.IsSuccess)
                 {
                     return Result<string>.Success(response.Data);
-                } else
+                }
+                else
                 {
                     throw new Exception(response.Message);
                 }

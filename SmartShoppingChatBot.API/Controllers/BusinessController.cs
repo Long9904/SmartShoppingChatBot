@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
@@ -51,7 +50,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpGet("profile")]
-        [Authorize(Roles = "BUSINESS_OWNER, CATALOG_TEAM")]
+        [Authorize(Roles = "BUSINESS_OWNER, CATALOG_TEAM, ADMIN")]
         [EndpointDescription("Business owner, catalog team views current business profile")]
         [EndpointSummary("BO, CT views current business profile")]
         public async Task<IActionResult> ViewBusinessProfile()
