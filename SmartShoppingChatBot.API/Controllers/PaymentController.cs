@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
@@ -12,6 +14,7 @@ namespace SmartShoppingChatBot.API.Controllers
     [Route("api/v1/payments")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 
     public class PaymentController : ControllerBase
     {
@@ -36,6 +39,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpPost("callback")]
+        [AllowAnonymous]
         [EndpointSummary("[DON'T CALL THIS ENDPOINT DIRECTLY] WEBHOOK CALLBACK FOR PAYMENT")]
         [EndpointDescription("Handle payment success callback.")]
         public async Task<IActionResult> PaymentWebhook([FromBody] PayOSWebhookRequest webhookData)
