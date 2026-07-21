@@ -15,7 +15,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             RuleFor(x => x.ExternalCustomerId)
                 .Cascade(CascadeMode.Stop)
                 .NotEmpty().WithMessage("ExternalCustomerId cannot empty")
-                .MaximumLength(30).WithMessage("External customer ID cannot exced 100 charator");
+                .MaximumLength(50).WithMessage("External customer ID cannot exced 50 charator");
 
 
             RuleFor(x => x.ConversationId)
