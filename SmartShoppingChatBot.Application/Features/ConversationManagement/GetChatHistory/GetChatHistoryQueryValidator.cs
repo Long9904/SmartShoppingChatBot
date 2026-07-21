@@ -8,7 +8,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.GetCh
         {
             RuleFor(x => x.ExternalCustomerId)
                 .NotEmpty().WithMessage("ExternalCustomerId cannot be empty")
-                .MaximumLength(30).WithMessage("External customer ID cannot exceed 30 characters");
+                .MaximumLength(50).WithMessage("External customer ID cannot exceed 50 characters");
 
             RuleFor(x => x.Limit)
                 .InclusiveBetween(1, 100).WithMessage("Limit must be between 1 and 100");

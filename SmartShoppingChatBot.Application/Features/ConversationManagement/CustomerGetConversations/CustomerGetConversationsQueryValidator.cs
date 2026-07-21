@@ -9,7 +9,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.Custo
             RuleFor(x => x.ExternalCustomerId)
                 .Cascade(CascadeMode.Stop)
                 .NotEmpty().WithMessage("ExternalCustomerId cannot be empty")
-                .MaximumLength(30).WithMessage("External customer ID cannot exceed 30 characters");
+                .MaximumLength(50).WithMessage("External customer ID cannot exceed 50 characters");
 
             RuleFor(x => x.PageIndex)
                 .GreaterThan(0).WithMessage("PageIndex must be greater than 0");
