@@ -102,7 +102,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     x.Id == ObjectId.Parse(request.ConversationId));
 
                     if (conversation == null) return Result<ConversationResponse>
-                            .Failure(404, "Conversation not found", null, ConverstationMessageCode.NotFound);
+                            .Failure(404, "Conversation not found", null, ConversationMessageCode.NotFound);
 
                     conversation.LastMessageAt = createTime;
                     await _conversationRepository.UpdateAsync(conversation);
@@ -235,7 +235,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     MessageResponse = aiMessage.Content,
                 };
 
-                return Result<ConversationResponse>.Success(response, 200, "Kernel response success", ConverstationMessageCode.Success);
+                return Result<ConversationResponse>.Success(response, 200, "Kernel response success", ConversationMessageCode.Success);
 
             }
             catch (Exception ex)

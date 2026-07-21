@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.ProductManagement.ProductCommon;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
@@ -111,10 +112,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                     reranked.MessageCode);
             }
 
-            Console.WriteLine(reranked.Data.Select(MapResponse).ToList());
-
             return Result<List<ProductResponse>>.Success(
-                reranked.Data.Select(MapResponse).ToList(),
+                reranked.Data.Select(ProductMappings.ToResponse).ToList(),
                 200,
                 "Product semantic search successfully.");
         }
@@ -246,25 +245,5 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 : null;
         }
 
-        private static ProductResponse MapResponse(Product product)
-        {
-            return new ProductResponse
-            {
-                Id = product.Id.ToString(),
-                BusinessId = product.BusinessId.ToString(),
-                ExternalId = product.ExternalId,
-                Name = product.Name,
-                Description = product.Description,
-                Price = product.Price,
-                Currency = product.Currency,
-                Brand = product.Brand,
-                StockQuantity = product.StockQuantity,
-                Category = product.Category,
-                Status = product.Status,
-                Images = product.Images,
-                Metadata = product.Metadata,
-                CreatedAt = product.CreatedAt
-            };
-        }
     }
 }

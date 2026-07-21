@@ -16,7 +16,7 @@ namespace SmartShoppingChatBot.Application.Interface
 
         Task SetPayloadAsync(
              string collectionName,
-             IReadOnlyList<ulong> ids,
+             IReadOnlyList<Guid> ids,
              Dictionary<string, Value> payload,
              CancellationToken ct = default);
 

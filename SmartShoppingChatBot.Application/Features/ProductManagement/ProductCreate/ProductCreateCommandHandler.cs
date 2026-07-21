@@ -7,6 +7,7 @@ using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Events;
+using SmartShoppingChatBot.Application.Features.ProductManagement.ProductCommon;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
@@ -166,26 +167,11 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                     QdrantPointId = pointId
                 }, cancellationToken);
 
-                return Result<ProductResponse>.Success(new ProductResponse
-                {
-                    Id = product.Id.ToString(),
-                    BusinessId = product.BusinessId.ToString(),
-                    ExternalId = product.ExternalId,
-                    Name = product.Name,
-                    Description = product.Description,
-                    Price = product.Price,
-                    Currency = product.Currency,
-                    Brand = product.Brand,
-                    StockQuantity = product.StockQuantity,
-                    Category = product.Category,
-                    Status = product.Status,
-                    Images = product.Images,
-                    CreatedAt = product.CreatedAt,
-                    Metadata = product.Metadata
-                },
-                statusCode: 200,
-                message: "Product create success",
-                messageCode: ProductMessageCode.CreateSuccess
+                return Result<ProductResponse>.Success(
+                    ProductMappings.ToResponse(product),
+                    statusCode: 200,
+                    message: "Product create success",
+                    messageCode: ProductMessageCode.CreateSuccess
                 );
 
             }

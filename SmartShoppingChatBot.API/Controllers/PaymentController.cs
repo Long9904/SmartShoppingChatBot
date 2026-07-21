@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
@@ -12,6 +14,7 @@ namespace SmartShoppingChatBot.API.Controllers
     [Route("api/v1/payments")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
+    
 
     public class PaymentController : ControllerBase
     {
@@ -25,6 +28,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [EndpointSummary("Create Payment Link ")]
         [EndpointDescription("Create a new payment link.")]
         public async Task<IActionResult> CreatePaymentLink(CreatePaymentRequest request)
@@ -36,6 +40,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpPost("callback")]
+        [AllowAnonymous]
         [EndpointSummary("[DON'T CALL THIS ENDPOINT DIRECTLY] WEBHOOK CALLBACK FOR PAYMENT")]
         [EndpointDescription("Handle payment success callback.")]
         public async Task<IActionResult> PaymentWebhook([FromBody] PayOSWebhookRequest webhookData)
@@ -58,6 +63,7 @@ namespace SmartShoppingChatBot.API.Controllers
 
         [HttpGet]
         [EndpointSummary("Get All Payments")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> GetAllPayments([FromQuery] GetPaymentQuery query)
         {
             var result = await _mediator.Send(query);
@@ -67,6 +73,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpGet("order/{orderCode}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> GetPaymentByOrderCode([FromRoute] long orderCode)
         {
             var query = new GetPaymentByOrderCodeQuery { OrderCode = orderCode };
