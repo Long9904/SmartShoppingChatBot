@@ -49,7 +49,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.Custo
                 return Result<BasePaginatedList<CustomerConversationResponse>>.Failure(
                     statusCode: 404,
                     message: "Customer not found",
-                    messageCode: ConverstationMessageCode.NotFound);
+                    messageCode: ConversationMessageCode.NotFound);
             }
 
             var query = _conversationRepository.AsQueryable()
@@ -81,7 +81,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.Custo
                 data: response,
                 statusCode: 200,
                 message: "Get customer conversations successfully",
-                messageCode: ConverstationMessageCode.Success);
+                messageCode: ConversationMessageCode.Success);
         }
     }
 }
