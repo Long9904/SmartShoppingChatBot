@@ -4,7 +4,9 @@ using MongoDB.Bson;
 using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.ProductManagement.ProductCommon;
 using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 using SmartShoppingChatBot.Domain.QdrantConfig;
 
@@ -42,7 +44,13 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
         public async Task<Result<ProductResponse>> Handle(ProductEmbedCommand request, CancellationToken cancellationToken)
         {
 
-            var product = await _productRepository.FindAsync(x => x.Id == ObjectId.Parse(request.ProductId));
+            if (!ObjectId.TryParse(request.ProductId, out var productId))
+            {
+                return Result<ProductResponse>.Failure(400, "Invalid product ID.");
+            }
+
+            var product = await _productRepository.FindAsync(x =>
+                x.Id == productId && x.Status != ProductStatus.Deleted);
 
             if (product == null) return Result<ProductResponse>.Failure(404, "Product not found.");
 
@@ -76,9 +84,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             }
 
             var embeddedAt = _timeProvider.GetUtcNow();
-            product.Status = Domain.Enums.ProductStatus.Active;
+            product.Status = ProductStatus.Active;
             product.EmbbbedAt = embeddedAt;
-            product.UpdatedAt = embeddedAt;
 
             var qdrantPoint = new PointStruct
             {
@@ -94,29 +101,11 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                         }
                     }
                 },
-                Payload =
-                {
-                    [ProductPayloadNames.ProductId] = product.Id.ToString(),
-                    [ProductPayloadNames.BusinessId] = product.BusinessId.ToString(),
-                    [ProductPayloadNames.Price] = (double)product.Price,
-                    [ProductPayloadNames.Status] = product.Status.ToString(),
-                    ["mongo_id"] = product.Id.ToString(),
-                    ["business_id"] = product.BusinessId.ToString(),
-                    ["external_id"] = product.ExternalId,
-                    ["name"] = product.Name,
-                    ["description"] = product.Description ?? "",
-                    ["external_url"] = product.ExternalProductUrl ?? "",
-                    ["price"] = (double)product.Price,
-                    ["currency"] = product.Currency,
-                    ["brand"] = product.Brand ?? "",
-                    ["category"] =  product.Category,
-                    ["status"] = product.Status.ToString()
-                }
             };
 
-            foreach (var meta in product.Metadata)
+            foreach (var payloadItem in ProductMappings.BuildQdrantPayload(product))
             {
-                qdrantPoint.Payload[$"{meta.Key}"] = meta.Value.ToString()!;
+                qdrantPoint.Payload[payloadItem.Key] = payloadItem.Value;
             }
 
             try
@@ -129,23 +118,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 await _productRepository.UpdateAsync(product);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                return Result<ProductResponse>.Success(new ProductResponse
-                {
-                    Id = product.Id.ToString(),
-                    BusinessId = product.BusinessId.ToString(),
-                    ExternalId = product.ExternalId,
-                    Name = product.Name,
-                    Description = product.Description,
-                    Price = product.Price,
-                    Currency = product.Currency,
-                    Brand = product.Brand,
-                    StockQuantity = product.StockQuantity,
-                    Category = product.Category,
-                    Status = product.Status,
-                    Images = product.Images,
-                    Metadata = product.Metadata,
-                    CreatedAt = product.CreatedAt
-                });
+                return Result<ProductResponse>.Success(ProductMappings.ToResponse(product));
             }
             catch (Exception ex)
             {

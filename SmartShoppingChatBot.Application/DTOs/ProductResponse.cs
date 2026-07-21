@@ -10,6 +10,8 @@ namespace SmartShoppingChatBot.Application.DTOs
 
         public string ExternalId { get; set; } = string.Empty;
 
+        public string ExternalProductUrl { get; set; } = string.Empty;
+
         public string Name { get; set; } = default!;
 
         public string? Description { get; set; }
@@ -31,6 +33,8 @@ namespace SmartShoppingChatBot.Application.DTOs
         public Dictionary<string, string> Metadata { get; set; } = [];
 
         public DateTimeOffset CreatedAt { get; set; }
+
+        public DateTimeOffset UpdatedAt { get; set; }
 
     }
 }
