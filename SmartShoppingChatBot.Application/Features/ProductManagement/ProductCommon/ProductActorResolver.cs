@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
@@ -18,6 +17,18 @@ internal static class ProductActorResolver
 
         if ("Bearer".Equals(authenticationType, StringComparison.OrdinalIgnoreCase))
         {
+
+        }
+
+        if ("ApiKey".Equals(authenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<UserEmbedded>.Success(new UserEmbedded
+            {
+                Name = "Business: " + business.BusinessName
+            });
+        }
+        else
+        {
             var user = await currentUserService.GetUser();
             if (!user.IsSuccess || user.Data == null)
             {
@@ -34,18 +45,5 @@ internal static class ProductActorResolver
                 Name = user.Data.FullName
             });
         }
-
-        if ("ApiKey".Equals(authenticationType, StringComparison.OrdinalIgnoreCase))
-        {
-            return Result<UserEmbedded>.Success(new UserEmbedded
-            {
-                Name = "Business: " + business.BusinessName
-            });
-        }
-
-        return Result<UserEmbedded>.Failure(
-            401,
-            "Authentication failed.",
-            messageCode: AuthMessageCode.InvalidAuthentication);
     }
 }

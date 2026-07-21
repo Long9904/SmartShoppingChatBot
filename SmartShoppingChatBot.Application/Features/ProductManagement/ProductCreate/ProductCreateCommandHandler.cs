@@ -111,8 +111,21 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             // External or internal
 
             var authType = _httpContextAccessor.HttpContext?.User.Identity?.AuthenticationType;
+            Console.WriteLine(authType + "------------------------------------");
 
-            if ("Bearer".Equals(authType))
+            if ("ApiKey".Equals(authType))
+            {
+                product.CreatedBy = new UserEmbedded
+                {
+                    Name = "Business: " + business.Data.BusinessName,
+                };
+
+                product.UpdatedBy = new UserEmbedded
+                {
+                    Name = "Business: " + business.Data.BusinessName,
+                };
+            }
+            else
             {
                 var user = await _currentUserService.GetUser();
 
@@ -129,22 +142,6 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                     Id = user.Data!.Id,
                     Name = user.Data.FullName,
                 };
-            }
-            else if ("ApiKey".Equals(authType))
-            {
-                product.CreatedBy = new UserEmbedded
-                {
-                    Name = "Business: " + business.Data.BusinessName,
-                };
-
-                product.UpdatedBy = new UserEmbedded
-                {
-                    Name = "Business: " + business.Data.BusinessName,
-                };
-            }
-            else
-            {
-                return Result<ProductResponse>.Failure(404, "Authentication fail", null, AuthMessageCode.InvalidAuthentication);
             }
 
 
