@@ -14,7 +14,7 @@ namespace SmartShoppingChatBot.API.Controllers
     [Route("api/v1/payments")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    
 
     public class PaymentController : ControllerBase
     {
@@ -28,6 +28,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [EndpointSummary("Create Payment Link ")]
         [EndpointDescription("Create a new payment link.")]
         public async Task<IActionResult> CreatePaymentLink(CreatePaymentRequest request)
@@ -62,6 +63,7 @@ namespace SmartShoppingChatBot.API.Controllers
 
         [HttpGet]
         [EndpointSummary("Get All Payments")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> GetAllPayments([FromQuery] GetPaymentQuery query)
         {
             var result = await _mediator.Send(query);
@@ -71,6 +73,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpGet("order/{orderCode}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> GetPaymentByOrderCode([FromRoute] long orderCode)
         {
             var query = new GetPaymentByOrderCodeQuery { OrderCode = orderCode };

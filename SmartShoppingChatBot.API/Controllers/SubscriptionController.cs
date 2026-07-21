@@ -15,7 +15,7 @@ namespace SmartShoppingChatBot.API.Controllers
     [Route("api/v1/subscriptions")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    
     public class SubscriptionController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -26,6 +26,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [EndpointSummary("Admin add a new subscription.")]
         [EndpointDescription("Add a new subscription.")]
         public async Task<IActionResult> AddSubscription([FromBody] SubscriptionAddCommand command)
@@ -49,6 +50,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [EndpointSummary("Admin update an existing subscription.")]
         public async Task<IActionResult> UpdateSubscription([FromRoute] string id, [FromBody] SubscriptionUpdateCommand command)
         {
@@ -61,6 +63,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         [EndpointSummary("Admin Delete a subscription by ID.")]
         public async Task<IActionResult> DeleteSubscription([FromRoute] string id)
         {

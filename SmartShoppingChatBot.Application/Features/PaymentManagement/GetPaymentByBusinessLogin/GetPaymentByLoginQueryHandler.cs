@@ -29,7 +29,7 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetPayment
         public async Task<Result<PaymentResponse>> Handle(GetPaymentByLoginQuery request, CancellationToken cancellationToken)
         {
             var businessLogin = await _currentUserService.GetBusiness();
-            if (!businessLogin.IsSuccess)
+            if (!businessLogin.IsSuccess || businessLogin.Data == null)
             {
                 return Result<PaymentResponse>.Failure(businessLogin.StatusCode, businessLogin.Message);
             }

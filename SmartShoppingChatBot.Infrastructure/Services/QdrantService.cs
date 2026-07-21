@@ -102,5 +102,44 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             return points.ToList();
         }
+
+        public async Task<List<ScoredPoint>> HybridDocumentSearchAsync(
+            float[] embeddingSemantic,
+            float[] embeddingTechnical,
+            int candidateLimit,
+            Filter filter,
+            CancellationToken ct)
+        {
+            const ulong semanticLimit = 60;
+            const ulong technicalLimit = 40;
+
+            var prefetch = new List<PrefetchQuery>
+            {
+                new()
+                {
+                    Query = embeddingSemantic,
+                    Using = DocumentVectorNames.SemanticSearch,
+                    Filter = filter,
+                    Limit = semanticLimit
+                },
+                new()
+                {
+                    Query = embeddingTechnical,
+                    Using = DocumentVectorNames.DocumentTechnical,
+                    Filter = filter,
+                    Limit = technicalLimit
+                }
+            };
+
+            var points = await _qdrantClient.QueryAsync(
+                collectionName: QdrantCollections.Documents,
+                query: Fusion.Rrf,
+                prefetch: prefetch,
+                limit: (ulong)candidateLimit,
+                payloadSelector: true,
+                cancellationToken: ct);
+
+            return points.ToList();
+        }
     }
 }
