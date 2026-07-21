@@ -169,12 +169,7 @@ builder.Services.AddAuthentication(options =>
         };
     })
 
-    .AddScheme<AuthenticationSchemeOptions,
-    ApiKeyAuthenticationHandler>(
-    "ApiKey",
-    options => { });
-
-
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>("ApiKey", options => { });
 
 
 builder.Services.AddAuthorization();
