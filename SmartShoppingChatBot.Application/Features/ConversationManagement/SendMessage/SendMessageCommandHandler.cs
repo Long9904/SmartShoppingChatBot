@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using System.Diagnostics;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -124,8 +125,15 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 await _messageRepository.AddAsync(userMessage);
 
                 // 2. Take conversation context from Redis or load it from the database
+                var sw = Stopwatch.StartNew();
 
-                var conversationContext = await _conversationContextService.GetOrLoadAsyncConversationCache(conversation.Id.ToString(), cancellationToken);
+                var conversationContext = await _conversationContextService.GetOrLoadAsyncConversationCache(
+                    conversation.Id.ToString(), cancellationToken);
+
+                sw.Stop();
+                Console.WriteLine("----------------------------------");
+                _logger.LogInformation("1. Context từ redis: {Elapsed} ms", sw.ElapsedMilliseconds);
+                Console.WriteLine("----------------------------------");
 
                 // 3. Send req to semantic kernel + old context summary
                 KernelChatRequest req = new()
@@ -135,7 +143,14 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     UserMessage = request.Message,
                 };
 
+                sw = Stopwatch.StartNew();
+
                 var sematicKernelResponse = await _kernelChatService.ChatAsync(req);
+
+                sw.Stop();
+                Console.WriteLine("----------------------------------");
+                _logger.LogInformation("2. Kernel chat: {kernel} ms", sw.ElapsedMilliseconds);
+                Console.WriteLine("----------------------------------");
 
                 if (!sematicKernelResponse.IsSuccess)
                 {
