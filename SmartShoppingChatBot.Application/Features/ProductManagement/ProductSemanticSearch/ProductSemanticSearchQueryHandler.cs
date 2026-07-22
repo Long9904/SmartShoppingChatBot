@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Commons.Results;
@@ -19,17 +21,20 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
         private readonly IGeminiService _geminiService;
         private readonly IQdrantService _qdrantService;
         private readonly IProductRepository _productRepository;
+        private readonly ILogger<ProductSemanticSearchQueryHandler> _logger;
 
         public ProductSemanticSearchQueryHandler(
             ICurrentUserService currentUserService,
             IGeminiService geminiService,
             IQdrantService qdrantService,
+            ILogger<ProductSemanticSearchQueryHandler> logger,
             IProductRepository productRepository)
         {
             _currentUserService = currentUserService;
             _geminiService = geminiService;
             _qdrantService = qdrantService;
             _productRepository = productRepository;
+            _logger = logger;
         }
 
         public Task<Result<List<ProductResponse>>> Handle(
@@ -53,6 +58,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                     business.MessageCode);
             }
 
+            var sw = Stopwatch.StartNew();
+
             var embeddingSemantic = await _geminiService.EmbeddingsAsyncV2(
                 request.SemanticQuery,
                 "RETRIEVAL_QUERY",
@@ -67,31 +74,57 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                     embeddingSemantic.MessageCode);
             }
 
-            var embeddingTechnical = await _geminiService.EmbeddingsAsyncV2(
+            double[]? technicalVector = null;
+            if (request.TechnicalQuery != null)
+            {
+                var embeddingTechnical = await _geminiService.EmbeddingsAsyncV2(
                 request.TechnicalQuery,
                 "RETRIEVAL_QUERY",
                 ct);
 
 
-            if (!embeddingTechnical.IsSuccess || embeddingTechnical.Data == null)
-            {
-                return Result<List<ProductResponse>>.Failure(
-                    embeddingTechnical.StatusCode,
-                    embeddingTechnical.Message,
-                    embeddingTechnical.Errors,
-                    embeddingTechnical.MessageCode);
+                if (!embeddingTechnical.IsSuccess || embeddingTechnical.Data == null)
+                {
+                    return Result<List<ProductResponse>>.Failure(
+                        embeddingTechnical.StatusCode,
+                        embeddingTechnical.Message,
+                        embeddingTechnical.Errors,
+                        embeddingTechnical.MessageCode);
+                }
+
+                technicalVector = embeddingTechnical.Data;
             }
+
+            sw.Stop();
+            Console.WriteLine("----------------------------------");
+            _logger.LogInformation("4. Build 2 vertor: {kernel} ms", sw.ElapsedMilliseconds);
+            Console.WriteLine("----------------------------------");
 
             var filter = BuildFilter(business.Data.Id, request);
 
+            sw = Stopwatch.StartNew();
+
             var points = await _qdrantService.HybridSearchAsync(
-                embeddingSemantic.Data.Select(x => (float)x).ToArray(),
-                embeddingTechnical.Data.Select(x => (float)x).ToArray(),
-                filter,
-                request.CandidateLimit,
-                ct);
+                embeddingSemantic: embeddingSemantic.Data.Select(x => (float)x).ToArray(),
+                embeddingTechnical: technicalVector.Select(x => (float)x).ToArray(),
+                filter: filter,
+                candidateLimit: request.CandidateLimit,
+                ct: ct);
+
+            sw.Stop();
+            Console.WriteLine("----------------------------------");
+            _logger.LogInformation("5. Qdrant vector search: {kernel} ms", sw.ElapsedMilliseconds);
+            Console.WriteLine("----------------------------------");
+
+
+            sw = Stopwatch.StartNew();
 
             var products = await LoadProductsAsync(points, business.Data.Id);
+
+            sw.Stop();
+            Console.WriteLine("----------------------------------");
+            _logger.LogInformation("6. Load product: {kernel} ms", sw.ElapsedMilliseconds);
+            Console.WriteLine("----------------------------------");
 
             if (products.Count == 0)
             {
@@ -101,7 +134,14 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                     "No matching products found.");
             }
 
+            sw = Stopwatch.StartNew();
+
             var reranked = await RerankAsync(request.SemanticQuery, products, request.TopK, ct);
+
+            sw.Stop();
+            Console.WriteLine("----------------------------------");
+            _logger.LogInformation("7. Rernaking: {kernel} ms", sw.ElapsedMilliseconds);
+            Console.WriteLine("----------------------------------");
 
             if (!reranked.IsSuccess || reranked.Data == null)
             {

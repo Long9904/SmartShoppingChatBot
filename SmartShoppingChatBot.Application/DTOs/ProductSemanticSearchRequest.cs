@@ -27,8 +27,9 @@ namespace SmartShoppingChatBot.Application.DTOs
             - Không trả lời câu hỏi.
             - Không suy diễn hoặc thêm thuộc tính.
             - Không bao gồm điều kiện về giá (đã có field riêng).
+            - Có thể null nếu sematic query đã đủ 
             ")]
-        public string TechnicalQuery { get; init; } = string.Empty;
+        public string? TechnicalQuery { get; init; } = string.Empty;
 
 
         [Description("Số lượng sản phẩm lấy trước khi reranking. Khuyến nghị: 20-100. Mặc định: 100.")]
