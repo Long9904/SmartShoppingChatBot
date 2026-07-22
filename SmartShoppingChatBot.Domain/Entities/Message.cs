@@ -13,6 +13,8 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public required string Content { get; set; }
 
+        public string? SummaryContent { get; set; } = default!;
+
         public SenderTypeEnum SenderType { get; set; }
 
         public ContentTypeEnum ContentType { get; set; }

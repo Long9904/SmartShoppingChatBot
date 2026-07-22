@@ -15,10 +15,6 @@ internal static class ProductActorResolver
     {
         var authenticationType = httpContextAccessor.HttpContext?.User.Identity?.AuthenticationType;
 
-        if ("Bearer".Equals(authenticationType, StringComparison.OrdinalIgnoreCase))
-        {
-
-        }
 
         if ("ApiKey".Equals(authenticationType, StringComparison.OrdinalIgnoreCase))
         {

@@ -4,8 +4,8 @@ namespace SmartShoppingChatBot.Application.Interface
 {
     public interface IProductReferenceCollector
     {
-        void AddRange(IEnumerable<ProductResponse> products);
-        IReadOnlyList<ProductResponse> GetProducts();
+        void AddRange(IEnumerable<ProductResponseV2> products);
+        IReadOnlyList<ProductResponseV2> GetProducts();
         void Reset();
     }
 }

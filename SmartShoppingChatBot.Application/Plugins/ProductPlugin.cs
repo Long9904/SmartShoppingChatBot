@@ -19,7 +19,7 @@ namespace SmartShoppingChatBot.Application.Plugins
         }
 
         [KernelFunction]
-        [Description("Tìm sản phẩm theo ngữ nghĩa kết hợp bộ lọc có cấu trúc. Must response with JSON")]
+        [Description("Use whenever the user asks to:\r\n- find\r\n- browse\r\n- show\r\n- recommend\r\n- search")]
         public async Task<object> SemanticProductSearch(
             [Description("Bộ lọc cấu trúc")] ProductSemanticSearchRequest request,
             [Description("Field này không được gọi")] CancellationToken cancellationToken)
