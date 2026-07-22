@@ -44,7 +44,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     nameof(conversationId));
             }
 
-
             // 1. Lấy context từ redis
             var cachedContext = await _cacheService.GetAsync(conversationId, ct);
             if (cachedContext is not null) return cachedContext;

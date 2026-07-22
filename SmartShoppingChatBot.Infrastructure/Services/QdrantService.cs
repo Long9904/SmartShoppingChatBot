@@ -66,7 +66,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
         public async Task<List<ScoredPoint>> HybridSearchAsync(
             float[] embeddingSemantic,
-            float[] embeddingTechnical,
+            float[]? embeddingTechnical,
             Filter filter,
             int candidateLimit,
             CancellationToken ct)
@@ -83,14 +83,17 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     Filter = filter,
                     Limit = semanticLimit
                 },
-                new()
+            };
+            if (embeddingTechnical is not null)
+            {
+                prefetch.Add(new()
                 {
                     Query = embeddingTechnical,
                     Using = ProductVectorNames.ProductTechnical,
                     Filter = filter,
                     Limit = technicalLimit
-                }
-            };
+                });
+            }
 
             var points = await _qdrantClient.QueryAsync(
                 collectionName: QdrantCollections.Products,

@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -50,15 +51,22 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     }),
                 ResponseFormat = typeof(KernelChatResult),
                 Temperature = 0.2,
-                MaxTokens = 10000,
+                MaxTokens = 2200,
             };
 
             try
             {
+                var sw = Stopwatch.StartNew();
+
                 var response = await chatService.GetChatMessageContentAsync(
                 history,
                 settings,
                 _kernel);
+
+                sw.Stop();
+                Console.WriteLine("----------------------------------");
+                _logger.LogInformation("3. Kernel response: {kernel} ms", sw.ElapsedMilliseconds);
+                Console.WriteLine("----------------------------------");
 
                 if (string.IsNullOrWhiteSpace(response.Content)) return Result<KernelChatResult>.Failure(
                         500, "Kernel returned empty content.");
