@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Linq.Dynamic.Core;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -20,15 +19,18 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         private readonly GoogleConfigs _config;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<GeminiService> _logger;
+        private readonly GoogleAccessTokenProvider _accessTokenProvider;
 
         public GeminiService(
             IOptions<GoogleConfigs> config,
             IHttpClientFactory httpClientFactory,
+            GoogleAccessTokenProvider accessTokenProvider,
             ILogger<GeminiService> logger)
         {
             _config = config.Value;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _accessTokenProvider = accessTokenProvider;
         }
 
 
@@ -79,7 +81,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
                 var json = JsonSerializer.Serialize(requestBody);
 
-                var accessToken = await GetAccessTokenAsync();
+                var accessToken = await _accessTokenProvider.GetAccessTokenAsync(ct);
 
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -119,6 +121,41 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 _logger.LogError(ex, "Error generating embeddings from Gemini API");
                 return Result<double[]>.Failure(500, "Error generating embeddings from Gemini API", messageCode: "MG_SERVER_500");
             }
+        }
+
+        public async Task<Result<IReadOnlyList<double[]>>> EmbeddingsAsyncV3(
+            IReadOnlyList<string> texts,
+            string taskType = "RETRIEVAL_QUERY",
+            CancellationToken ct = default)
+        {
+            if (texts.Count == 0)
+            {
+                return Result<IReadOnlyList<double[]>>.Success(Array.Empty<double[]>());
+            }
+
+            var embeddingTasks = texts
+                .Select(text => EmbeddingsAsyncV2(text, taskType, ct))
+                .ToArray();
+
+            var results = await Task.WhenAll(embeddingTasks);
+
+            foreach (var result in results)
+            {
+                if (!result.IsSuccess)
+                {
+                    return Result<IReadOnlyList<double[]>>.Failure(
+                        result.StatusCode,
+                        result.Message,
+                        result.Errors,
+                        result.MessageCode);
+                }
+            }
+
+            var embeddings = results
+                .Select(result => result.Data!)
+                .ToArray();
+
+            return Result<IReadOnlyList<double[]>>.Success(embeddings);
         }
 
         public async Task<Result<string>> GenerateTextAsync(
@@ -231,7 +268,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
         }
 
-        public async Task<Result<string>> GenerateTextAsyncV2(GeminiRequest geminiRequest)
+        public async Task<Result<string>> GenerateTextAsyncV2(GeminiRequest geminiRequest, CancellationToken ct = default)
         {
             if (geminiRequest.GenerationConfig.MaxOutputTokens > _config.GeminiMaxTokens)
             {
@@ -284,7 +321,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 var json = JsonSerializer.Serialize(requestBody, JsonOptions);
 
-                var accessToken = await GetAccessTokenAsync();
+                var accessToken = await _accessTokenProvider.GetAccessTokenAsync(ct);
 
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -371,14 +408,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
         }
 
-        public Task<Result<ICollection<RankedRecord>>> RerankerAsync(
-            string userQuery,
-            IEnumerable<RankRecord> records,
-            CancellationToken ct)
-        {
-            return RerankerAsyncV2(userQuery, records, ct);
-        }
-
         public async Task<Result<ICollection<RankedRecord>>> RerankerAsyncV2(
             string userQuery,
             IEnumerable<RankRecord> records,
@@ -395,7 +424,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 IgnoreRecordDetailsInResponse = false
             };
 
-            var token = await GetAccessTokenAsync();
+            var token = await _accessTokenProvider.GetAccessTokenAsync(ct);
 
             using var message = new HttpRequestMessage(HttpMethod.Post, endpoint);
 

@@ -1,11 +1,11 @@
 using System.Diagnostics;
+using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
-using SmartShoppingChatBot.Application.Features.ProductManagement.ProductCommon;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
@@ -15,18 +15,20 @@ using SmartShoppingChatBot.Domain.QdrantConfig;
 namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSemanticSearch
 {
     public class ProductSemanticSearchQueryHandler
-        : IRequestHandler<ProductSemanticSearchQuery, Result<List<ProductResponse>>>
+        : IRequestHandler<ProductSemanticSearchQuery, Result<List<ProductResponseV2>>>
     {
         private readonly ICurrentUserService _currentUserService;
         private readonly IGeminiService _geminiService;
         private readonly IQdrantService _qdrantService;
         private readonly IProductRepository _productRepository;
+        private readonly IMapper _mapper;
         private readonly ILogger<ProductSemanticSearchQueryHandler> _logger;
 
         public ProductSemanticSearchQueryHandler(
             ICurrentUserService currentUserService,
             IGeminiService geminiService,
             IQdrantService qdrantService,
+            IMapper mapper,
             ILogger<ProductSemanticSearchQueryHandler> logger,
             IProductRepository productRepository)
         {
@@ -35,23 +37,24 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             _qdrantService = qdrantService;
             _productRepository = productRepository;
             _logger = logger;
+            _mapper = mapper;
         }
 
-        public Task<Result<List<ProductResponse>>> Handle(
+        public Task<Result<List<ProductResponseV2>>> Handle(
             ProductSemanticSearchQuery query,
             CancellationToken cancellationToken)
         {
             return SearchAsync(query.Request, cancellationToken);
         }
 
-        private async Task<Result<List<ProductResponse>>> SearchAsync(
+        private async Task<Result<List<ProductResponseV2>>> SearchAsync(
             ProductSemanticSearchRequest request,
             CancellationToken ct)
         {
             var business = await _currentUserService.GetBusiness();
             if (!business.IsSuccess || business.Data == null)
             {
-                return Result<List<ProductResponse>>.Failure(
+                return Result<List<ProductResponseV2>>.Failure(
                     business.StatusCode,
                     business.Message,
                     business.Errors,
@@ -60,40 +63,50 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             var sw = Stopwatch.StartNew();
 
-            var embeddingSemantic = await _geminiService.EmbeddingsAsyncV2(
-                request.SemanticQuery,
-                "RETRIEVAL_QUERY",
-                ct);
-
-            if (!embeddingSemantic.IsSuccess || embeddingSemantic.Data == null)
-            {
-                return Result<List<ProductResponse>>.Failure(
-                    embeddingSemantic.StatusCode,
-                    embeddingSemantic.Message,
-                    embeddingSemantic.Errors,
-                    embeddingSemantic.MessageCode);
-            }
-
-            double[]? technicalVector = null;
-            if (request.TechnicalQuery != null)
-            {
-                var embeddingTechnical = await _geminiService.EmbeddingsAsyncV2(
-                request.TechnicalQuery,
-                "RETRIEVAL_QUERY",
-                ct);
-
-
-                if (!embeddingTechnical.IsSuccess || embeddingTechnical.Data == null)
+            var buildVectors = await _geminiService.EmbeddingsAsyncV3(
+                new[]
                 {
-                    return Result<List<ProductResponse>>.Failure(
-                        embeddingTechnical.StatusCode,
-                        embeddingTechnical.Message,
-                        embeddingTechnical.Errors,
-                        embeddingTechnical.MessageCode);
-                }
+                    request.SemanticQuery,
+                    request.TechnicalQuery
+                }, "RETRIEVAL_QUERY", ct);
 
-                technicalVector = embeddingTechnical.Data;
+            if (!buildVectors.IsSuccess || buildVectors.Data == null)
+            {
+                return Result<List<ProductResponseV2>>.Failure(
+                    buildVectors.StatusCode,
+                    buildVectors.Message,
+                    buildVectors.Errors,
+                    buildVectors.MessageCode);
             }
+
+            //var embeddingSemantic = await _geminiService.EmbeddingsAsyncV2(
+            //    request.SemanticQuery,
+            //    "RETRIEVAL_QUERY",
+            //    ct);
+
+            //if (!embeddingSemantic.IsSuccess || embeddingSemantic.Data == null)
+            //{
+            //    return Result<List<ProductResponseV2>>.Failure(
+            //        embeddingSemantic.StatusCode,
+            //        embeddingSemantic.Message,
+            //        embeddingSemantic.Errors,
+            //        embeddingSemantic.MessageCode);
+            //}
+
+            //var embeddingTechnical = await _geminiService.EmbeddingsAsyncV2(
+            //    request.TechnicalQuery,
+            //    "RETRIEVAL_QUERY",
+            //    ct);
+
+
+            //if (!embeddingTechnical.IsSuccess || embeddingTechnical.Data == null)
+            //{
+            //    return Result<List<ProductResponseV2>>.Failure(
+            //        embeddingTechnical.StatusCode,
+            //        embeddingTechnical.Message,
+            //        embeddingTechnical.Errors,
+            //        embeddingTechnical.MessageCode);
+            //}
 
             sw.Stop();
             Console.WriteLine("----------------------------------");
@@ -105,10 +118,10 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             sw = Stopwatch.StartNew();
 
             var points = await _qdrantService.HybridSearchAsync(
-                embeddingSemantic: embeddingSemantic.Data.Select(x => (float)x).ToArray(),
-                embeddingTechnical: technicalVector.Select(x => (float)x).ToArray(),
+                embeddingSemantic: buildVectors.Data[0].Select(x => (float)x).ToArray(),
+                embeddingTechnical: buildVectors.Data[1].Select(x => (float)x).ToArray(),
                 filter: filter,
-                candidateLimit: request.CandidateLimit,
+                candidateLimit: 40,
                 ct: ct);
 
             sw.Stop();
@@ -128,7 +141,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             if (products.Count == 0)
             {
-                return Result<List<ProductResponse>>.Success(
+                return Result<List<ProductResponseV2>>.Success(
                     [],
                     200,
                     "No matching products found.");
@@ -136,7 +149,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             sw = Stopwatch.StartNew();
 
-            var reranked = await RerankAsync(request.SemanticQuery, products, request.TopK, ct);
+            var reranked = await RerankAsync(request.SemanticQuery, products, 5, ct);
 
             sw.Stop();
             Console.WriteLine("----------------------------------");
@@ -145,15 +158,17 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             if (!reranked.IsSuccess || reranked.Data == null)
             {
-                return Result<List<ProductResponse>>.Failure(
+                return Result<List<ProductResponseV2>>.Failure(
                     reranked.StatusCode,
                     reranked.Message,
                     reranked.Errors,
                     reranked.MessageCode);
             }
 
-            return Result<List<ProductResponse>>.Success(
-                reranked.Data.Select(ProductMappings.ToResponse).ToList(),
+            var responses = _mapper.Map<List<ProductResponseV2>>(reranked.Data);
+
+            return Result<List<ProductResponseV2>>.Success(
+                responses,
                 200,
                 "Product semantic search successfully.");
         }
