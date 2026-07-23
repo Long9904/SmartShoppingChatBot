@@ -60,7 +60,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 .NotNull().WithMessage("Metadata cannot be null.")
                 .Must(kv => !string.IsNullOrWhiteSpace(kv.Key)).WithMessage("Metadata key cannot be empty.")
                 .Must(kv => kv.Value != null).WithMessage("Metadata value cannot be null.")
-                .Must(kv => kv.Key.Length <= 100).WithMessage("Metadata key cannot exceed 100 characters.");
+                .Must(kv => kv.Value.Length <= 100).WithMessage("Metadata value cannot exceed 100 characters.")
+                .Must(kv => kv.Key.Length <= 20).WithMessage("Metadata key cannot exceed 20 characters.");
 
         }
     }

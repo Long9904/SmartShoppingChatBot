@@ -111,7 +111,6 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             // External or internal
 
             var authType = _httpContextAccessor.HttpContext?.User.Identity?.AuthenticationType;
-            Console.WriteLine(authType + "------------------------------------");
 
             if ("ApiKey".Equals(authType))
             {

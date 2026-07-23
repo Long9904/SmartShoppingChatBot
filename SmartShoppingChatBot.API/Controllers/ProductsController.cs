@@ -6,6 +6,7 @@ using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.ProductManagement.ImportProductExcel;
 using SmartShoppingChatBot.Application.Features.ProductManagement.ProductCreate;
 using SmartShoppingChatBot.Application.Features.ProductManagement.ProductDelete;
 using SmartShoppingChatBot.Application.Features.ProductManagement.ProductGetAll;
@@ -176,6 +177,21 @@ namespace SmartShoppingChatBot.API.Controllers
             return StatusCode(
                 result.StatusCode,
                 ApiResponse<T>.Fail(result.Message!, result.Errors, result.MessageCode));
+        }
+
+
+        [HttpPost("products/import")]
+        [Consumes("multipart/form-data")]
+        [ApiExplorerSettings(GroupName = "internal")]
+        [EndpointSummary("BO import product data")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "BUSINESS_OWNER")]
+        public async Task<IActionResult> Import(
+        [FromForm] ImportProductRequest request,
+        CancellationToken ct)
+        {
+            var result = await _mediator.Send(new ImportProductsCommand(request.File), ct);
+
+            return FromResult(result);
         }
     }
 }

@@ -29,6 +29,8 @@ public class MongoDbContext : DbContext
 
     public DbSet<Message> Messages { get; set; }
 
+    public DbSet<ImportJob> ImportJobs { get; set; }
+
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
