@@ -29,7 +29,7 @@ namespace SmartShoppingChatBot.Application.Interface
 
         Task<List<ScoredPoint>> HybridSearchAsync(
             float[] embeddingSemantic,
-            float[]? embeddingTechnical,
+            float[] embeddingTechnical,
             Filter filter,
             int candidateLimit,
             CancellationToken ct);

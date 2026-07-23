@@ -11,8 +11,6 @@
         // Mỗi turn là 1 cạp user - assitant
 
         public List<CachedConversationTurn> RecentTurns { get; set; } = [];
-
-        public DateTimeOffset UpdatedAt { get; set; }
     }
 
     public class CachedConversationTurn
@@ -24,8 +22,6 @@
 
         // Assitant message
         public CachedAssistantMessage? AssistantMessage { get; set; }
-
-        public DateTimeOffset CreatedAt { get; init; }
     }
 
     public sealed class CachedUserMessage
@@ -33,8 +29,6 @@
         public string MessageId { get; init; } = string.Empty;
 
         public string Content { get; init; } = string.Empty;
-
-        public DateTimeOffset CreatedAt { get; init; }
     }
 
 
@@ -45,8 +39,6 @@
         public string Content { get; init; } = string.Empty;
 
         public List<CachedProductReference> ProductReferences { get; init; } = [];
-
-        public DateTimeOffset CreatedAt { get; init; }
     }
 
 

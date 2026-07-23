@@ -186,6 +186,9 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 }).ToList();
 
 
+
+                aiMessage.SummaryContent = kernelResult.AISummaryContent ?? "";
+
                 await _messageRepository.AddAsync(aiMessage);
 
                 conversation.Summary = kernelResult.Summary;
@@ -203,20 +206,17 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 var turn = new CachedConversationTurn
                 {
                     TurnId = userMessage.Id.ToString(),
-                    CreatedAt = turnCreateTime,
 
                     UserMessage = new()
                     {
                         Content = userMessage.Content,
-                        CreatedAt = userMessage.CreatedAt,
                         MessageId = userMessage.Id.ToString()
                     },
 
                     AssistantMessage = new()
                     {
                         MessageId = aiMessage.Id.ToString(),
-                        Content = aiMessage.Content,
-                        CreatedAt = aiMessage.CreatedAt,
+                        Content = aiMessage.SummaryContent ?? "",
                         ProductReferences = cacheProduct.Select(cp =>
                         new CachedProductReference
                         {
@@ -237,7 +237,6 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
                     conversationContext.RecentTurns.RemoveRange(0, overFlowCount);
                 }
-                conversationContext.UpdatedAt = turnCreateTime;
 
                 // 6. Save turn mới vào reids
                 await _conversationContextService.SaveConversationCacheAsync(conversationContext, cancellationToken);

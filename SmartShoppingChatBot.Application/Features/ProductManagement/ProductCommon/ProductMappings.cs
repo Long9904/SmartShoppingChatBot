@@ -5,7 +5,7 @@ using SmartShoppingChatBot.Domain.QdrantConfig;
 
 namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCommon;
 
-internal static class ProductMappings
+public static class ProductMappings
 {
     public static ProductResponse ToResponse(Product product)
     {

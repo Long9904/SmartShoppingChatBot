@@ -34,6 +34,8 @@ public static class InfrastructureDI
         services.AddScoped<IConversationContextService, ConversationContextService>();
         services.AddScoped<IProductReferenceCollector, ProductReferenceCollector>();
 
+        services.AddSingleton<GoogleAccessTokenProvider>();
+
         // Seeder
         services.AddScoped<UserSeeder>();
         services.AddScoped<SubscriptionSeeder>();

@@ -9,5 +9,8 @@ namespace SmartShoppingChatBot.Application.DTOs
 
         [JsonPropertyName("summary")]
         public required string Summary { get; init; } = "";
+
+        [JsonPropertyName("ai_summary_content")]
+        public string AISummaryContent { get; init; } = string.Empty;
     }
 }

@@ -51,7 +51,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     }),
                 ResponseFormat = typeof(KernelChatResult),
                 Temperature = 0.2,
-                MaxTokens = 2200,
+                MaxTokens = 4000,
             };
 
             try
@@ -89,7 +89,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     return Result<KernelChatResult>.Failure(500, "Kernel response does not contain an answer.");
                 }
 
-                if (string.IsNullOrWhiteSpace(result.Summary))
+                if (string.IsNullOrWhiteSpace(result.Summary) || string.IsNullOrWhiteSpace(result.AISummaryContent))
                 {
                     return Result<KernelChatResult>.Failure(500, "Kernel response does not contain a summary.");
                 }
