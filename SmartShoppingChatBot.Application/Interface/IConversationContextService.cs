@@ -1,6 +1,6 @@
 ﻿using SmartShoppingChatBot.Application.DTOs;
 
-namespace SmartShoppingChatBot.Infrastructure.Services
+namespace SmartShoppingChatBot.Application.Interface
 {
     public interface IConversationContextService
     {

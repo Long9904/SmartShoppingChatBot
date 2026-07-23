@@ -11,7 +11,6 @@ using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
-using SmartShoppingChatBot.Infrastructure.Services;
 
 namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendMessage
 {
