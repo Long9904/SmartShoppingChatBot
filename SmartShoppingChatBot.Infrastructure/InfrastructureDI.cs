@@ -57,6 +57,7 @@ public static class InfrastructureDI
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IImportJobRepository, ImportJobRepository>();
 
         return services;
     }

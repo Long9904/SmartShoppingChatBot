@@ -15,7 +15,7 @@ namespace SmartShoppingChatBot.Application.Consumers
             _mediator = mediator;
         }
 
-        public Task Consume(ConsumeContext<ProductCreateEvent> context)
+        public async Task Consume(ConsumeContext<ProductCreateEvent> context)
         {
             var command = new ProductEmbedCommand
             {
@@ -23,16 +23,14 @@ namespace SmartShoppingChatBot.Application.Consumers
                 QdrantPointId = context.Message.QdrantPointId
             };
 
-            var result = _mediator.Send(command);
+            var result = await _mediator.Send(command);
 
-            if (result.Result.IsSuccess)
+            if (!result.IsSuccess)
             {
-                return Task.CompletedTask;
+                throw new InvalidOperationException(result.Message);
             }
-            else
-            {
-                throw new Exception(result.Result.Message);
-            }
+            await Task.Delay(TimeSpan.FromSeconds(12), context.CancellationToken);
+
         }
     }
 }
