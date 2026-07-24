@@ -58,9 +58,9 @@ namespace SmartShoppingChatBot.API.Controllers
             var result = await _mediator.Send(new GetMyBusinessProfileQuery());
 
             if (result.IsSuccess)
-                return StatusCode(result.StatusCode, ApiResponse<BusinessResponse>.Ok(result.Data!, result.Message));
+                return StatusCode(result.StatusCode, ApiResponse<MyBusinessProfileResponse>.Ok(result.Data!, result.Message));
 
-            return StatusCode(result.StatusCode, ApiResponse<BusinessResponse>.Fail(result.Message!, result.Errors));
+            return StatusCode(result.StatusCode, ApiResponse<MyBusinessProfileResponse>.Fail(result.Message!, result.Errors));
         }
 
         [HttpPut("profile")]
