@@ -126,3 +126,4 @@ artifacts/
 tools/
 scripts/
 scripts
+.agents/
