@@ -113,7 +113,7 @@ public class ConfirmBusinessCommandHandler :
         };
 
         // Resigter business subcription plan
-        var freeTierPlan = await _subscriptionPlanRepository.FindAsync(x => "Basic".Equals(x.Name));
+        var freeTierPlan = await _subscriptionPlanRepository.FindAsync(x => x.Name.Contains("Basic"));
 
         if (freeTierPlan == null) return Result<BusinessRegistrationResponse>.Failure(404, "Plan not found", null, "MG_SUBPLAN_404");
 
