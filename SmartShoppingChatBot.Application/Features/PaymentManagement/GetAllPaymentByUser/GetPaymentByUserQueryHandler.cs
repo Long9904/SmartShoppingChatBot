@@ -6,9 +6,9 @@ using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Interface;
 
-namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPayment
+namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPaymentByUser
 {
-    public class GetPaymentByUserQueryHandler : IRequestHandler<GetPaymentQuery, Result<BasePaginatedList<PaymentResponse>>>
+    public class GetPaymentByUserQueryHandler : IRequestHandler<GetPaymentByUserQuery, Result<BasePaginatedList<PaymentResponse>>>
     {
         private readonly IPaymentRepository _paymentRepository;
         private readonly IUnitOfWork _unitOfWork;
@@ -18,7 +18,7 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPaym
         private readonly IMapper _mapper;
 
         public GetPaymentByUserQueryHandler(IPaymentRepository paymentRepository, IUnitOfWork unitOfWork,
-            IBusinessRepository businessRepository, ISubscriptionPlanRepository subscriptionPlanRepository, IMapper mapper ,ICurrentUserService currentUserService)
+            IBusinessRepository businessRepository, ISubscriptionPlanRepository subscriptionPlanRepository, IMapper mapper, ICurrentUserService currentUserService)
         {
             _paymentRepository = paymentRepository;
             _unitOfWork = unitOfWork;
@@ -28,9 +28,14 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPaym
             _currentUserService = currentUserService;
         }
 
-        public async Task<Result<BasePaginatedList<PaymentResponse>>> Handle(GetPaymentQuery request, CancellationToken cancellationToken)
+        public async Task<Result<BasePaginatedList<PaymentResponse>>> Handle(GetPaymentByUserQuery request, CancellationToken cancellationToken)
         {
-            
+            var BusinessLogin = await _currentUserService.GetBusiness();
+            if (BusinessLogin == null || BusinessLogin.Data == null)
+            {
+                return Result<BasePaginatedList<PaymentResponse>>.Failure(404, "User not found");
+            }
+
             var query = _paymentRepository.AsQueryable();
             if (!string.IsNullOrEmpty(request.Filter.Search))
             {
@@ -52,7 +57,8 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPaym
                         break;
                 }
             }
-            
+            var businessId = BusinessLogin.Data.Id;
+            query = query.Where(p => p.BussinessId == businessId);
             var pagingList = await _paymentRepository.PaginatedListAsync(
                 query,
                 request.Filter?.PageIndex ?? 1,
