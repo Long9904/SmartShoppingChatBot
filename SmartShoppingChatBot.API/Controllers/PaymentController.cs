@@ -72,7 +72,7 @@ namespace SmartShoppingChatBot.API.Controllers
                 return StatusCode(result.StatusCode, ApiResponse<BasePaginatedList<PaymentResponse>>.Ok(result.Data!, result.Message));
             return StatusCode(result.StatusCode, ApiResponse<BasePaginatedList<PaymentResponse>>.Fail(result.Message!, result.Errors));
         }
-        [HttpGet]
+        [HttpGet("user")]
         [EndpointSummary("BO-Get All Payments")]
         [Authorize(Roles = "BUSINESS_OWNER, CATALOG_TEAM")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
