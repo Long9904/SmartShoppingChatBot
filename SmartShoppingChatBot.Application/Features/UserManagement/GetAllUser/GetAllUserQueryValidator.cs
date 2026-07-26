@@ -26,6 +26,11 @@ namespace SmartShoppingChatBot.Application.Features.UserManagement.GetAllUser
                 .Must(x => x == null || x is int)
                 .WithMessage("Gender must be an integer value.");
 
+
+            RuleFor(x => x.BusinessName)
+                .MaximumLength(100)
+                .WithMessage("BusinessName must not exceed 100 characters.");
+
         }
     }
 }
