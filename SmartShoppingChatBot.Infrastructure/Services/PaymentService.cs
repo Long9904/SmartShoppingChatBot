@@ -225,7 +225,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 _logger.LogWarning("Payment with order code {OrderCode} has already been completed", webhookData.Data.OrderCode);
                 return true;
             }
-
+            
             //load subscription plan
             if (existingPayment.SubscriptionPlanId == ObjectId.Empty)
             {
@@ -448,6 +448,32 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             return checked(timestamp * 1000 + randomPart);
         } 
-        
+        public async Task<Result<string>> CancleOldPayment(long orderCode)
+        {
+            try
+            {
+                var businessLogin = await _currentUserService.GetBusiness();
+                if(businessLogin == null || businessLogin.Data == null)
+                {
+                    return Result<string>.Failure(404, "Business not found");
+                }
+                var existingPayment = await _paymentRepository.FindAsync(x => x.OrderCode == orderCode && x.BussinessId == businessLogin.Data.Id && x.Status == PaymentEnums.Pending);
+                if (existingPayment == null)
+                {
+                    return Result<string>.Failure(404, "Payment not found or not pending");
+                }
+
+                //await _payOSClient.PaymentRequests.CancelAsync(orderCode, "Cancellation reason");
+                existingPayment.Status = PaymentEnums.Cancelled;
+                await _paymentRepository.UpdateAsync(existingPayment);
+                await _unitOfWork.SaveChangesAsync();
+                return Result<string>.Success("Payment cancelled successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling payment for order code {OrderCode}", orderCode);
+                return Result<string>.Failure(500, "An error occurred while cancelling the payment");
+            }
+        }
     }
 }
