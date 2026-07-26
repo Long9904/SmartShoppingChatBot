@@ -185,6 +185,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 .Select((product, index) =>
                     new CachedProductReference
                     {
+                        DisplayOrder = index + 1,
                         ProductId = product.ProductId,
                         DisplayName = product.DisplayName ?? "",
                     }).ToList();

@@ -175,7 +175,7 @@ public class ImportProductsCommandHandler : IRequestHandler<ImportProductsComman
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // 4.2 Take external Id from db and check is esixting
+        // 4.2 Take external ProductId from db and check is esixting
         var existingProducts = await _productRepository.FindAllAsync(p =>
             p.BusinessId == business.Data.Id
             && externalIdsFromExcel.Contains(p.ExternalId)

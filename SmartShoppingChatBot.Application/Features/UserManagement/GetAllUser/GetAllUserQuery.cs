@@ -17,6 +17,8 @@ namespace SmartShoppingChatBot.Application.Features.UserManagement.GetAllUser
 
         public UserStatus? UserStatus { get; set; }
 
+        public string? BusinessName { get; set; }
+
         public string? OrderBy { get; set; }
     }
 }

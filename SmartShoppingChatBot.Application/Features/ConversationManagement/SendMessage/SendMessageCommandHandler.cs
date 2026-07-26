@@ -144,6 +144,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
                 sw = Stopwatch.StartNew();
 
+                _productReferenceCollector.Reset();
+
                 var sematicKernelResponse = await _kernelChatService.ChatAsync(req);
 
                 sw.Stop();
@@ -156,7 +158,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     await _unitOfWork.RollBackAsync(cancellationToken);
 
                     return Result<ConversationResponse>
-                        .Failure(500, "Xin lỗi, hiện mình chưa thể trả lời câu hỏi này. Bạn vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ nhé.", null, "MG_SERVER_500");
+                        .Success(null, 200, "Xin lỗi, hiện mình chưa thể trả lời câu hỏi này. Bạn vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ nhé.", "MG_SERVER_200");
                 }
 
                 var kernelResult = sematicKernelResponse.Data!;
@@ -175,14 +177,61 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     Status = MessageStatus.Sent,
                 };
 
-                var cacheProduct = _productReferenceCollector.GetProducts();
+                var cacheProducts = _productReferenceCollector.GetProducts();
 
-                aiMessage.CacheProductReference = cacheProduct.Select(cp =>
-                new ProductReference
+                var productById = BuildAvailableProductReferences(
+                    cacheProducts,
+                    conversationContext);
+
+                var selectedProductIds = kernelResult.SelectedProductIds
+                    .Where(productId => !string.IsNullOrWhiteSpace(productId))
+                    .Select(productId => productId.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var unavailableProductIds = selectedProductIds
+                    .Where(productId => !productById.ContainsKey(productId))
+                    .ToList();
+
+                if (unavailableProductIds.Count > 0)
                 {
-                    DisplayName = cp.Name,
-                    ProductId = cp.Id,
-                }).ToList();
+                    _logger.LogWarning(
+                        "Kernel returned product IDs that were not present in the current search results or conversation context: {ProductIds}",
+                        string.Join(", ", unavailableProductIds));
+                }
+
+                if (cacheProducts.Count > 0 && selectedProductIds.Count == 0)
+                {
+                    _logger.LogWarning(
+                        "Kernel returned no selected product IDs although the product search returned {ProductCount} products",
+                        cacheProducts.Count);
+                }
+
+                var selectedProductReferences = selectedProductIds
+                    .Where(productById.ContainsKey)
+                    .Select((productId, index) =>
+                    {
+                        var product = productById[productId];
+
+                        return new CachedProductReference
+                        {
+                            DisplayOrder = index + 1,
+                            DisplayName = product.DisplayName,
+                            ProductId = product.ProductId,
+                        };
+                    })
+                    .ToList();
+
+                aiMessage.CacheProductReference = selectedProductReferences
+                    .Select(product =>
+                    {
+                        return new ProductReference
+                        {
+                            ProductId = product.ProductId,
+                            DisplayName = product.DisplayName
+                        };
+                    })
+                    .ToList();
 
 
 
@@ -216,12 +265,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     {
                         MessageId = aiMessage.Id.ToString(),
                         Content = aiMessage.SummaryContent ?? "",
-                        ProductReferences = cacheProduct.Select(cp =>
-                        new CachedProductReference
-                        {
-                            DisplayName = cp.Name,
-                            ProductId = cp.Id,
-                        }).ToList()
+                        ProductReferences = selectedProductReferences
                     }
                 };
 
@@ -260,6 +304,52 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     .Failure(500, "Error when saving user message or kernel response", null, "MG_SERVER_500");
             }
 
+        }
+
+        private static Dictionary<string, CachedProductReference> BuildAvailableProductReferences(
+            IEnumerable<ProductResponseV2> currentProducts,
+            ConversationContextCache conversationContext)
+        {
+            var productById = new Dictionary<string, CachedProductReference>(
+                StringComparer.OrdinalIgnoreCase);
+
+            var contextProductReferences = conversationContext.RecentTurns
+                .SelectMany(turn => turn.AssistantMessage?.ProductReferences ?? []);
+
+            foreach (var product in contextProductReferences)
+            {
+                if (string.IsNullOrWhiteSpace(product.ProductId))
+                {
+                    continue;
+                }
+
+                var productId = product.ProductId.Trim();
+
+                productById.TryAdd(productId, new CachedProductReference
+                {
+                    ProductId = productId,
+                    DisplayName = product.DisplayName,
+                    DisplayOrder = product.DisplayOrder,
+                });
+            }
+
+            foreach (var product in currentProducts)
+            {
+                if (string.IsNullOrWhiteSpace(product.ProductId))
+                {
+                    continue;
+                }
+
+                var productId = product.ProductId.Trim();
+
+                productById[productId] = new CachedProductReference
+                {
+                    ProductId = productId,
+                    DisplayName = product.Name,
+                };
+            }
+
+            return productById;
         }
 
         private async Task<Result<Customer>> GetOrCreateCustomerAsync(
