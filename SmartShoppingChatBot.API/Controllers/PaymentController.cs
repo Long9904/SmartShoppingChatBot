@@ -94,5 +94,15 @@ namespace SmartShoppingChatBot.API.Controllers
                 return StatusCode(StatusCodes.Status200OK, ApiResponse<PaymentResponse>.Ok(result.Data!, result.Message));
             return StatusCode(StatusCodes.Status404NotFound, ApiResponse<PaymentResponse>.Fail("Payment not found.", null));
         }
+
+        [HttpDelete("cancel/{orderCode}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> CancelPayment([FromRoute] long orderCode)
+        {
+            var result = await _paymentService.CancleOldPayment(orderCode);
+            if (result.IsSuccess)
+                return StatusCode(StatusCodes.Status200OK, ApiResponse<string>.Ok(result.Data!, result.Message));
+            return StatusCode(result.StatusCode, ApiResponse<string>.Fail(result.Message!, result.Errors));
+        }
     }
 }
