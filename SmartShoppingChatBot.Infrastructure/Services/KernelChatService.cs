@@ -51,7 +51,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     }),
                 ResponseFormat = typeof(KernelChatResult),
                 Temperature = 0.2,
-                MaxTokens = 4000,
+                MaxTokens = 2000,
             };
 
             try
@@ -93,6 +93,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 {
                     return Result<KernelChatResult>.Failure(500, "Kernel response does not contain a summary.");
                 }
+
+                if (result.SelectedProductIds is null)
+                {
+                    return Result<KernelChatResult>.Failure(500, "Kernel response does not contain selectedProductIds.");
+                }
+
+                _logger.LogInformation(
+                    "Kernel selected product IDs: {SelectedProductIds}",
+                    string.Join(", ", result.SelectedProductIds));
 
                 return Result<KernelChatResult>.Success(result, 200, "Function calling success");
             }

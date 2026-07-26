@@ -12,5 +12,9 @@ namespace SmartShoppingChatBot.Application.DTOs
 
         [JsonPropertyName("ai_summary_content")]
         public required string AISummaryContent { get; init; }
+
+        [JsonPropertyName("selectedProductIds")]
+        [System.ComponentModel.Description("Product IDs actually shown or mentioned in answer, in the same order as answer.")]
+        public required List<string> SelectedProductIds { get; init; }
     }
 }

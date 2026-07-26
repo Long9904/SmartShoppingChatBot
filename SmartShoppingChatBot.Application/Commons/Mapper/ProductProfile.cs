@@ -9,7 +9,7 @@ namespace SmartShoppingChatBot.Application.Commons.Mapper
         public ProductProfile()
         {
             CreateMap<Product, ProductResponseV2>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id.ToString()))
+                .ForMember(dest => dest.ProductId, opt => opt.MapFrom(src => src.Id.ToString()))
                 .ForMember(dest => dest.ExternalProductUrl, opt => opt.MapFrom(src => src.ExternalProductUrl))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
