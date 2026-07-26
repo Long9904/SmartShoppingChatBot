@@ -25,6 +25,11 @@ namespace SmartShoppingChatBot.Application.Features.UserManagement.GetAllUser
             var query = _userRepository.AsQueryable();
             query = query.Where(x => x.UserStatus != UserStatus.DELETED);
 
+            if (!string.IsNullOrEmpty(request.BusinessName))
+            {
+                query = query.Where(x => x.Business.BusinessName.Contains(request.BusinessName));
+            }
+
             if (!string.IsNullOrEmpty(request.FullName))
             {
                 query = query.Where(x => x.FullName.Contains(request.FullName));

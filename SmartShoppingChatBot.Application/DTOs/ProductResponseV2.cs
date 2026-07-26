@@ -2,7 +2,9 @@
 {
     public class ProductResponseV2
     {
-        public string Id { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonPropertyName("productId")]
+        [System.ComponentModel.Description("Canonical product ID. Copy this exact value when referencing the product.")]
+        public string ProductId { get; set; } = string.Empty;
 
         public string ExternalProductUrl { get; set; } = string.Empty;
 
