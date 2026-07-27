@@ -20,7 +20,7 @@ namespace SmartShoppingChatBot.Application.Plugins
         }
 
         [KernelFunction]
-        [Description("Use whenever the user asks to find, browse, show, recommend, buy, or get information about products. No COMPARE")]
+        [Description("Tìm sản phẩm khi người dùng muốn xem, tìm, mua, gợi ý, tư vấn, so sánh, tìm lựa chọn thay thế, nâng cấp, phụ kiện hoặc hỏi thông tin về bất kỳ sản phẩm nào. Cũng dùng khi người dùng tham chiếu sản phẩm trong lịch sử như “mẫu này”, “con thứ hai”, “hai mẫu trên”")]
         [return: Description("Product search result. Every product has a canonical productId that must be copied exactly when the product is referenced.")]
         public async Task<Result<List<ProductResponseV2>>> SemanticProductSearch(
             [Description("Bộ lọc cấu trúc")] ProductSemanticSearchRequest request,
