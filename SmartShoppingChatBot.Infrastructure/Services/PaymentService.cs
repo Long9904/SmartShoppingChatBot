@@ -1,7 +1,4 @@
 ﻿using AutoMapper;
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -16,6 +13,10 @@ using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using static MassTransit.ValidationResultExtensions;
 
 namespace SmartShoppingChatBot.Infrastructure.Services
 {
@@ -107,7 +108,19 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 .FindAsync(x => x.BussinessId == business.Id && x.SubscriptionPlanId == selectSubscription.Id && x.Status == PaymentEnums.Pending);
             if (existingPayment != null)
             {
-                return Result<PaymentResponsed>.Failure(400, "Business already has a pending payment for this plan");
+                if(!string.IsNullOrEmpty(existingPayment.PayOsPaymentLink))
+                {
+                    return Result<PaymentResponsed>.Success(new PaymentResponsed
+                    {
+                        CheckoutUrl = existingPayment.PayOsPaymentLink,
+                        OrderCode = existingPayment.OrderCode,
+                        Message = "Existing payment link retrieved successfully"
+                    }, 200, "Existing payment link retrieved successfully");
+                }
+                else
+                {
+                    return Result<PaymentResponsed>.Failure(400, "Existing payment is pending but has no payment link ! Please cancel old payment and try again");
+                }
             }
 
             var orderCode = GenerateOrderCode();
@@ -137,12 +150,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             try
             {
                 var result = await _payOSClient.PaymentRequests.CreateAsync(paymentRequest);
+                payment.PayOsPaymentLink = result.CheckoutUrl;
                 await _paymentRepository.AddAsync(payment);
                 await _unitOfWork.SaveChangesAsync();
                 return Result<PaymentResponsed>.Success(new PaymentResponsed
                 {
-                    CheckoutUrl = result.CheckoutUrl,
-                    OrderCode = orderCode,
+                    CheckoutUrl = payment.PayOsPaymentLink,
+                    OrderCode = payment.OrderCode,
                     Message = "Payment link created successfully"
                 }, 200, "Payment link created successfully");
             }
