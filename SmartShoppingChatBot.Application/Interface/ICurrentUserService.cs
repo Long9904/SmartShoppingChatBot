@@ -8,6 +8,8 @@ namespace SmartShoppingChatBot.Application.Interface
         Task<string?> GetUserId();
         Task<Result<Business>> GetBusiness();
 
+        string? GetBusinessId();
+
         Task<Result<User>> GetUser();
     }
 }

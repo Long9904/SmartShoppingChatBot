@@ -60,6 +60,24 @@ public class CurrentUserService : ICurrentUserService
         };
     }
 
+    public string? GetBusinessId()
+    {
+        var businessId = _httpContextAccessor.HttpContext?.User?.FindFirst("business")?.Value;
+
+        if (businessId == null)
+        {
+            throw new AuthenticationException("Token is invalid");
+        }
+
+        var isValidId = ObjectId.TryParse(businessId, out var objectId);
+        if (!isValidId)
+        {
+            throw new AuthenticationException("Token is invalid");
+        }
+
+        return businessId;
+    }
+
     public async Task<Result<User>> GetUser()
     {
         var userId = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;

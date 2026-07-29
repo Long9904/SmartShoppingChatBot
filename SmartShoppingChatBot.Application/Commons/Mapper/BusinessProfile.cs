@@ -10,6 +10,7 @@ public class BusinessProfile : Profile
     {
         CreateMap<Business, BusinessRegistrationResponse>();
         CreateMap<Business, BusinessResponse>();
+        CreateMap<BusinessConfig, BusinessConfigResponse>();
         CreateMap<Business, MyBusinessProfileResponse>();
         CreateMap<Business, BusinessResponseV1>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id.ToString()))

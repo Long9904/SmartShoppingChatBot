@@ -6,6 +6,9 @@ using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.Auth.GetMyBusinessProfile;
 using SmartShoppingChatBot.Application.Features.BusinessManagement.BOUpdateBusiness;
+using SmartShoppingChatBot.Application.Features.BusinessManagement.BusinessConfig.GetBusinessConfig;
+using SmartShoppingChatBot.Application.Features.BusinessManagement.BusinessConfig.ResetBusinessConfig;
+using SmartShoppingChatBot.Application.Features.BusinessManagement.BusinessConfig.UpdateBusinessConfig;
 using SmartShoppingChatBot.Application.Features.BusinessManagement.BusinessRegistration;
 using SmartShoppingChatBot.Application.Features.BusinessManagement.ConfirmBusinessRegistration;
 using SmartShoppingChatBot.Application.Features.BusinessManagement.GetAllBusiness;
@@ -75,6 +78,48 @@ namespace SmartShoppingChatBot.API.Controllers
                 return StatusCode(result.StatusCode, ApiResponse<BusinessResponse>.Ok(result.Data!, result.Message));
 
             return StatusCode(result.StatusCode, ApiResponse<BusinessResponse>.Fail(result.Message!, result.Errors));
+        }
+
+        [HttpGet("config")]
+        [Authorize(Roles = "BUSINESS_OWNER")]
+        [EndpointDescription("Business owner gets the current business config")]
+        [EndpointSummary("BO gets business config")]
+        public async Task<IActionResult> GetBusinessConfig()
+        {
+            var result = await _mediator.Send(new GetBusinessConfigQuery());
+
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<BusinessConfigResponse>.Ok(result.Data!, result.Message, result.MessageCode));
+
+            return StatusCode(result.StatusCode, ApiResponse<BusinessConfigResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
+        }
+
+        [HttpPut("config")]
+        [Authorize(Roles = "BUSINESS_OWNER")]
+        [EndpointDescription("Business owner updates the current business config")]
+        [EndpointSummary("BO updates business config")]
+        public async Task<IActionResult> UpdateBusinessConfig([FromBody] UpdateBusinessConfigCommand command)
+        {
+            var result = await _mediator.Send(command);
+
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<BusinessConfigResponse>.Ok(result.Data!, result.Message, result.MessageCode));
+
+            return StatusCode(result.StatusCode, ApiResponse<BusinessConfigResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
+        }
+
+        [HttpPut("config/default")]
+        [Authorize(Roles = "BUSINESS_OWNER")]
+        [EndpointDescription("Business owner resets the current business config to default")]
+        [EndpointSummary("BO resets business config to default")]
+        public async Task<IActionResult> ResetBusinessConfig()
+        {
+            var result = await _mediator.Send(new ResetBusinessConfigCommand());
+
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<BusinessConfigResponse>.Ok(result.Data!, result.Message, result.MessageCode));
+
+            return StatusCode(result.StatusCode, ApiResponse<BusinessConfigResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
         }
 
         [HttpPut("{id}/verify")]
