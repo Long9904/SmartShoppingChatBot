@@ -20,18 +20,22 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 PropertyNameCaseInsensitive = true
             };
+        private readonly IRedisBusinessConfig _redisBusinessConfig;
 
-        public KernelChatService(Kernel kernel, ILogger<KernelChatService> logger)
+        public KernelChatService(Kernel kernel, ILogger<KernelChatService> logger, IRedisBusinessConfig redisBusinessConfig)
         {
 
             _kernel = kernel;
             _logger = logger;
+            _redisBusinessConfig = redisBusinessConfig;
         }
 
         public async Task<Result<KernelChatResult>> ChatAsync(KernelChatRequest request)
         {
             var chatService = _kernel.GetRequiredService<IChatCompletionService>();
-            var businessPrompt = await BuildBusinessSystemPrompt(request.Business);
+            var businessConfig = await _redisBusinessConfig.GetBusinessConfigAsync();
+
+            var businessPrompt = await BuildBusinessSystemPrompt(request.Business, businessConfig!);
 
             ChatHistory history = new();
             history.AddSystemMessage(businessPrompt);
@@ -42,6 +46,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             history.AddSystemMessage($"Conversation context:\n{contextJson}");
             history.AddUserMessage(request.UserMessage);
 
+
+
             var settings = new OpenAIPromptExecutionSettings
             {
                 FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(
@@ -50,8 +56,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         AllowStrictSchemaAdherence = true
                     }),
                 ResponseFormat = typeof(KernelChatResult),
-                Temperature = 0.2,
-                MaxTokens = 2000,
+                Temperature = businessConfig?.ModelTemperature ?? 0.2,
+                MaxTokens = businessConfig?.MaxOutPutToken ?? 2000,
             };
 
             try
@@ -112,13 +118,17 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
         }
 
-        private async Task<string> BuildBusinessSystemPrompt(Business business)
+        private async Task<string> BuildBusinessSystemPrompt(Business business, BusinessConfig config)
         {
             var systemPrompt = await File.ReadAllTextAsync("prompts/SemanticKernelSystem.md");
 
             //TODO: nâng cấp lênh thành sẽ load và đọc config của mỗi business từ redis > db
 
-            return systemPrompt.Replace("{business_name}", business.BusinessName);
+            systemPrompt = systemPrompt
+                 .Replace("{business_name}", business.BusinessName)
+                 .Replace("{BusinessSystemPrompt}", config.SystemPrompt ?? string.Empty)
+                 .Replace("{FallBackMessage}", config.FallBackMessage ?? string.Empty);
+            return systemPrompt;
         }
     }
 }

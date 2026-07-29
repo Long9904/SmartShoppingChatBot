@@ -86,6 +86,7 @@ public class ConfirmBusinessCommandHandler :
         if (request.IsApproved == true)
         {
             business.BusinessStatus = BusinessEnums.ACTIVE;
+            business.Config = new Domain.Entities.BusinessConfig();
             owner.UserStatus = UserStatus.PENDING_PROFILE_COMPLETION;
         }
         else

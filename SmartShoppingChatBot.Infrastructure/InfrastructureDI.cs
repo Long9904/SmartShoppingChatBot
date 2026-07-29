@@ -33,6 +33,7 @@ public static class InfrastructureDI
         services.AddScoped<IConversationContextCacheService, RedisConversationContextCacheService>();
         services.AddScoped<IConversationContextService, ConversationContextService>();
         services.AddScoped<IProductReferenceCollector, ProductReferenceCollector>();
+        services.AddScoped<IRedisBusinessConfig, RedisBusinessConfig>();
 
         services.AddSingleton<GoogleAccessTokenProvider>();
 
