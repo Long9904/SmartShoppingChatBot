@@ -39,5 +39,6 @@ namespace SmartShoppingChatBot.Application.Interface
             int candidateLimit,
             Filter filter,
             CancellationToken ct);
+        Task DeletePointsAsync(string collectionName, IReadOnlyList<Guid> ids, CancellationToken ct = default);
     }
 }
