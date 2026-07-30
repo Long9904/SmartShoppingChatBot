@@ -23,6 +23,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
         private readonly IProductRepository _productRepository;
         private readonly IMapper _mapper;
         private readonly ILogger<ProductSemanticSearchQueryHandler> _logger;
+        private readonly IRedisBusinessConfig _redisBusinessConfig;
 
         public ProductSemanticSearchQueryHandler(
             ICurrentUserService currentUserService,
@@ -30,12 +31,14 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             IQdrantService qdrantService,
             IMapper mapper,
             ILogger<ProductSemanticSearchQueryHandler> logger,
+            IRedisBusinessConfig redisBusinessConfig,
             IProductRepository productRepository)
         {
             _currentUserService = currentUserService;
             _geminiService = geminiService;
             _qdrantService = qdrantService;
             _productRepository = productRepository;
+            _redisBusinessConfig = redisBusinessConfig;
             _logger = logger;
             _mapper = mapper;
         }
@@ -118,8 +121,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             sw = Stopwatch.StartNew();
 
             var points = await _qdrantService.HybridSearchAsync(
-                embeddingSemantic: buildVectors.Data[0].Select(x => (float)x).ToArray(),
-                embeddingTechnical: buildVectors.Data[1].Select(x => (float)x).ToArray(),
+                embeddingSemantic: buildVectors.Data.Result[0].Select(x => (float)x).ToArray(),
+                embeddingTechnical: buildVectors.Data.Result[1].Select(x => (float)x).ToArray(),
                 filter: filter,
                 candidateLimit: 40,
                 ct: ct);
@@ -148,8 +151,15 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             }
 
             sw = Stopwatch.StartNew();
+            var busienssConfig = await _redisBusinessConfig.GetBusinessConfigAsync();
 
-            var reranked = await RerankAsync(request.SemanticQuery, products, 5, ct);
+
+            var reranked = await RerankAsync(
+                request.SemanticQuery,
+                products,
+                busienssConfig?.TopKDocument ?? 5,
+                busienssConfig?.RerankingScore ?? 0.75,
+                ct);
 
             sw.Stop();
             Console.WriteLine("----------------------------------");
@@ -255,6 +265,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             string query,
             IReadOnlyCollection<Product> products,
             int topK,
+            double score,
             CancellationToken ct)
         {
             var productById = products.ToDictionary(x => x.Id.ToString());
@@ -278,9 +289,9 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                     reranked.MessageCode);
             }
 
-            var rankedProducts = reranked.Data
+            var rankedProducts = reranked.Data.Result
                 .OrderByDescending(x => x.Score)
-                .Where(x => productById.ContainsKey(x.Id))
+                .Where(x => productById.ContainsKey(x.Id) && x.Score >= score)
                 .Take(topK)
                 .Select(x => productById[x.Id])
                 .ToList();

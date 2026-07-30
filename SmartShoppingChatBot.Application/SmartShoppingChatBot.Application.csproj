@@ -30,6 +30,7 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
     <PackageReference Include="Google.Cloud.AIPlatform.V1" Version="3.72.0" />
+    <PackageReference Include="Google.GenAI" Version="1.15.0" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.8" />
     <PackageReference Include="MediatR" Version="14.1.0" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.78.0" />

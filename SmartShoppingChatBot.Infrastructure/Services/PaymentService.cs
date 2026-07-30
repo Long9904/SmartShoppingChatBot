@@ -13,10 +13,6 @@ using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
-using static MassTransit.ValidationResultExtensions;
 
 namespace SmartShoppingChatBot.Infrastructure.Services
 {
@@ -108,7 +104,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 .FindAsync(x => x.BussinessId == business.Id && x.SubscriptionPlanId == selectSubscription.Id && x.Status == PaymentEnums.Pending);
             if (existingPayment != null)
             {
-                if(!string.IsNullOrEmpty(existingPayment.PayOsPaymentLink))
+                if (!string.IsNullOrEmpty(existingPayment.PayOsPaymentLink))
                 {
                     return Result<PaymentResponsed>.Success(new PaymentResponsed
                     {
@@ -205,7 +201,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
             catch (PayOSException ex)
             {
-              
+
                 _logger.LogWarning(
                     ex,
                     "PayOS webhook verification failed ");
@@ -239,7 +235,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 _logger.LogWarning("Payment with order code {OrderCode} has already been completed", webhookData.Data.OrderCode);
                 return true;
             }
-            
+
             //load subscription plan
             if (existingPayment.SubscriptionPlanId == ObjectId.Empty)
             {
@@ -402,9 +398,19 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     UsedTokens = 0,
                     MaxProductAllowed = subscriptionPlan.MaxProductAllowed
                 };
+                // Check if business has any quota active -> set inactive
+                var oldQuotas = await _businessQuotaRepository.FindAllAsync(x =>
+                x.BusinessId == existingPayment.BussinessId
+                && x.ResetDate > now);
+
+                foreach (var quot in oldQuotas)
+                {
+                    quot.ResetDate = now;
+                }
 
                 existingPayment.Status = PaymentEnums.Completed;
                 await _subscriptionRepository.AddAsync(subscription);
+                await _businessQuotaRepository.UpdateRangeAsync(oldQuotas);
                 await _businessQuotaRepository.AddAsync(businessQuota);
                 await _paymentRepository.UpdateAsync(existingPayment);
                 await _unitOfWork.SaveChangesAsync();
@@ -461,13 +467,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var randomPart = Random.Shared.Next(100, 999);
 
             return checked(timestamp * 1000 + randomPart);
-        } 
+        }
         public async Task<Result<string>> CancleOldPayment(long orderCode)
         {
             try
             {
                 var businessLogin = await _currentUserService.GetBusiness();
-                if(businessLogin == null || businessLogin.Data == null)
+                if (businessLogin == null || businessLogin.Data == null)
                 {
                     return Result<string>.Failure(404, "Business not found");
                 }
