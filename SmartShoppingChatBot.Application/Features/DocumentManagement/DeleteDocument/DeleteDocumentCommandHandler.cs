@@ -21,33 +21,41 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.DeleteDoc
         private readonly IUnitOfWork _unitOfWork;
         private readonly IKnowledgeEntryRepository _entryRepository;
         private readonly IQdrantService _qdrantService;
+        private readonly ICurrentUserService _currentUserService;
 
         public DeleteDocumentCommandHandler(ILogger<DeleteDocumentCommandHandler> logger, 
-            IKnowledgeDocumentRepository repository, IUnitOfWork unitOfWork, IKnowledgeEntryRepository entryRepository, IQdrantService qdrantService)
+            IKnowledgeDocumentRepository repository, IUnitOfWork unitOfWork, IKnowledgeEntryRepository entryRepository,
+            IQdrantService qdrantService, ICurrentUserService currentUserService)
         {
             _logger = logger;
             _repository = repository;
             _unitOfWork = unitOfWork;
             _entryRepository = entryRepository;
             _qdrantService = qdrantService;
+            _currentUserService = currentUserService;
         }
 
 
 
         public async Task<Result<string>> Handle(DeleteDocumentCommand request, CancellationToken cancellationToken)
         {
+            var business = await _currentUserService.GetBusiness();
+            if (business == null || business.Data == null)
+            {
+                return Result<string>.Failure(403, "User does not have permission to delete documents.");
+            }
             if (!ObjectId.TryParse(request.DocumentId, out var id))
             {
                 return Result<string>.Failure(400, "Invalid document ID format.");
             }
             // Check if the document exists and is not already deleted
-            var document = await _repository.FindAsync(x => x.Id == id && x.Status != Domain.Enums.KnowledgeDocumentStatus.Deleted);
+            var document = await _repository.FindAsync(x => x.Id == id && x.BusinessId == business.Data.Id && x.Status != Domain.Enums.KnowledgeDocumentStatus.Deleted);
             if (document == null)
             {
                 return Result<string>.Failure(404, "Document not found.");
             }
             // Retrieve all entries associated with the document
-            var entries = await _entryRepository.FindAllAsync(x => x.DocumentId == id);
+            var entries = await _entryRepository.FindAllAsync(x => x.DocumentId == id && x.BusinessId == business.Data.Id);
             var pointIds = entries
                 .Select(x => Guid.TryParse(x.QdrantPointId, out var guid) ? guid : (Guid?)null)
                 .Where(g => g.HasValue)
