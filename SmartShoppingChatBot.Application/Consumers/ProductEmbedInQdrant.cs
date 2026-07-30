@@ -29,7 +29,7 @@ namespace SmartShoppingChatBot.Application.Consumers
             {
                 throw new InvalidOperationException(result.Message);
             }
-            await Task.Delay(TimeSpan.FromSeconds(12), context.CancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(10), context.CancellationToken);
 
         }
     }

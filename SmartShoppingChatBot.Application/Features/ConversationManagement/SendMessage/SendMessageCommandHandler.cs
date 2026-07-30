@@ -19,6 +19,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         private readonly ICustomerRepository _customerRepository;
         private readonly IMessageRepository _messageRepository;
         private readonly IConversationRepository _conversationRepository;
+        private readonly IBusinessQuotaRepository _buinessQuotaRepository;
+        private readonly IUsageQuotaLogRepository _usageQuotaLogRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<SendMessageCommandHandler> _logger;
@@ -32,6 +34,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             ICustomerRepository customerRepository,
             IMessageRepository messageRepository,
             IConversationRepository conversationRepository,
+            IBusinessQuotaRepository buinessQuotaRepository,
+            IUsageQuotaLogRepository usageQuotaLogRepository,
             IUnitOfWork unitOfWork,
             TimeProvider time,
             IOptions<RedisOptions> options,
@@ -45,6 +49,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             _customerRepository = customerRepository;
             _messageRepository = messageRepository;
             _conversationRepository = conversationRepository;
+            _buinessQuotaRepository = buinessQuotaRepository;
+            _usageQuotaLogRepository = usageQuotaLogRepository;
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _time = time;
@@ -61,7 +67,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         {
             var business = await _currentUserService.GetBusiness();
 
-            if (!business.IsSuccess)
+            if (!business.IsSuccess || business.Data is null)
                 return Result<ConversationResponse>.Failure(
                     statusCode: business.StatusCode,
                     message: business.Message,
@@ -69,7 +75,28 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
             var customer = await GetOrCreateCustomerAsync(request.ExternalCustomerId, business.Data!);
 
+            var businessCurrentQuota = await _buinessQuotaRepository.GetCurrentBusinessQuota(business.Data.Id);
+            if (businessCurrentQuota is null)
+                return Result<ConversationResponse>.Failure(
+                    statusCode: 404,
+                    message: "Business quota not found",
+                    messageCode: BusinessQuotaMessageCode.NotFound);
 
+            if (businessCurrentQuota.UsedMessages > businessCurrentQuota.MessageLimit)
+            {
+                return Result<ConversationResponse>.Failure(
+                    statusCode: 404,
+                    message: "Doanh nghiệp đã đạt đến giới hạn sử dụng hiện tại",
+                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded);
+            }
+
+            if (businessCurrentQuota.UsedTokens > businessCurrentQuota.TokenLimit)
+            {
+                return Result<ConversationResponse>.Failure(
+                    statusCode: 429,
+                    message: "Doanh nghiệp đã đạt đến giới hạn sử dụng hiện tại",
+                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded);
+            }
 
             Conversation? conversation;
             try
@@ -129,10 +156,6 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 var conversationContext = await _conversationContextService.GetOrLoadAsyncConversationCache(
                     conversation.Id.ToString(), cancellationToken);
 
-                sw.Stop();
-                Console.WriteLine("----------------------------------");
-                _logger.LogInformation("1. Context từ redis: {Elapsed} ms", sw.ElapsedMilliseconds);
-                Console.WriteLine("----------------------------------");
 
                 // 3. Send req to semantic kernel + old context summary
                 KernelChatRequest req = new()
@@ -142,16 +165,10 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     UserMessage = request.Message,
                 };
 
-                sw = Stopwatch.StartNew();
-
                 _productReferenceCollector.Reset();
 
                 var sematicKernelResponse = await _kernelChatService.ChatAsync(req);
 
-                sw.Stop();
-                Console.WriteLine("----------------------------------");
-                _logger.LogInformation("2. Kernel chat: {kernel} ms", sw.ElapsedMilliseconds);
-                Console.WriteLine("----------------------------------");
 
                 if (!sematicKernelResponse.IsSuccess)
                 {
@@ -161,9 +178,11 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                         .Success(null, 200, "Xin lỗi, hiện mình chưa thể trả lời câu hỏi này. Bạn vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ nhé.", "MG_SERVER_200");
                 }
 
+
                 var kernelResult = sematicKernelResponse.Data!;
                 var responseTime = _time.GetUtcNow();
 
+                _logger.LogInformation($"{kernelResult.ComparedProductIds.ToArray()}");
                 // 4. Build AI response
                 var aiMessage = new Message
                 {
@@ -188,24 +207,6 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     .Select(productId => productId.Trim())
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
-
-                var unavailableProductIds = selectedProductIds
-                    .Where(productId => !productById.ContainsKey(productId))
-                    .ToList();
-
-                if (unavailableProductIds.Count > 0)
-                {
-                    _logger.LogWarning(
-                        "Kernel returned product IDs that were not present in the current search results or conversation context: {ProductIds}",
-                        string.Join(", ", unavailableProductIds));
-                }
-
-                if (cacheProducts.Count > 0 && selectedProductIds.Count == 0)
-                {
-                    _logger.LogWarning(
-                        "Kernel returned no selected product IDs although the product search returned {ProductCount} products",
-                        cacheProducts.Count);
-                }
 
                 var selectedProductReferences = selectedProductIds
                     .Where(productById.ContainsKey)
@@ -234,22 +235,42 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     .ToList();
 
 
+                sw.Stop();
+                var totalTokenUsed = kernelResult.InputTokens + kernelResult.OutputTokens;
+                var usageLog = new UsageQuotaLog
+                {
+                    BillableTokens = totalTokenUsed,
+                    OutputTokens = kernelResult.OutputTokens,
+                    InputTokens = kernelResult.InputTokens,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    Id = ObjectId.GenerateNewId(),
+                    BusinessId = business.Data.Id,
+                    BusinessQuotaId = businessCurrentQuota.Id,
+                    MessageUsed = 1,
+                    SourceId = aiMessage.Id,
+                    SourceType = SourceTypeEnum.Chat
+                };
 
                 aiMessage.SummaryContent = kernelResult.AISummaryContent ?? "";
 
                 await _messageRepository.AddAsync(aiMessage);
 
+                businessCurrentQuota.UsedMessages += 1;
+                businessCurrentQuota.UsedTokens += totalTokenUsed;
+
                 conversation.Summary = kernelResult.Summary;
                 conversation.SummaryUpdatedAt = responseTime;
+                conversation.LastMessageAt = responseTime;
 
+
+                await _buinessQuotaRepository.UpdateAsync(businessCurrentQuota);
+                await _usageQuotaLogRepository.AddAsync(usageLog);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                 // 5. Build turn cache to save orther context to redis
                 var turnCreateTime = _time.GetUtcNow();
-
-
 
                 var turn = new CachedConversationTurn
                 {
@@ -310,12 +331,15 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             IEnumerable<ProductResponseV2> currentProducts,
             ConversationContextCache conversationContext)
         {
-            var productById = new Dictionary<string, CachedProductReference>(
-                StringComparer.OrdinalIgnoreCase);
 
+            // Tạo 1 cái distionary bằng productId + tham chiếu của nó
+            var productById = new Dictionary<string, CachedProductReference>(StringComparer.OrdinalIgnoreCase);
+
+            // Lấy tất cả tham chiếu ở trên hisotry
             var contextProductReferences = conversationContext.RecentTurns
                 .SelectMany(turn => turn.AssistantMessage?.ProductReferences ?? []);
 
+            // ADd tất cả tham chiếu vào distionary
             foreach (var product in contextProductReferences)
             {
                 if (string.IsNullOrWhiteSpace(product.ProductId))
@@ -332,7 +356,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     DisplayOrder = product.DisplayOrder,
                 });
             }
-
+            // Thêm cache product vào distionary
             foreach (var product in currentProducts)
             {
                 if (string.IsNullOrWhiteSpace(product.ProductId))

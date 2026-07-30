@@ -72,7 +72,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.DocumentS
                     errors: null,
                     messageCode: "DOCUMENTS_NOT_FOUND");
             }
-            var vector = embedding.Data.Select(x => (float)x).ToArray();
+            var vector = embedding.Data.Result.Select(x => (float)x).ToArray();
             var filter = BuildFilter(business.Data.Id, request);
             var points = await _qdrantService.HybridDocumentSearchAsync(vector, vector, request.CandidateLimit, filter, ct);
             _logger.LogInformation(
@@ -178,7 +178,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.DocumentS
                     reranked.MessageCode);
             }
 
-            var responses = reranked.Data
+            var responses = reranked.Data.Result
                 .OrderByDescending(x => x.Score)
                 .Where(x => entryById.ContainsKey(x.Id))
                 .Take(topK)

@@ -144,4 +144,10 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
 
         return await query.Where(predicate).ToListAsync();
     }
+
+    public Task UpdateRangeAsync(IEnumerable<T> entities)
+    {
+        _dbSet.UpdateRange(entities);
+        return Task.CompletedTask;
+    }
 }

@@ -67,7 +67,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             }
 
 
-            var businessQuota = await _businessQuotaRepository.FindAsync(b => b.BusinessId == business.Data.Id);
+            var businessQuota = await _businessQuotaRepository.GetCurrentBusinessQuota(business.Data.Id);
             if (businessQuota == null)
                 return Result<ProductResponse>.Failure(404, "Business quota not found", null, BusinessQuotaMessageCode.NotFound);
 
@@ -77,6 +77,17 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             if (productCount >= businessQuota.MaxProductAllowed)
             {
                 return Result<ProductResponse>.Failure(400, "Rate limit for create new product", null, ProductMessageCode.ProdcutRateLimit);
+            }
+
+            var remainingTokens = businessQuota.TokenLimit - businessQuota.UsedTokens;
+
+            if (remainingTokens < ProductEmbeddingQuota.TokenBudgetPerProduct)
+            {
+                return Result<ProductResponse>.Failure(
+                    429,
+                    "Not enough token quota to embed product.",
+                    null,
+                    BusinessQuotaMessageCode.TokenLimitExceeded);
             }
 
 
@@ -147,7 +158,6 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             // Build search text
             var embeddingText = product.BuildEmbeddingText();
             product.SearchContent = embeddingText;
-
 
             try
             {

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using OpenAI.Chat;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
@@ -35,7 +36,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var chatService = _kernel.GetRequiredService<IChatCompletionService>();
             var businessConfig = await _redisBusinessConfig.GetBusinessConfigAsync();
 
-            var businessPrompt = await BuildBusinessSystemPrompt(request.Business, businessConfig!);
+            var businessPrompt = await BuildBusinessSystemPrompt(request.Business, businessConfig);
 
             ChatHistory history = new();
             history.AddSystemMessage(businessPrompt);
@@ -69,6 +70,19 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 settings,
                 _kernel);
 
+                long inputTokens = 0;
+                long outputTokens = 0;
+
+                if (response.Metadata.TryGetValue("Usage", out var usageMetadata) && usageMetadata is ChatTokenUsage usage)
+                {
+                    inputTokens = usage.InputTokenCount;
+                    outputTokens = usage.OutputTokenCount;
+                }
+                else
+                {
+                    _logger.LogWarning("Kernel response does not contain token usage metadata.");
+                }
+
                 sw.Stop();
                 Console.WriteLine("----------------------------------");
                 _logger.LogInformation("3. Kernel response: {kernel} ms", sw.ElapsedMilliseconds);
@@ -95,6 +109,9 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     return Result<KernelChatResult>.Failure(500, "Kernel response does not contain an answer.");
                 }
 
+                result.InputTokens = inputTokens;
+                result.OutputTokens = outputTokens;
+
                 if (string.IsNullOrWhiteSpace(result.Summary) || string.IsNullOrWhiteSpace(result.AISummaryContent))
                 {
                     return Result<KernelChatResult>.Failure(500, "Kernel response does not contain a summary.");
@@ -118,7 +135,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
         }
 
-        private async Task<string> BuildBusinessSystemPrompt(Business business, BusinessConfig config)
+        private async Task<string> BuildBusinessSystemPrompt(Business business, BusinessConfig? config)
         {
             var systemPrompt = await File.ReadAllTextAsync("prompts/SemanticKernelSystem.md");
 
@@ -126,8 +143,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             systemPrompt = systemPrompt
                  .Replace("{business_name}", business.BusinessName)
-                 .Replace("{BusinessSystemPrompt}", config.SystemPrompt ?? string.Empty)
-                 .Replace("{FallBackMessage}", config.FallBackMessage ?? string.Empty);
+                 .Replace("{BusinessSystemPrompt}", config?.SystemPrompt ?? string.Empty)
+                 .Replace("{FallBackMessage}", config?.FallBackMessage ?? "Xin lỗi, hiện tôi chưa thể xử lý yêu cầu này.");
             return systemPrompt;
         }
     }

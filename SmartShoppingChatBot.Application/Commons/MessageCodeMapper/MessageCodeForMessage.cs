@@ -3,5 +3,6 @@
     public static class MessageCodeForMessage
     {
         public const string Success = "MG_MESSAGE_200";
+        public const string InvalidCursor = "MG_MESSAGE_CURSOR_400";
     }
 }
