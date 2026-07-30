@@ -1,6 +1,7 @@
 ﻿using MongoDB.Bson;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
+using SmartShoppingChatBot.Domain.Enums;
 
 namespace SmartShoppingChatBot.Domain.Interface
 {
@@ -9,6 +10,8 @@ namespace SmartShoppingChatBot.Domain.Interface
         Task<CursorPage<Message>> MessageCursorPaging(
             ObjectId conversationId,
             int limit,
-            ObjectId? lastId = null);
+            ObjectId? lastId = null,
+            string? search = null,
+            SenderTypeEnum? senderType = null);
     }
 }

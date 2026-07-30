@@ -31,6 +31,8 @@ public class MongoDbContext : DbContext
 
     public DbSet<ImportJob> ImportJobs { get; set; }
 
+    public DbSet<UsageQuotaLog> UsageQuotaLogs { get; set; }
+
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
@@ -109,12 +111,23 @@ public class MongoDbContext : DbContext
         modelBuilder.Entity<Conversation>(e =>
         {
             e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.BusinessId, e.CustomerId, e.CreateAt });
         });
 
         modelBuilder.Entity<Message>(e =>
         {
             e.HasKey(e => e.Id);
             e.HasIndex(e => new { e.ConversationId, e.Id });
+        });
+
+        modelBuilder.Entity<UsageQuotaLog>(e =>
+        {
+            e.HasIndex(x => new
+            {
+                x.BusinessQuotaId,
+                x.SourceType,
+                x.SourceId
+            }).IsUnique();
         });
     }
 }

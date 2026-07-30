@@ -1,6 +1,6 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using AutoMapper;
 using SmartShoppingChatBot.Domain.Commons;
-using System.Linq.Expressions;
 
 namespace SmartShoppingChatBot.Domain.Interface;
 
@@ -29,6 +29,8 @@ public interface IGenericRepository<T> where T : class
 
     Task<T?> GetByIdAsync(object id);
     Task AddRangeAsync(IEnumerable<T> entities);
+
+    Task UpdateRangeAsync(IEnumerable<T> entities);
     Task<IList<T>> FilterByAsync(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<T>>? include = null);
     Task<int> CountAsync(Expression<Func<T, bool>> predicate);
 

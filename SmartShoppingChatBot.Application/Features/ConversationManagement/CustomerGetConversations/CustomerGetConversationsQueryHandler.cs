@@ -30,7 +30,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.Custo
         {
             var business = await _currentUserService.GetBusiness();
 
-            if (!business.IsSuccess)
+            if (!business.IsSuccess || business.Data is null)
             {
                 return Result<BasePaginatedList<CustomerConversationResponse>>.Failure(
                     statusCode: business.StatusCode,
@@ -39,7 +39,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.Custo
                     messageCode: business.MessageCode);
             }
 
-            var businessId = business.Data!.Id;
+            var businessId = business.Data.Id;
             var customer = await _customerRepository.FindAsync(x =>
                 x.CustomerExternalId == request.ExternalCustomerId
                 && x.BusinessId == businessId);
@@ -49,7 +49,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.Custo
                 return Result<BasePaginatedList<CustomerConversationResponse>>.Failure(
                     statusCode: 404,
                     message: "Customer not found",
-                    messageCode: ConversationMessageCode.NotFound);
+                    messageCode: CustomerMessageCode.NotFound);
             }
 
             var query = _conversationRepository.AsQueryable()

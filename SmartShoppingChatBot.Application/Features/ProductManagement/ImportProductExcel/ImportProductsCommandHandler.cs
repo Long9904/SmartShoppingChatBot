@@ -11,6 +11,7 @@ using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Events;
+using SmartShoppingChatBot.Application.Features.ProductManagement.ProductCommon;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
@@ -25,7 +26,7 @@ public class ImportProductsCommandHandler : IRequestHandler<ImportProductsComman
     private readonly IImportJobRepository _importJobRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProductRepository _productRepository;
-    private readonly IBusinessQuotaRepository _usinessQuotaRepository;
+    private readonly IBusinessQuotaRepository _businessQuotaRepository;
     private readonly TimeProvider _time;
     private readonly ILogger<ImportProductsCommandHandler> _logger;
     private readonly IPublishEndpoint _publisher;
@@ -36,30 +37,46 @@ public class ImportProductsCommandHandler : IRequestHandler<ImportProductsComman
         IImportJobRepository importJobRepository,
         IUnitOfWork unitOfWork,
         IProductRepository productRepository,
-        IBusinessQuotaRepository usinessQuotaRepository,
+        IBusinessQuotaRepository businessQuotaRepository,
         TimeProvider time,
         IMapper mapper,
         IPublishEndpoint publishEndpoint,
-
         ILogger<ImportProductsCommandHandler> logger)
     {
         _currentUserService = currentUserService;
         _importJobRepository = importJobRepository;
         _unitOfWork = unitOfWork;
         _productRepository = productRepository;
-        _usinessQuotaRepository = usinessQuotaRepository;
         _time = time;
         _publisher = publishEndpoint;
         _mapper = mapper;
         _logger = logger;
+        _businessQuotaRepository = businessQuotaRepository;
     }
 
     public async Task<Result<ImportJobResponse>> Handle(ImportProductsCommand request, CancellationToken cancellationToken)
     {
         var business = await _currentUserService.GetBusiness();
 
-        if (!business.IsSuccess)
+        if (!business.IsSuccess || business.Data is null)
             return Result<ImportJobResponse>.Failure(business.StatusCode, business.Message, business.Errors, business.MessageCode);
+
+        var businessQuota = await _businessQuotaRepository.GetCurrentBusinessQuota(business.Data.Id);
+
+        if (businessQuota == null)
+            return Result<ImportJobResponse>.Failure(404, "Business quota not found", null, BusinessQuotaMessageCode.NotFound);
+
+        var remainingTokens = businessQuota.TokenLimit - businessQuota.UsedTokens;
+
+        if (remainingTokens < ProductEmbeddingQuota.TokenBudgetPerProduct)
+        {
+            return Result<ImportJobResponse>.Failure(
+                429,
+                "Not enough token quota to embed product.",
+                null,
+                BusinessQuotaMessageCode.TokenLimitExceeded);
+        }
+
 
         // 1. Create new import job
         var importJob = new ImportJob
@@ -138,10 +155,6 @@ public class ImportProductsCommandHandler : IRequestHandler<ImportProductsComman
 
         // 5 Check business quota
         var totalProductImport = lastUsedRow.RowNumber() - 1;
-
-        var businessQuota = await _usinessQuotaRepository.FindAsync(b => b.BusinessId == business.Data.Id);
-        if (businessQuota == null)
-            return Result<ImportJobResponse>.Failure(404, "Business quota not found", null, BusinessQuotaMessageCode.NotFound);
 
         var productCount = await _productRepository.CountAsync(p => p.BusinessId == business.Data.Id && p.Status != ProductStatus.Deleted);
 
@@ -616,6 +629,43 @@ public class ImportProductsCommandHandler : IRequestHandler<ImportProductsComman
 
         importJob.SuccessRows = products.Count;
         importJob.Errors = errors;
+
+        var requiredEmbeddingTokens =
+            ProductEmbeddingQuota.TokenBudgetPerProduct * products.Count;
+
+        var latestBusinessQuota = await _businessQuotaRepository
+            .GetCurrentBusinessQuota(business.Data.Id);
+
+        if (latestBusinessQuota == null)
+        {
+            await MarkJobFailedAsync(
+                importJob,
+                "Business quota not found.",
+                cancellationToken);
+
+            return Result<ImportJobResponse>.Failure(
+                404,
+                "Business quota not found.",
+                null,
+                BusinessQuotaMessageCode.NotFound);
+        }
+
+        remainingTokens =
+            latestBusinessQuota.TokenLimit - latestBusinessQuota.UsedTokens;
+
+        if (remainingTokens < requiredEmbeddingTokens)
+        {
+            var quotaError =
+                $"Not enough token quota to embed {products.Count} imported products.";
+
+            await MarkJobFailedAsync(importJob, quotaError, cancellationToken);
+
+            return Result<ImportJobResponse>.Failure(
+                429,
+                quotaError,
+                null,
+                BusinessQuotaMessageCode.TokenLimitExceeded);
+        }
 
 
         try

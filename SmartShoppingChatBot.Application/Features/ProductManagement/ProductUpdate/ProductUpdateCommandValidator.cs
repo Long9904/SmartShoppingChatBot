@@ -18,12 +18,12 @@ public class ProductUpdateCommandValidator : AbstractValidator<ProductUpdateComm
         RuleFor(x => x.Name)
             .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("Name is required.")
-            .MaximumLength(200).WithMessage("Name cannot exceed 200 characters.");
+            .MaximumLength(100).WithMessage("Name cannot exceed 100 characters.");
 
         RuleFor(x => x.Description)
             .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("Description is required.")
-            .MaximumLength(500).WithMessage("Description cannot exceed 500 characters.");
+            .MaximumLength(200).WithMessage("Description cannot exceed 200 characters.");
 
         RuleFor(x => x.ExternalProductUrl)
             .NotEmpty().WithMessage("External product URL is required.")
