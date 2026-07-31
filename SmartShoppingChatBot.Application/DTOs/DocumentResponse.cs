@@ -1,4 +1,5 @@
 ﻿using MongoDB.Bson;
+using SmartShoppingChatBot.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,8 +25,8 @@ namespace SmartShoppingChatBot.Application.DTOs
     }
     public class DocumentGetResponse
     {
-        public string Id { get; set; }
-        public string BusinessId { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string BusinessId { get; set; } = string.Empty;
 
         public string Title { get; set; } = null!;
         public string FileName { get; set; } = null!;
@@ -35,6 +36,7 @@ namespace SmartShoppingChatBot.Application.DTOs
         public string ContentType { get; set; } = null!;
         public long SizeInBytes { get; set; }
         public string? Type { get; set; }
+        public KnowledgeDocumentStatus Status { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     }
 }
