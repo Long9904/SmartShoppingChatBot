@@ -296,6 +296,16 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 .Select(x => productById[x.Id])
                 .ToList();
 
+            if (rankedProducts is null)
+            {
+                rankedProducts = reranked.Data.Result
+                .OrderByDescending(x => x.Score)
+                .Where(x => productById.ContainsKey(x.Id))
+                .Take(topK)
+                .Select(x => productById[x.Id])
+                .ToList();
+            }
+
             return Result<List<Product>>.Success(rankedProducts);
         }
 

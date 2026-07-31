@@ -25,7 +25,10 @@ namespace SmartShoppingChatBot.Application.Plugins
             "Tìm kiếm sản phẩm mới theo nhu cầu ngôn ngữ tự nhiên khi chưa có canonical productId phù hợp. " +
             "Dùng cho xem, tìm, mua, gợi ý, tư vấn, tìm lựa chọn thay thế, nâng cấp hoặc phụ kiện. " +
             "Nếu sản phẩm đã có productId trong conversation context thì dùng GetProductsByIds thay vì function này.")]
-        [return: Description("Product search result. Every product has a canonical productId that must be copied exactly when the product is referenced.")]
+        [return: Description(
+          "Product search result. When IsSuccess is true and Data contains products, " +
+          "you must present 3-5 products from Data and include their exact productId values " +
+          "in selectedProductIds. Never claim that no products were found when Data is non-empty.")]
         public async Task<Result<List<ProductResponseV2>>> SemanticProductSearch(
             [Description("Bộ lọc cấu trúc")] ProductSemanticSearchRequest request,
             [Description("Field này không được gọi")] CancellationToken cancellationToken)
