@@ -89,7 +89,8 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.GetAllDoc
                 SizeInBytes = doc.SizeInBytes,
                 Title = doc.Title,
                 Type = doc.Type,
-                CreatedAt = doc.CreatedAt
+                CreatedAt = doc.CreatedAt,
+                Status = doc.Status
             };
         }
     }
