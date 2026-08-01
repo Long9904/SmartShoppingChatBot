@@ -57,23 +57,27 @@ public class RedisBusinessConfig : IRedisBusinessConfig
         {
             var value = await _database.StringGetAsync(key);
 
-            if (!value.HasValue)
-                return null;
-
-            var config = JsonSerializer.Deserialize<BusinessConfig>(
-                value.ToString(),
-                JsonOptions);
-
-            if (config is null)
+            if (value.HasValue)
             {
-                _logger.LogWarning(
-                    "Could not deserialize Redis context for business {businessId}",
-                    businessId);
+                var cachedConfig = JsonSerializer.Deserialize<BusinessConfig>(
+                    value.ToString(),
+                    JsonOptions);
 
-                await _database.KeyDeleteAsync(key);
+                if (cachedConfig is not null)
+                {
+                    await _database.KeyExpireAsync(key, GetExpiration());
+                    return cachedConfig;
+                }
 
-                var business = await _businessRepository.FindAsync(b => b.Id == ObjectId.Parse(businessId));
-                if (business is null) return new BusinessConfig
+                await TryDeleteAsync(key);
+            }
+
+            // Redis không có hoặc dữ liệu không hợp lệ → đọc DB
+            var business = await _businessRepository.FindAsync(b => b.Id == ObjectId.Parse(businessId));
+
+            if (business?.Config is null)
+            {
+                return new BusinessConfig
                 {
                     FallBackMessage = string.Empty,
                     SystemPrompt = string.Empty,
@@ -82,14 +86,11 @@ public class RedisBusinessConfig : IRedisBusinessConfig
                     RerankingScore = 0.75,
                     TopKDocument = 3
                 };
-
-                return business.Config;
             }
 
-            // Sliding expiration: mỗi lần sử dụng sẽ refresh TTL.
-            await _database.KeyExpireAsync(key, GetExpiration());
+            await SetBusinessConfigAsync(business, cancellationToken);
+            return business.Config;
 
-            return config;
         }
         catch (RedisException exception)
         {

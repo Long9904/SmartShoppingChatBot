@@ -106,25 +106,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
                 if (result is null || string.IsNullOrWhiteSpace(result.Answer))
                 {
+                    _logger.LogError("Kernel response does not contain an answer.");
                     return Result<KernelChatResult>.Failure(500, "Kernel response does not contain an answer.");
                 }
 
                 result.InputTokens = inputTokens;
                 result.OutputTokens = outputTokens;
 
-                if (string.IsNullOrWhiteSpace(result.Summary) || string.IsNullOrWhiteSpace(result.AISummaryContent))
-                {
-                    return Result<KernelChatResult>.Failure(500, "Kernel response does not contain a summary.");
-                }
-
-                if (result.SelectedProductIds is null)
-                {
-                    return Result<KernelChatResult>.Failure(500, "Kernel response does not contain selectedProductIds.");
-                }
-
-                _logger.LogInformation(
-                    "Kernel selected product IDs: {SelectedProductIds}",
-                    string.Join(", ", result.SelectedProductIds));
 
                 return Result<KernelChatResult>.Success(result, 200, "Function calling success");
             }
