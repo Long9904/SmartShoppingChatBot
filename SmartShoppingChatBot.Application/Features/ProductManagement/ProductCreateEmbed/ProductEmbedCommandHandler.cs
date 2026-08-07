@@ -102,17 +102,20 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 return Result<ProductResponse>.Failure(404, "Business quota not found", null, BusinessQuotaMessageCode.NotFound);
 
             var totalTokenEmbebProduct =
-                productTechnicalVector.Data!.InputTokens +
-                productSemanticVector.Data!.InputTokens +
-                sematicSearchText.Data.InputTokens +
-                sematicSearchText.Data.OutputTokens;
+                 (long)Math.Ceiling(productTechnicalVector.Data!.InputTokens / 3.0)
+                 + (long)Math.Ceiling(productSemanticVector.Data!.InputTokens / 3.0)
+                 + (long)Math.Ceiling(sematicSearchText.Data.InputTokens / 3.0);
+
+            var geminiCredits =
+                totalTokenEmbebProduct +
+                sematicSearchText.Data.OutputTokens * 2;
 
             var newUsageQuotaLog = new UsageQuotaLog
             {
                 Id = ObjectId.GenerateNewId(),
                 BusinessId = product.BusinessId,
                 InputTokens = totalTokenEmbebProduct,
-                BillableTokens = totalTokenEmbebProduct,
+                BillableTokens = geminiCredits,
                 BusinessQuotaId = currentBusinessQuota.Id,
                 MessageUsed = 0,
                 OutputTokens = 0,

@@ -236,10 +236,10 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
 
                 sw.Stop();
-                var totalTokenUsed = kernelResult.InputTokens + kernelResult.OutputTokens;
+                var gptCredits = kernelResult.InputTokens + kernelResult.OutputTokens * 6;
                 var usageLog = new UsageQuotaLog
                 {
-                    BillableTokens = totalTokenUsed,
+                    BillableTokens = gptCredits,
                     OutputTokens = kernelResult.OutputTokens,
                     InputTokens = kernelResult.InputTokens,
                     CreatedAt = DateTimeOffset.UtcNow,
@@ -256,7 +256,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 await _messageRepository.AddAsync(aiMessage);
 
                 businessCurrentQuota.UsedMessages += 1;
-                businessCurrentQuota.UsedTokens += totalTokenUsed;
+                businessCurrentQuota.UsedTokens += gptCredits;
 
                 conversation.Summary = kernelResult.Summary;
                 conversation.SummaryUpdatedAt = responseTime;
