@@ -127,3 +127,5 @@ tools/
 scripts/
 scripts
 .agents/
+CoverageReport/
+CoverageReportApplication/

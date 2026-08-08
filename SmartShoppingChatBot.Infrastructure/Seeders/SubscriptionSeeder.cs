@@ -31,8 +31,8 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 Duration = 30,
                 Level = 0,
                 Status = StatusEnums.Active,
-                TokenLimit = 15000000,
-                MessageLimit = 3000,
+                TokenLimit = 1000000,
+                MessageLimit = 300,
                 MaxProductAllowed = 100,
                 MaxDocumentAllowed = 15,
             };
@@ -45,7 +45,7 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 Duration = 30,
                 Level = 1,
                 Status = StatusEnums.Active,
-                TokenLimit = 60000000,
+                TokenLimit = 30000000,
                 MessageLimit = 10000,
                 MaxProductAllowed = 1000,
                 MaxDocumentAllowed = 50,
@@ -59,9 +59,9 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 Duration = 30,
                 Level = 2,
                 Status = StatusEnums.Active,
-                TokenLimit = 4000000000,
+                TokenLimit = 80000000,
                 MessageLimit = 50000,
-                MaxProductAllowed = int.MaxValue,
+                MaxProductAllowed = 8000,
                 MaxDocumentAllowed = 100,
             };
             var existingSubscriptions = await _context.SubscriptionPlans.FirstOrDefaultAsync(u => u.Name == subscriptionBasic.Name || u.Name == subscriptionPro.Name || u.Name == subscriptionEnterprise.Name);
