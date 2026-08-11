@@ -1,9 +1,13 @@
+using Google.Cloud.AIPlatform.V1;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using Qdrant.Client.Grpc;
+using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
 using SmartShoppingChatBot.Application.Commons.Results;
+using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.EnumMessageCode;
+using SmartShoppingChatBot.Application.Features.ProductManagement.ProductCommon;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
@@ -12,7 +16,7 @@ using SmartShoppingChatBot.Domain.QdrantConfig;
 
 namespace SmartShoppingChatBot.Application.Features.DocumentManagement.EmbeddingDocument
 {
-    public class EmbeddingDocumentCommandHandler : IRequestHandler<EmbeddingDocumentCommand, Result<string>>
+    public class EmbeddingDocumentCommandHandler : IRequestHandler<EmbeddingDocumentCommand, Result<GeminiResponse<string>>>
     {
         private const string DocumentEmbeddingTaskType = "RETRIEVAL_DOCUMENT";
 
@@ -25,6 +29,8 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
         private readonly IChunkService _chunkService;
         private readonly IGeminiService _geminiService;
         private readonly IQdrantService _qdrantService;
+        private readonly IBusinessQuotaRepository _businessQuotaRepository;
+        private readonly IUsageQuotaLogRepository _usageQuotaLogRepository;
         private readonly ILogger<EmbeddingDocumentCommandHandler> _logger;
 
         public EmbeddingDocumentCommandHandler(
@@ -37,7 +43,9 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
             IExtractFileService extractFileService,
             IChunkService chunkService,
             IGeminiService geminiService,
-            IQdrantService qdrantService)
+            IQdrantService qdrantService,
+            IBusinessQuotaRepository businessQuotaRepository,
+            IUsageQuotaLogRepository usageQuotaLogRepository)
         {
             _businessRepository = businessRepository;
             _knowledgeDocumentRepository = knowledgeDocumentRepository;
@@ -49,15 +57,20 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
             _geminiService = geminiService;
             _qdrantService = qdrantService;
             _logger = logger;
+            _businessQuotaRepository = businessQuotaRepository;
+            _usageQuotaLogRepository = usageQuotaLogRepository;
         }
 
-        public async Task<Result<string>> Handle(EmbeddingDocumentCommand request, CancellationToken cancellationToken)
+        public async Task<Result<GeminiResponse<string>>> Handle(EmbeddingDocumentCommand request, CancellationToken cancellationToken)
         {
+            long totalInputToken = 0;
+            long totalOutputToken = 0;
+            long totalToken = 0;
             //parse id request to ObjectId
             if (!ObjectId.TryParse(request.BusinessId, out var businessId) ||
                 !ObjectId.TryParse(request.DocumentId, out var documentId))
             {
-                return Result<string>.Failure(400, "Invalid business or document id.", null, DocumentMessageCode.Invalid);
+                return Result<GeminiResponse<string>>.Failure(400, "Invalid business or document id.", null, DocumentMessageCode.Invalid);
             }
             //check business 
             var business = await _businessRepository.FindAsync(x =>
@@ -65,7 +78,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 x.BusinessStatus == Domain.Enums.BusinessEnums.ACTIVE);
 
             if (business == null)
-                return Result<string>.Failure(404, "Business not found.", null, DocumentMessageCode.NotFound);
+                return Result<GeminiResponse<string>>.Failure(404, "Business not found.", null, DocumentMessageCode.NotFound);
             //check document
             var document = await _knowledgeDocumentRepository.FindAsync(x =>
                 x.Id == documentId &&
@@ -73,7 +86,28 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 x.Status == KnowledgeDocumentStatus.Uploaded);
 
             if (document == null)
-                return Result<string>.Failure(404, "Uploaded document not found.", null, DocumentMessageCode.NotFound);
+                return Result<GeminiResponse<string>>.Failure(404, "Uploaded document not found.", null, DocumentMessageCode.NotFound);
+            //check business quota
+            var businessQuota = await _businessQuotaRepository.GetCurrentBusinessQuota(business.Id);
+
+            if (businessQuota == null)
+                return Result<GeminiResponse<string>>.Failure(404, "Business quota not found", null, BusinessQuotaMessageCode.NotFound);
+
+            var remainingTokens = businessQuota.TokenLimit - businessQuota.UsedTokens;
+
+            if (remainingTokens < DocumentEmbeddingQuota.MaxTokensPerDocument)
+            {
+                document.Status = KnowledgeDocumentStatus.Failed;
+                document.ErrorMessage = "Not enough token quota to embed document.";
+                document.ProcessedAt = DateTimeOffset.UtcNow;
+                await _knowledgeDocumentRepository.UpdateAsync(document);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return Result<GeminiResponse<string>>.Failure(
+                    429,
+                    "Not enough token quota to embed document.",
+                    null,
+                    BusinessQuotaMessageCode.TokenLimitExceeded);
+            }
             //update document processing 
             document.Status = KnowledgeDocumentStatus.Processing;
             document.ErrorMessage = null;
@@ -98,10 +132,18 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 foreach (var section in sections)
                 {
                     var embeddingText = await GenerateSectionSummaryAsync(section.HeadingPath, section.MarkdownContent);
-                    if (string.IsNullOrWhiteSpace(embeddingText.Data))
-                        continue;
+                    if (!embeddingText.IsSuccess || embeddingText.Data == null)
+                    {
+                        throw new InvalidOperationException(
+                            embeddingText.Message ?? "Failed to generate section summary.");
+                    }
+                    if (string.IsNullOrWhiteSpace(embeddingText.Data.Result))
+                        throw new InvalidOperationException($"Section summary is empty for heading: {section.HeadingPath}");
                     //llm summarize each section to get summary
-                    section.SectionSummary = embeddingText.Data;
+                    section.SectionSummary = embeddingText.Data.Result;
+                    //token usage
+                    totalInputToken += embeddingText.Data.InputTokens;
+                    totalOutputToken += embeddingText.Data.OutputTokens;
                 }
                 //cut section to chunk
                 var entries = await _chunkService.ChunkSectionsAsync(
@@ -115,26 +157,48 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
 
                 var points = new List<PointStruct>();
 
+
                 foreach (var entry in entries)
                 {
+
                     //generate embedding for each chunk
-                    var technicalVector = await _geminiService.EmbeddingsAsync(entry.EmbeddingText, DocumentEmbeddingTaskType);
+                    var technicalVector = await _geminiService.EmbeddingsAsyncV2(entry.EmbeddingText, DocumentEmbeddingTaskType);
                     if (!technicalVector.IsSuccess || technicalVector.Data == null)
                         throw new InvalidOperationException(technicalVector.Message ?? "Failed to generate document embedding.");
 
                     var semanticText = BuildDocumentSemanticSearchText(entry);
-                    var semanticVector = await _geminiService.EmbeddingsAsync(semanticText, DocumentEmbeddingTaskType);
+                    var semanticVector = await _geminiService.EmbeddingsAsyncV2(semanticText, DocumentEmbeddingTaskType);
                     if (!semanticVector.IsSuccess || semanticVector.Data == null)
                         throw new InvalidOperationException(semanticVector.Message ?? "Failed to generate semantic embedding.");
                     //create point for qdrant
-                    points.Add(BuildQdrantPoint(entry, technicalVector.Data, semanticVector.Data));
-                }
+                    points.Add(BuildQdrantPoint(entry, technicalVector.Data.Result, semanticVector.Data.Result));
 
+                    //accumulate tokens
+                    totalInputToken += technicalVector.Data.InputTokens + semanticVector.Data.InputTokens;
+                    totalOutputToken += technicalVector.Data.OutputTokens + semanticVector.Data.OutputTokens;
+
+                }
+                totalToken = totalInputToken + (totalOutputToken * 6) + (totalInputToken / 3) + (totalOutputToken * 2);
+                var newUsageQuotaLog = new UsageQuotaLog
+                {
+                    Id = ObjectId.GenerateNewId(),
+                    BusinessId = business.Id,
+                    InputTokens = totalInputToken,
+                    OutputTokens = totalOutputToken,
+                    BillableTokens = totalToken,
+                    BusinessQuotaId = businessQuota.Id,
+                    MessageUsed = 0,
+
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    SourceId = document.Id,
+                    SourceType = SourceTypeEnum.EmbeddingProduct,
+                };
+                businessQuota.UsedTokens += totalToken;
                 //save entries to mongo
                 await _knowledgeEntryRepository.AddRangeAsync(entries);
                 //update document status
                 document.ChunkCount = entries.Count;
-                document.Status = KnowledgeDocumentStatus.Processing;
+                document.ChunkCount = entries.Count;
                 document.ErrorMessage = null;
                 document.ProcessedAt = DateTimeOffset.UtcNow;
                 await _knowledgeDocumentRepository.UpdateAsync(document);
@@ -149,13 +213,12 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 //update document status to embedded
                 document.Status = KnowledgeDocumentStatus.Embedded;
                 document.ProcessedAt = DateTimeOffset.UtcNow;
+                await _businessQuotaRepository.UpdateAsync(businessQuota);
+                await _usageQuotaLogRepository.AddAsync(newUsageQuotaLog);
                 await _knowledgeDocumentRepository.UpdateAsync(document);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                return Result<string>.Success(
-                    $"Embedded document {document.Id} with {entries.Count} chunks.",
-                    200,
-                    "Document embedded successfully.");
+                return Result<GeminiResponse<string>>.Success(new GeminiResponse<string> { Result = "Document embedded successfully." }, 200);
             }
             catch (Exception ex)
             {
@@ -167,7 +230,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 await _knowledgeDocumentRepository.UpdateAsync(document);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                return Result<string>.Failure(400, ex.Message);
+                return Result<GeminiResponse<string>>.Failure(400, ex.Message);
             }
         }
 
@@ -242,7 +305,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                     {entry.Content}
                     """;
         }
-        private async Task<Result<string>> GenerateSectionSummaryAsync(string headingPath, string markdownContent)
+        private async Task<Result<GeminiResponse<string>>> GenerateSectionSummaryAsync(string headingPath, string markdownContent)
         {
             var systemPrompt = await File.ReadAllTextAsync("prompts/SectionSummary.md");
 
@@ -259,31 +322,73 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.Embedding
                 """;
             try
             {
-                var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
-                if (response.IsSuccess)
+                var response = await _geminiService.GenerateTextAsyncV2(new GeminiRequest
                 {
-                    _logger.LogInformation($"Data generated using QwenService: {response.Data}");
-                    return Result<string>.Success(response.Data);
-                }
-                else
-                {
-                    var fallbackResponse = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
-                    return Result<string>.Success(fallbackResponse.Data);
-                }
+                    Prompt = prompt,
+                    GenerationConfig = new()
+                    {
+                        MaxOutputTokens = 5000,
+                        Temperature = 0.2
+                    },
+                    SystemPrompt = systemPrompt,
 
+                });
+                if (response.IsSuccess && response.Data != null)
+                {
+                    _logger.LogInformation("Section summary generated successfully for heading: {HeadingPath}", headingPath);
+                    return Result<GeminiResponse<string>>.Success(response.Data);
+                }
+                _logger.LogWarning("Primary section summary generation failed for heading: {HeadingPath}. Trying fallback.", headingPath);
+                var fallbackResponse = await _geminiService.GenerateTextAsyncV2(new GeminiRequest { Prompt = prompt });
+                if (fallbackResponse.IsSuccess && fallbackResponse.Data != null)
+                {
+                    _logger.LogInformation("Fallback section summary generated successfully for heading: {HeadingPath}", headingPath);
+                    return Result<GeminiResponse<string>>.Success(fallbackResponse.Data);
+                }
+                _logger.LogError("Both primary and fallback section summary generation failed for heading: {HeadingPath}", headingPath);
+                return Result<GeminiResponse<string>>.Failure(500, "Failed to generate section summary using both attempts.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate semantic search text using QwenService. Falling back to GeminiService.");
+                _logger.LogError(ex, "Failed to generate section summary for heading: {HeadingPath}. Trying fallback.", headingPath);
 
-                var response = await _geminiService.GenerateTextAsync(prompt, 5000, 0.2);
-                if (!response.IsSuccess)
+                try
                 {
-                    _logger.LogError("GeminiService also failed to generate semantic search text.");
-                    return Result<string>.Failure(500, "Failed to generate semantic search text using both QwenService and GeminiService.");
-                }
+                    var fallbackResponse = await _geminiService.GenerateTextAsyncV2(
+                        new GeminiRequest
+                        {
+                            Prompt = prompt
+                        });
 
-                return Result<string>.Success(response.Data);
+                    if (fallbackResponse.IsSuccess && fallbackResponse.Data != null)
+                    {
+                        _logger.LogInformation(
+                            "Fallback section summary generated successfully for heading: {HeadingPath}",
+                            headingPath);
+
+                        return Result<GeminiResponse<string>>.Success(
+                            fallbackResponse.Data);
+                    }
+
+                    _logger.LogError(
+                        "Fallback section summary generation failed for heading: {HeadingPath}",
+                        headingPath);
+
+                    return Result<GeminiResponse<string>>.Failure(
+                        500,
+                        "Failed to generate section summary using both attempts.");
+                }
+                catch (Exception fallbackEx)
+                {
+                    _logger.LogError(
+                        fallbackEx,
+                        "Fallback section summary generation threw an exception for heading: {HeadingPath}",
+                        headingPath);
+
+                    return Result<GeminiResponse<string>>.Failure(
+                        500,
+                        "Failed to generate section summary using both attempts.");
+                }
             }
         }
 
