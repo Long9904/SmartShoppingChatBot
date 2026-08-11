@@ -102,8 +102,6 @@ public sealed class RedisConversationContextCacheService : IConversationContextC
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        context.UpdatedAt = DateTimeOffset.UtcNow;
-
         var key = BuildKey(context.ConversationId);
         var json = JsonSerializer.Serialize(context, JsonOptions);
 

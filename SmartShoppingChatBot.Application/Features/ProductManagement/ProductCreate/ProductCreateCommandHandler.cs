@@ -67,7 +67,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             }
 
 
-            var businessQuota = await _businessQuotaRepository.FindAsync(b => b.BusinessId == business.Data.Id);
+            var businessQuota = await _businessQuotaRepository.GetCurrentBusinessQuota(business.Data.Id);
             if (businessQuota == null)
                 return Result<ProductResponse>.Failure(404, "Business quota not found", null, BusinessQuotaMessageCode.NotFound);
 
@@ -77,6 +77,17 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             if (productCount >= businessQuota.MaxProductAllowed)
             {
                 return Result<ProductResponse>.Failure(400, "Rate limit for create new product", null, ProductMessageCode.ProdcutRateLimit);
+            }
+
+            var remainingTokens = businessQuota.TokenLimit - businessQuota.UsedTokens;
+
+            if (remainingTokens < ProductEmbeddingQuota.TokenBudgetPerProduct)
+            {
+                return Result<ProductResponse>.Failure(
+                    429,
+                    "Not enough token quota to embed product.",
+                    null,
+                    BusinessQuotaMessageCode.TokenLimitExceeded);
             }
 
 
@@ -112,7 +123,19 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
 
             var authType = _httpContextAccessor.HttpContext?.User.Identity?.AuthenticationType;
 
-            if ("Bearer".Equals(authType))
+            if ("ApiKey".Equals(authType))
+            {
+                product.CreatedBy = new UserEmbedded
+                {
+                    Name = "Business: " + business.Data.BusinessName,
+                };
+
+                product.UpdatedBy = new UserEmbedded
+                {
+                    Name = "Business: " + business.Data.BusinessName,
+                };
+            }
+            else
             {
                 var user = await _currentUserService.GetUser();
 
@@ -130,28 +153,11 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                     Name = user.Data.FullName,
                 };
             }
-            else if ("ApiKey".Equals(authType))
-            {
-                product.CreatedBy = new UserEmbedded
-                {
-                    Name = "Business: " + business.Data.BusinessName,
-                };
-
-                product.UpdatedBy = new UserEmbedded
-                {
-                    Name = "Business: " + business.Data.BusinessName,
-                };
-            }
-            else
-            {
-                return Result<ProductResponse>.Failure(404, "Authentication fail", null, AuthMessageCode.InvalidAuthentication);
-            }
 
 
             // Build search text
             var embeddingText = product.BuildEmbeddingText();
             product.SearchContent = embeddingText;
-
 
             try
             {

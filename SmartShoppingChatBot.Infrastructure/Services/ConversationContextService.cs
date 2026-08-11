@@ -44,7 +44,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     nameof(conversationId));
             }
 
-
             // 1. Lấy context từ redis
             var cachedContext = await _cacheService.GetAsync(conversationId, ct);
             if (cachedContext is not null) return cachedContext;
@@ -88,7 +87,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 ConversationId = conversationId,
                 Summary = conversationData.Summary ?? string.Empty,
                 RecentTurns = recentTurns,
-                UpdatedAt = DateTimeOffset.UtcNow
             };
 
             await _cacheService.SetAsync(context, ct);
@@ -120,8 +118,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 ConversationId = conversationId,
                 Summary = string.Empty,
-                RecentTurns = [],
-                UpdatedAt = DateTimeOffset.UtcNow
+                RecentTurns = []
             };
         }
 
@@ -144,10 +141,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         {
                             MessageId = message.Id.ToString(),
                             Content = message.Content,
-                            CreatedAt = message.CreatedAt
                         },
                         AssistantMessage = null,
-                        CreatedAt = message.CreatedAt
                     };
 
                     turns.Add(currentTurn);
@@ -170,9 +165,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 currentTurn.AssistantMessage = new CachedAssistantMessage
                 {
                     MessageId = message.Id.ToString(),
-                    Content = message.Content,
-                    ProductReferences = BuildProductReferences(message),
-                    CreatedAt = message.CreatedAt
+                    Content = message.SummaryContent ?? "",
+                    ProductReferences = BuildProductReferences(message)
                 };
             }
 
@@ -191,6 +185,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 .Select((product, index) =>
                     new CachedProductReference
                     {
+                        DisplayOrder = index + 1,
                         ProductId = product.ProductId,
                         DisplayName = product.DisplayName ?? "",
                     }).ToList();

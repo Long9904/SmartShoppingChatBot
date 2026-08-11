@@ -5,14 +5,14 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 {
     public class ProductReferenceCollector : IProductReferenceCollector
     {
-        private readonly List<ProductResponse> _products = [];
+        private readonly List<ProductResponseV2> _products = [];
 
-        public void AddRange(IEnumerable<ProductResponse> products)
+        public void AddRange(IEnumerable<ProductResponseV2> products)
         {
             _products.AddRange(products);
         }
 
-        public IReadOnlyList<ProductResponse> GetProducts()
+        public IReadOnlyList<ProductResponseV2> GetProducts()
         {
             return _products.ToList();
         }

@@ -22,6 +22,7 @@ public class ProductUpdateCommandHandler : IRequestHandler<ProductUpdateCommand,
     private readonly IProductRepository _productRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IQdrantService _qdrantService;
+    private readonly IBusinessQuotaRepository _businessQuotaRepository;
     private readonly IPublishEndpoint _publisher;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ProductUpdateCommandHandler> _logger;
@@ -32,6 +33,7 @@ public class ProductUpdateCommandHandler : IRequestHandler<ProductUpdateCommand,
         IProductRepository productRepository,
         IUnitOfWork unitOfWork,
         IQdrantService qdrantService,
+        IBusinessQuotaRepository businessQuotaRepository,
         IPublishEndpoint publisher,
         TimeProvider timeProvider,
         ILogger<ProductUpdateCommandHandler> logger)
@@ -41,6 +43,7 @@ public class ProductUpdateCommandHandler : IRequestHandler<ProductUpdateCommand,
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _qdrantService = qdrantService;
+        _businessQuotaRepository = businessQuotaRepository;
         _publisher = publisher;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -112,6 +115,30 @@ public class ProductUpdateCommandHandler : IRequestHandler<ProductUpdateCommand,
 
         var requiresReembedding = RequiresReembedding(product, request);
         var hadQdrantPoint = product.Status != ProductStatus.PendingEmbedding;
+
+        if (requiresReembedding)
+        {
+            var businessQuota = await _businessQuotaRepository
+                .GetCurrentBusinessQuota(business.Id);
+
+            if (businessQuota == null)
+            {
+                return Result<ProductResponse>.Failure(
+                    404,
+                    "Business quota not found.",
+                    messageCode: BusinessQuotaMessageCode.NotFound);
+            }
+
+            var remainingTokens = businessQuota.TokenLimit - businessQuota.UsedTokens;
+
+            if (remainingTokens < ProductEmbeddingQuota.TokenBudgetPerProduct)
+            {
+                return Result<ProductResponse>.Failure(
+                    429,
+                    "Not enough token quota to re-embed product.",
+                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded);
+            }
+        }
 
         product.ExternalId = request.ExternalId;
         product.ExternalProductUrl = request.ExternalProductUrl ?? string.Empty;

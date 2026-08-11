@@ -66,6 +66,7 @@ builder.Services.AddDataProtection()
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<EmailTokenSettings>(builder.Configuration.GetSection("EmailTokenSettings"));
+builder.Services.Configure<PasswordResetTokenSettings>(builder.Configuration.GetSection("PasswordResetTokenSettings"));
 builder.Services.Configure<ApiConfigs>(builder.Configuration.GetSection("ApiConfigs"));
 builder.Services.Configure<GoogleConfigs>(builder.Configuration.GetSection("Google"));
 builder.Services.Configure<QwenConfigs>(builder.Configuration.GetSection("Qwen"));
@@ -169,12 +170,7 @@ builder.Services.AddAuthentication(options =>
         };
     })
 
-    .AddScheme<AuthenticationSchemeOptions,
-    ApiKeyAuthenticationHandler>(
-    "ApiKey",
-    options => { });
-
-
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>("ApiKey", options => { });
 
 
 builder.Services.AddAuthorization();

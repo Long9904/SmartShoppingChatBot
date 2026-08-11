@@ -5,6 +5,7 @@
         Uploaded,
         Processing,
         Embedded,
-        Failed
+        Failed,
+        Deleted
     }
 }

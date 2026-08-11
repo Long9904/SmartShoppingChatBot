@@ -7,7 +7,6 @@
             "userMessage": {
                 "messageId": "message-001",
                 "content": "Có quần jean nào dưới 700 nghìn không?",
-                "createdAt": "2026-07-20T05:00:00Z"
             },
             "assistantMessage": {
                 "messageId": "message-002",
@@ -17,11 +16,8 @@
                         "productId": "product-001",
                         "displayName": "Quần jean Canifa"
                     }
-                ],
-                "createdAt": "2026-07-20T05:00:02Z"
-            },
-            "createdAt": "2026-07-20T05:00:00Z"
+                ]
+            }
         }
-    ],
-    "updatedAt": "2026-07-20T05:00:02Z"
+    ]
 }

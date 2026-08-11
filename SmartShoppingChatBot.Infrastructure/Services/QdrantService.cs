@@ -141,5 +141,12 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             return points.ToList();
         }
+        public async Task DeletePointsAsync(string collectionName, IReadOnlyList<Guid> ids, CancellationToken ct = default)
+        {
+            await _qdrantClient.DeleteAsync(
+                collectionName: collectionName,
+                ids: ids,
+                cancellationToken: ct);
+        }
     }
 }

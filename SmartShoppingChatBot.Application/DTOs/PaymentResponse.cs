@@ -10,6 +10,7 @@ namespace SmartShoppingChatBot.Application.DTOs
         public long OrderCode { get; set; }
         public decimal Amount { get; set; }
         public string Description { get; set; } = string.Empty;
+        public string? PayOsPaymentLink { get; set; }
         public PaymentEnums Status { get; set; } = PaymentEnums.Pending;
         public DateTimeOffset CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTimeOffset? UpdatedAt { get; set; }

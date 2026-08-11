@@ -1,7 +1,4 @@
 ﻿using AutoMapper;
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -107,7 +104,19 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 .FindAsync(x => x.BussinessId == business.Id && x.SubscriptionPlanId == selectSubscription.Id && x.Status == PaymentEnums.Pending);
             if (existingPayment != null)
             {
-                return Result<PaymentResponsed>.Failure(400, "Business already has a pending payment for this plan");
+                if (!string.IsNullOrEmpty(existingPayment.PayOsPaymentLink))
+                {
+                    return Result<PaymentResponsed>.Success(new PaymentResponsed
+                    {
+                        CheckoutUrl = existingPayment.PayOsPaymentLink,
+                        OrderCode = existingPayment.OrderCode,
+                        Message = "Existing payment link retrieved successfully"
+                    }, 200, "Existing payment link retrieved successfully");
+                }
+                else
+                {
+                    return Result<PaymentResponsed>.Failure(400, "Existing payment is pending but has no payment link ! Please cancel old payment and try again");
+                }
             }
 
             var orderCode = GenerateOrderCode();
@@ -137,12 +146,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             try
             {
                 var result = await _payOSClient.PaymentRequests.CreateAsync(paymentRequest);
+                payment.PayOsPaymentLink = result.CheckoutUrl;
                 await _paymentRepository.AddAsync(payment);
                 await _unitOfWork.SaveChangesAsync();
                 return Result<PaymentResponsed>.Success(new PaymentResponsed
                 {
-                    CheckoutUrl = result.CheckoutUrl,
-                    OrderCode = orderCode,
+                    CheckoutUrl = payment.PayOsPaymentLink,
+                    OrderCode = payment.OrderCode,
                     Message = "Payment link created successfully"
                 }, 200, "Payment link created successfully");
             }
@@ -191,7 +201,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
             catch (PayOSException ex)
             {
-              
+
                 _logger.LogWarning(
                     ex,
                     "PayOS webhook verification failed ");
@@ -388,9 +398,19 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     UsedTokens = 0,
                     MaxProductAllowed = subscriptionPlan.MaxProductAllowed
                 };
+                // Check if business has any quota active -> set inactive
+                var oldQuotas = await _businessQuotaRepository.FindAllAsync(x =>
+                x.BusinessId == existingPayment.BussinessId
+                && x.ResetDate > now);
+
+                foreach (var quot in oldQuotas)
+                {
+                    quot.ResetDate = now;
+                }
 
                 existingPayment.Status = PaymentEnums.Completed;
                 await _subscriptionRepository.AddAsync(subscription);
+                await _businessQuotaRepository.UpdateRangeAsync(oldQuotas);
                 await _businessQuotaRepository.AddAsync(businessQuota);
                 await _paymentRepository.UpdateAsync(existingPayment);
                 await _unitOfWork.SaveChangesAsync();
@@ -447,7 +467,33 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var randomPart = Random.Shared.Next(100, 999);
 
             return checked(timestamp * 1000 + randomPart);
-        } 
-        
+        }
+        public async Task<Result<string>> CancleOldPayment(long orderCode)
+        {
+            try
+            {
+                var businessLogin = await _currentUserService.GetBusiness();
+                if (businessLogin == null || businessLogin.Data == null)
+                {
+                    return Result<string>.Failure(404, "Business not found");
+                }
+                var existingPayment = await _paymentRepository.FindAsync(x => x.OrderCode == orderCode && x.BussinessId == businessLogin.Data.Id && x.Status == PaymentEnums.Pending);
+                if (existingPayment == null)
+                {
+                    return Result<string>.Failure(404, "Payment not found or not pending");
+                }
+
+                //await _payOSClient.PaymentRequests.CancelAsync(orderCode, "Cancellation reason");
+                existingPayment.Status = PaymentEnums.Cancelled;
+                await _paymentRepository.UpdateAsync(existingPayment);
+                await _unitOfWork.SaveChangesAsync();
+                return Result<string>.Success("Payment cancelled successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling payment for order code {OrderCode}", orderCode);
+                return Result<string>.Failure(500, "An error occurred while cancelling the payment");
+            }
+        }
     }
 }

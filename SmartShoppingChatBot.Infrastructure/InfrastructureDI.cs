@@ -33,6 +33,9 @@ public static class InfrastructureDI
         services.AddScoped<IConversationContextCacheService, RedisConversationContextCacheService>();
         services.AddScoped<IConversationContextService, ConversationContextService>();
         services.AddScoped<IProductReferenceCollector, ProductReferenceCollector>();
+        services.AddScoped<IRedisBusinessConfig, RedisBusinessConfig>();
+
+        services.AddSingleton<GoogleAccessTokenProvider>();
 
         // Seeder
         services.AddScoped<UserSeeder>();
@@ -55,6 +58,8 @@ public static class InfrastructureDI
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IImportJobRepository, ImportJobRepository>();
+        services.AddScoped<IUsageQuotaLogRepository, UsageQuotaLogRepository>();
 
         return services;
     }

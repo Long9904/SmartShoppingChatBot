@@ -86,6 +86,7 @@ public class ConfirmBusinessCommandHandler :
         if (request.IsApproved == true)
         {
             business.BusinessStatus = BusinessEnums.ACTIVE;
+            business.Config = new Domain.Entities.BusinessConfig();
             owner.UserStatus = UserStatus.PENDING_PROFILE_COMPLETION;
         }
         else
@@ -113,7 +114,7 @@ public class ConfirmBusinessCommandHandler :
         };
 
         // Resigter business subcription plan
-        var freeTierPlan = await _subscriptionPlanRepository.FindAsync(x => "Basic".Equals(x.Name));
+        var freeTierPlan = await _subscriptionPlanRepository.FindAsync(x => x.Name.Contains("Basic"));
 
         if (freeTierPlan == null) return Result<BusinessRegistrationResponse>.Failure(404, "Plan not found", null, "MG_SUBPLAN_404");
 

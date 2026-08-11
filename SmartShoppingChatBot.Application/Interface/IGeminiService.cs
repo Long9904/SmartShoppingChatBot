@@ -13,19 +13,22 @@ namespace SmartShoppingChatBot.Application.Interface
 
         Task<Result<double[]>> EmbeddingsAsync(string text, string taskType = "RETRIEVAL_QUERY");
 
-        Task<Result<double[]>> EmbeddingsAsyncV2(
+        Task<Result<GeminiResponse<double[]>>> EmbeddingsAsyncV2(
             string text,
             string taskType = "RETRIEVAL_QUERY",
             CancellationToken ct = default);
 
-        Task<Result<string>> GenerateTextAsyncV2(GeminiRequest geminiRequest);
+        Task<Result<GeminiResponse<IReadOnlyList<double[]>>>> EmbeddingsAsyncV3(
+            IReadOnlyList<string> texts,
+            string taskType = "RETRIEVAL_QUERY",
+            CancellationToken ct = default);
 
-        Task<Result<ICollection<RankedRecord>>> RerankerAsync(
-            string userQuery,
-            IEnumerable<RankRecord> records,
-            CancellationToken ct);
+        Task<Result<GeminiResponse<string>>> GenerateTextAsyncV2(
+            GeminiRequest geminiRequest,
+            CancellationToken ct = default);
 
-        Task<Result<ICollection<RankedRecord>>> RerankerAsyncV2(
+
+        Task<Result<GeminiResponse<ICollection<RankedRecord>>>> RerankerAsyncV2(
             string userQuery,
             IEnumerable<RankRecord> records,
             CancellationToken ct);

@@ -22,4 +22,22 @@ public class Business
     public DateTimeOffset? DeletedAt { get; set; }
     public UserEmbedded? CreatedBy { get; set; }
     public UserEmbedded? UpdatedBy { get; set; }
+
+    public BusinessConfig? Config { get; set; }
+}
+
+
+public class BusinessConfig
+{
+    public double? ModelTemperature { get; set; } = 0.2;
+
+    public int? TopKDocument { get; set; } = 3;
+
+    public double? RerankingScore { get; set; } = 0.75;
+
+    public string? SystemPrompt { get; set; } = string.Empty;
+
+    public string? FallBackMessage { get; set; } = string.Empty;
+
+    public int? MaxOutPutToken { get; set; } = 2000;
 }

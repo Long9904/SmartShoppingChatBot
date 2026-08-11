@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using System.Diagnostics;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -10,7 +11,6 @@ using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
-using SmartShoppingChatBot.Infrastructure.Services;
 
 namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendMessage
 {
@@ -19,6 +19,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         private readonly ICustomerRepository _customerRepository;
         private readonly IMessageRepository _messageRepository;
         private readonly IConversationRepository _conversationRepository;
+        private readonly IBusinessQuotaRepository _buinessQuotaRepository;
+        private readonly IUsageQuotaLogRepository _usageQuotaLogRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly ILogger<SendMessageCommandHandler> _logger;
@@ -32,6 +34,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             ICustomerRepository customerRepository,
             IMessageRepository messageRepository,
             IConversationRepository conversationRepository,
+            IBusinessQuotaRepository buinessQuotaRepository,
+            IUsageQuotaLogRepository usageQuotaLogRepository,
             IUnitOfWork unitOfWork,
             TimeProvider time,
             IOptions<RedisOptions> options,
@@ -45,6 +49,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             _customerRepository = customerRepository;
             _messageRepository = messageRepository;
             _conversationRepository = conversationRepository;
+            _buinessQuotaRepository = buinessQuotaRepository;
+            _usageQuotaLogRepository = usageQuotaLogRepository;
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _time = time;
@@ -61,7 +67,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         {
             var business = await _currentUserService.GetBusiness();
 
-            if (!business.IsSuccess)
+            if (!business.IsSuccess || business.Data is null)
                 return Result<ConversationResponse>.Failure(
                     statusCode: business.StatusCode,
                     message: business.Message,
@@ -69,7 +75,28 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
             var customer = await GetOrCreateCustomerAsync(request.ExternalCustomerId, business.Data!);
 
+            var businessCurrentQuota = await _buinessQuotaRepository.GetCurrentBusinessQuota(business.Data.Id);
+            if (businessCurrentQuota is null)
+                return Result<ConversationResponse>.Failure(
+                    statusCode: 404,
+                    message: "Business quota not found",
+                    messageCode: BusinessQuotaMessageCode.NotFound);
 
+            if (businessCurrentQuota.UsedMessages > businessCurrentQuota.MessageLimit)
+            {
+                return Result<ConversationResponse>.Failure(
+                    statusCode: 404,
+                    message: "Doanh nghiệp đã đạt đến giới hạn sử dụng hiện tại",
+                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded);
+            }
+
+            if (businessCurrentQuota.UsedTokens > businessCurrentQuota.TokenLimit)
+            {
+                return Result<ConversationResponse>.Failure(
+                    statusCode: 429,
+                    message: "Doanh nghiệp đã đạt đến giới hạn sử dụng hiện tại",
+                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded);
+            }
 
             Conversation? conversation;
             try
@@ -124,8 +151,11 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 await _messageRepository.AddAsync(userMessage);
 
                 // 2. Take conversation context from Redis or load it from the database
+                var sw = Stopwatch.StartNew();
 
-                var conversationContext = await _conversationContextService.GetOrLoadAsyncConversationCache(conversation.Id.ToString(), cancellationToken);
+                var conversationContext = await _conversationContextService.GetOrLoadAsyncConversationCache(
+                    conversation.Id.ToString(), cancellationToken);
+
 
                 // 3. Send req to semantic kernel + old context summary
                 KernelChatRequest req = new()
@@ -135,19 +165,24 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     UserMessage = request.Message,
                 };
 
+                _productReferenceCollector.Reset();
+
                 var sematicKernelResponse = await _kernelChatService.ChatAsync(req);
+
 
                 if (!sematicKernelResponse.IsSuccess)
                 {
                     await _unitOfWork.RollBackAsync(cancellationToken);
 
                     return Result<ConversationResponse>
-                        .Failure(500, "Xin lỗi, hiện mình chưa thể trả lời câu hỏi này. Bạn vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ nhé.", null, "MG_SERVER_500");
+                        .Success(null, 200, "Xin lỗi, hiện mình chưa thể trả lời câu hỏi này. Bạn vui lòng thử lại hoặc liên hệ nhân viên hỗ trợ nhé.", "MG_SERVER_200");
                 }
+
 
                 var kernelResult = sematicKernelResponse.Data!;
                 var responseTime = _time.GetUtcNow();
 
+                _logger.LogInformation($"{kernelResult.ComparedProductIds.ToArray()}");
                 // 4. Build AI response
                 var aiMessage = new Message
                 {
@@ -161,21 +196,75 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     Status = MessageStatus.Sent,
                 };
 
-                var cacheProduct = _productReferenceCollector.GetProducts();
+                var cacheProducts = _productReferenceCollector.GetProducts();
 
-                aiMessage.CacheProductReference = cacheProduct.Select(cp =>
-                new ProductReference
+                var productById = BuildAvailableProductReferences(
+                    cacheProducts,
+                    conversationContext);
+
+                var selectedProductIds = kernelResult.SelectedProductIds
+                    .Where(productId => !string.IsNullOrWhiteSpace(productId))
+                    .Select(productId => productId.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var selectedProductReferences = selectedProductIds
+                    .Where(productById.ContainsKey)
+                    .Select((productId, index) =>
+                    {
+                        var product = productById[productId];
+
+                        return new CachedProductReference
+                        {
+                            DisplayOrder = index + 1,
+                            DisplayName = product.DisplayName,
+                            ProductId = product.ProductId,
+                        };
+                    })
+                    .ToList();
+
+                aiMessage.CacheProductReference = selectedProductReferences
+                    .Select(product =>
+                    {
+                        return new ProductReference
+                        {
+                            ProductId = product.ProductId,
+                            DisplayName = product.DisplayName
+                        };
+                    })
+                    .ToList();
+
+
+                sw.Stop();
+                var gptCredits = kernelResult.InputTokens + kernelResult.OutputTokens * 6;
+                var usageLog = new UsageQuotaLog
                 {
-                    DisplayName = cp.Name,
-                    ProductId = cp.Id,
-                }).ToList();
+                    BillableTokens = gptCredits,
+                    OutputTokens = kernelResult.OutputTokens,
+                    InputTokens = kernelResult.InputTokens,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    Id = ObjectId.GenerateNewId(),
+                    BusinessId = business.Data.Id,
+                    BusinessQuotaId = businessCurrentQuota.Id,
+                    MessageUsed = 1,
+                    SourceId = aiMessage.Id,
+                    SourceType = SourceTypeEnum.Chat
+                };
 
+                aiMessage.SummaryContent = kernelResult.AISummaryContent ?? "";
 
                 await _messageRepository.AddAsync(aiMessage);
 
+                businessCurrentQuota.UsedMessages += 1;
+                businessCurrentQuota.UsedTokens += gptCredits;
+
                 conversation.Summary = kernelResult.Summary;
                 conversation.SummaryUpdatedAt = responseTime;
+                conversation.LastMessageAt = responseTime;
 
+
+                await _buinessQuotaRepository.UpdateAsync(businessCurrentQuota);
+                await _usageQuotaLogRepository.AddAsync(usageLog);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -183,31 +272,21 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 // 5. Build turn cache to save orther context to redis
                 var turnCreateTime = _time.GetUtcNow();
 
-
-
                 var turn = new CachedConversationTurn
                 {
                     TurnId = userMessage.Id.ToString(),
-                    CreatedAt = turnCreateTime,
 
                     UserMessage = new()
                     {
                         Content = userMessage.Content,
-                        CreatedAt = userMessage.CreatedAt,
                         MessageId = userMessage.Id.ToString()
                     },
 
                     AssistantMessage = new()
                     {
                         MessageId = aiMessage.Id.ToString(),
-                        Content = aiMessage.Content,
-                        CreatedAt = aiMessage.CreatedAt,
-                        ProductReferences = cacheProduct.Select(cp =>
-                        new CachedProductReference
-                        {
-                            DisplayName = cp.Name,
-                            ProductId = cp.Id,
-                        }).ToList()
+                        Content = aiMessage.SummaryContent ?? "",
+                        ProductReferences = selectedProductReferences
                     }
                 };
 
@@ -222,7 +301,6 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
                     conversationContext.RecentTurns.RemoveRange(0, overFlowCount);
                 }
-                conversationContext.UpdatedAt = turnCreateTime;
 
                 // 6. Save turn mới vào reids
                 await _conversationContextService.SaveConversationCacheAsync(conversationContext, cancellationToken);
@@ -247,6 +325,55 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     .Failure(500, "Error when saving user message or kernel response", null, "MG_SERVER_500");
             }
 
+        }
+
+        private static Dictionary<string, CachedProductReference> BuildAvailableProductReferences(
+            IEnumerable<ProductResponseV2> currentProducts,
+            ConversationContextCache conversationContext)
+        {
+
+            // Tạo 1 cái distionary bằng productId + tham chiếu của nó
+            var productById = new Dictionary<string, CachedProductReference>(StringComparer.OrdinalIgnoreCase);
+
+            // Lấy tất cả tham chiếu ở trên hisotry
+            var contextProductReferences = conversationContext.RecentTurns
+                .SelectMany(turn => turn.AssistantMessage?.ProductReferences ?? []);
+
+            // ADd tất cả tham chiếu vào distionary
+            foreach (var product in contextProductReferences)
+            {
+                if (string.IsNullOrWhiteSpace(product.ProductId))
+                {
+                    continue;
+                }
+
+                var productId = product.ProductId.Trim();
+
+                productById.TryAdd(productId, new CachedProductReference
+                {
+                    ProductId = productId,
+                    DisplayName = product.DisplayName,
+                    DisplayOrder = product.DisplayOrder,
+                });
+            }
+            // Thêm cache product vào distionary
+            foreach (var product in currentProducts)
+            {
+                if (string.IsNullOrWhiteSpace(product.ProductId))
+                {
+                    continue;
+                }
+
+                var productId = product.ProductId.Trim();
+
+                productById[productId] = new CachedProductReference
+                {
+                    ProductId = productId,
+                    DisplayName = product.Name,
+                };
+            }
+
+            return productById;
         }
 
         private async Task<Result<Customer>> GetOrCreateCustomerAsync(

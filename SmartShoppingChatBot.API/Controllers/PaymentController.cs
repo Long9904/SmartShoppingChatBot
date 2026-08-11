@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPayment;
+using SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPaymentByUser;
 using SmartShoppingChatBot.Application.Features.PaymentManagement.GetPaymentByOrderCode;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
@@ -15,7 +16,6 @@ namespace SmartShoppingChatBot.API.Controllers
     [ApiController]
     [ApiExplorerSettings(GroupName = "internal")]
     
-
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
@@ -62,9 +62,21 @@ namespace SmartShoppingChatBot.API.Controllers
         }
 
         [HttpGet]
-        [EndpointSummary("Get All Payments")]
+        [EndpointSummary("Admin-Get All Payments")]
+        [Authorize(Roles = "Admin")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> GetAllPayments([FromQuery] GetPaymentQuery query)
+        {
+            var result = await _mediator.Send(query);
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<BasePaginatedList<PaymentResponse>>.Ok(result.Data!, result.Message));
+            return StatusCode(result.StatusCode, ApiResponse<BasePaginatedList<PaymentResponse>>.Fail(result.Message!, result.Errors));
+        }
+        [HttpGet("user")]
+        [EndpointSummary("BO-Get All Payments")]
+        [Authorize(Roles = "BUSINESS_OWNER, CATALOG_TEAM")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> GetAllPaymentsByUser([FromQuery] GetPaymentByUserQuery query)
         {
             var result = await _mediator.Send(query);
             if (result.IsSuccess)
@@ -81,6 +93,16 @@ namespace SmartShoppingChatBot.API.Controllers
             if (result.IsSuccess)
                 return StatusCode(StatusCodes.Status200OK, ApiResponse<PaymentResponse>.Ok(result.Data!, result.Message));
             return StatusCode(StatusCodes.Status404NotFound, ApiResponse<PaymentResponse>.Fail("Payment not found.", null));
+        }
+
+        [HttpDelete("cancel/{orderCode}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> CancelPayment([FromRoute] long orderCode)
+        {
+            var result = await _paymentService.CancleOldPayment(orderCode);
+            if (result.IsSuccess)
+                return StatusCode(StatusCodes.Status200OK, ApiResponse<string>.Ok(result.Data!, result.Message));
+            return StatusCode(result.StatusCode, ApiResponse<string>.Fail(result.Message!, result.Errors));
         }
     }
 }

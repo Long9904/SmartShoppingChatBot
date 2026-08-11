@@ -2,6 +2,7 @@
 using MongoDB.Bson;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
+using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Infrastructure.Repositories
@@ -15,11 +16,23 @@ namespace SmartShoppingChatBot.Infrastructure.Repositories
         public async Task<CursorPage<Message>> MessageCursorPaging(
             ObjectId conversationId,
             int limit,
-            ObjectId? lastId = null)
+            ObjectId? lastId = null,
+            string? search = null,
+            SenderTypeEnum? senderType = null)
         {
             limit = limit < 1 ? 1 : limit;
             var query = _context.Messages
                  .Where(x => x.ConversationId == conversationId);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(x => x.Content.Contains(search));
+            }
+
+            if (senderType.HasValue)
+            {
+                query = query.Where(x => x.SenderType == senderType.Value);
+            }
 
             if (lastId.HasValue)
             {

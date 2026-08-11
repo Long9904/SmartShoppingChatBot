@@ -2,31 +2,35 @@
 using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPayment
 {
-    public class GetPaymentQueryHandler : IRequestHandler<GetPaymentQuery, Result<BasePaginatedList<PaymentResponse>>>
+    public class GetPaymentByUserQueryHandler : IRequestHandler<GetPaymentQuery, Result<BasePaginatedList<PaymentResponse>>>
     {
         private readonly IPaymentRepository _paymentRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IBusinessRepository _businessRepository;
         private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
+        private readonly ICurrentUserService _currentUserService;
         private readonly IMapper _mapper;
 
-        public GetPaymentQueryHandler(IPaymentRepository paymentRepository, IUnitOfWork unitOfWork,
-            IBusinessRepository businessRepository, ISubscriptionPlanRepository subscriptionPlanRepository, IMapper mapper)
+        public GetPaymentByUserQueryHandler(IPaymentRepository paymentRepository, IUnitOfWork unitOfWork,
+            IBusinessRepository businessRepository, ISubscriptionPlanRepository subscriptionPlanRepository, IMapper mapper ,ICurrentUserService currentUserService)
         {
             _paymentRepository = paymentRepository;
             _unitOfWork = unitOfWork;
             _businessRepository = businessRepository;
             _subscriptionPlanRepository = subscriptionPlanRepository;
             _mapper = mapper;
+            _currentUserService = currentUserService;
         }
 
         public async Task<Result<BasePaginatedList<PaymentResponse>>> Handle(GetPaymentQuery request, CancellationToken cancellationToken)
         {
+            
             var query = _paymentRepository.AsQueryable();
             if (!string.IsNullOrEmpty(request.Filter.Search))
             {
@@ -48,6 +52,7 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.GetAllPaym
                         break;
                 }
             }
+            
             var pagingList = await _paymentRepository.PaginatedListAsync(
                 query,
                 request.Filter?.PageIndex ?? 1,

@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Linq.Dynamic.Core;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -20,15 +18,18 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         private readonly GoogleConfigs _config;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<GeminiService> _logger;
+        private readonly GoogleAccessTokenProvider _accessTokenProvider;
 
         public GeminiService(
             IOptions<GoogleConfigs> config,
             IHttpClientFactory httpClientFactory,
+            GoogleAccessTokenProvider accessTokenProvider,
             ILogger<GeminiService> logger)
         {
             _config = config.Value;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _accessTokenProvider = accessTokenProvider;
         }
 
 
@@ -40,12 +41,23 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         }
 
 
-        public Task<Result<double[]>> EmbeddingsAsync(string text, string taskType = "RETRIEVAL_QUERY")
+        public async Task<Result<double[]>> EmbeddingsAsync(string text, string taskType = "RETRIEVAL_QUERY")
         {
-            return EmbeddingsAsyncV2(text, taskType);
+            var response = await EmbeddingsAsyncV2(text, taskType);
+
+            if (!response.IsSuccess || response.Data == null)
+            {
+                return Result<double[]>.Failure(
+                    response.StatusCode,
+                    response.Message,
+                    response.Errors,
+                    response.MessageCode);
+            }
+
+            return Result<double[]>.Success(response.Data.Result);
         }
 
-        public async Task<Result<double[]>> EmbeddingsAsyncV2(
+        public async Task<Result<GeminiResponse<double[]>>> EmbeddingsAsyncV2(
             string text,
             string taskType = "RETRIEVAL_QUERY",
             CancellationToken ct = default)
@@ -79,7 +91,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
                 var json = JsonSerializer.Serialize(requestBody);
 
-                var accessToken = await GetAccessTokenAsync();
+                var accessToken = await _accessTokenProvider.GetAccessTokenAsync(ct);
 
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -95,7 +107,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 {
                     _logger.LogError("Error generating embeddings from Gemini API: {ResponseContent}", responseContent);
 
-                    return Result<double[]>.Failure((int)response.StatusCode, $"Error generating embeddings from Gemini API: {responseContent}");
+                    return Result<GeminiResponse<double[]>>.Failure((int)response.StatusCode, $"Error generating embeddings from Gemini API: {responseContent}");
                 }
 
                 using var doc = JsonDocument.Parse(responseContent);
@@ -108,7 +120,19 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     .Select(value => value.GetDouble())
                     .ToArray();
 
-                return Result<double[]>.Success(data);
+                var inputTokens = ReadTokenCount(root: doc.RootElement, propertyName: "promptTokenCount");
+
+                if (inputTokens == 0
+                    && doc.RootElement.GetProperty("embedding").TryGetProperty("statistics", out var statistics))
+                {
+                    inputTokens = ReadTokenCount(statistics, "tokenCount");
+                }
+
+                return Result<GeminiResponse<double[]>>.Success(new GeminiResponse<double[]>
+                {
+                    Result = data,
+                    InputTokens = inputTokens
+                });
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -117,8 +141,53 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error generating embeddings from Gemini API");
-                return Result<double[]>.Failure(500, "Error generating embeddings from Gemini API", messageCode: "MG_SERVER_500");
+                return Result<GeminiResponse<double[]>>.Failure(500, "Error generating embeddings from Gemini API", messageCode: "MG_SERVER_500");
             }
+        }
+
+        public async Task<Result<GeminiResponse<IReadOnlyList<double[]>>>> EmbeddingsAsyncV3(
+            IReadOnlyList<string> texts,
+            string taskType = "RETRIEVAL_QUERY",
+            CancellationToken ct = default)
+        {
+            if (texts.Count == 0)
+            {
+                return Result<GeminiResponse<IReadOnlyList<double[]>>>.Success(
+                    new GeminiResponse<IReadOnlyList<double[]>>
+                    {
+                        Result = Array.Empty<double[]>(),
+                        InputTokens = 0
+                    });
+            }
+
+            var embeddingTasks = texts
+                .Select(text => EmbeddingsAsyncV2(text, taskType, ct))
+                .ToArray();
+
+            var results = await Task.WhenAll(embeddingTasks);
+
+            foreach (var result in results)
+            {
+                if (!result.IsSuccess)
+                {
+                    return Result<GeminiResponse<IReadOnlyList<double[]>>>.Failure(
+                        result.StatusCode,
+                        result.Message,
+                        result.Errors,
+                        result.MessageCode);
+                }
+            }
+
+            var embeddings = results
+                .Select(result => result.Data!.Result)
+                .ToArray();
+
+            return Result<GeminiResponse<IReadOnlyList<double[]>>>.Success(
+                new GeminiResponse<IReadOnlyList<double[]>>
+                {
+                    Result = embeddings,
+                    InputTokens = results.Sum(result => result.Data!.InputTokens)
+                });
         }
 
         public async Task<Result<string>> GenerateTextAsync(
@@ -231,7 +300,9 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
         }
 
-        public async Task<Result<string>> GenerateTextAsyncV2(GeminiRequest geminiRequest)
+        public async Task<Result<GeminiResponse<string>>> GenerateTextAsyncV2(
+            GeminiRequest geminiRequest,
+            CancellationToken ct = default)
         {
             if (geminiRequest.GenerationConfig.MaxOutputTokens > _config.GeminiMaxTokens)
             {
@@ -284,7 +355,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 var json = JsonSerializer.Serialize(requestBody, JsonOptions);
 
-                var accessToken = await GetAccessTokenAsync();
+                var accessToken = await _accessTokenProvider.GetAccessTokenAsync(ct);
 
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -309,7 +380,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         json,
                         errorBody);
 
-                    return Result<string>.Failure(
+                    return Result<GeminiResponse<string>>.Failure(
                         (int)response.StatusCode,
                         errorBody);
                 }
@@ -332,54 +403,38 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 }
 
 
-                int promptTokenCount = 0;
-                int candidatesTokenCount = 0;
-                int totalTokenCount = 0;
+                long promptTokenCount = 0;
+                long candidatesTokenCount = 0;
 
                 if (root.TryGetProperty("usageMetadata", out var usageMetadata))
                 {
-                    if (usageMetadata.TryGetProperty("promptTokenCount", out var promptToken))
-                    {
-                        promptTokenCount = promptToken.GetInt32();
-                    }
-
-                    if (usageMetadata.TryGetProperty("candidatesTokenCount", out var candidateToken))
-                    {
-                        candidatesTokenCount = candidateToken.GetInt32();
-                    }
-
-                    if (usageMetadata.TryGetProperty("totalTokenCount", out var totalToken))
-                    {
-                        totalTokenCount = totalToken.GetInt32();
-                    }
+                    promptTokenCount = ReadTokenCount(usageMetadata, "promptTokenCount");
+                    candidatesTokenCount = ReadTokenCount(usageMetadata, "candidatesTokenCount");
                 }
 
                 if (text == null)
                 {
-                    return Result<string>.Failure(500, "No text generated from Gemini API");
+                    return Result<GeminiResponse<string>>.Failure(500, "No text generated from Gemini API");
                 }
 
-                return Result<string>.Success(text);
+                return Result<GeminiResponse<string>>.Success(new GeminiResponse<string>
+                {
+                    Result = text,
+                    InputTokens = promptTokenCount,
+                    OutputTokens = candidatesTokenCount
+                });
 
             }
 
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error generating text from Gemini API");
-                return Result<string>.Failure(500, "Error generating text from Gemini API", messageCode: "MG_SERVER_500");
+                return Result<GeminiResponse<string>>.Failure(500, "Error generating text from Gemini API", messageCode: "MG_SERVER_500");
             }
 
         }
 
-        public Task<Result<ICollection<RankedRecord>>> RerankerAsync(
-            string userQuery,
-            IEnumerable<RankRecord> records,
-            CancellationToken ct)
-        {
-            return RerankerAsyncV2(userQuery, records, ct);
-        }
-
-        public async Task<Result<ICollection<RankedRecord>>> RerankerAsyncV2(
+        public async Task<Result<GeminiResponse<ICollection<RankedRecord>>>> RerankerAsyncV2(
             string userQuery,
             IEnumerable<RankRecord> records,
             CancellationToken ct)
@@ -395,14 +450,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 IgnoreRecordDetailsInResponse = false
             };
 
-            var token = await GetAccessTokenAsync();
+            var requestContent = JsonSerializer.Serialize(req, RankJsonOptions);
+
+            var token = await _accessTokenProvider.GetAccessTokenAsync(ct);
 
             using var message = new HttpRequestMessage(HttpMethod.Post, endpoint);
 
-            message.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            message.Content = JsonContent.Create(req);
+            message.Content = new StringContent(requestContent, Encoding.UTF8, "application/json");
 
             using var client = _httpClientFactory.CreateClient("gemini");
 
@@ -412,15 +468,21 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
                 response.EnsureSuccessStatusCode();
 
-                var result =
-                    await response.Content.ReadFromJsonAsync<RankResponse>(cancellationToken: ct);
+                var responseContent = await response.Content.ReadAsStringAsync(ct);
+                var result = JsonSerializer.Deserialize<RankResponse>(responseContent, RankJsonOptions);
 
                 if (result == null)
                 {
-                    return Result<ICollection<RankedRecord>>.Failure(502, "Reranker returned an empty response");
+                    return Result<GeminiResponse<ICollection<RankedRecord>>>.Failure(502, "Reranker returned an empty response");
                 }
 
-                return Result<ICollection<RankedRecord>>.Success(result.Records, 200, "Reranker success");
+                return Result<GeminiResponse<ICollection<RankedRecord>>>.Success(
+                    new GeminiResponse<ICollection<RankedRecord>>
+                    {
+                        Result = result.Records
+                    },
+                    200,
+                    "Reranker success");
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -430,14 +492,38 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
 
                 _logger.LogError(ex, "Error when reranker");
-                return Result<ICollection<RankedRecord>>.Failure(400, "Reranker fail");
+                return Result<GeminiResponse<ICollection<RankedRecord>>>.Failure(400, "Reranker fail");
             }
+        }
+
+        private static long ReadTokenCount(JsonElement root, string propertyName)
+        {
+            if (root.TryGetProperty("usageMetadata", out var usageMetadata))
+            {
+                root = usageMetadata;
+            }
+
+            if (!root.TryGetProperty(propertyName, out var tokenCount))
+            {
+                return 0;
+            }
+
+            if (tokenCount.TryGetInt64(out var value))
+            {
+                return value;
+            }
+
+            return tokenCount.TryGetDouble(out var doubleValue)
+                ? Convert.ToInt64(doubleValue)
+                : 0;
         }
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
+
+        private static readonly JsonSerializerOptions RankJsonOptions = new(JsonSerializerDefaults.Web);
     }
 }
 
