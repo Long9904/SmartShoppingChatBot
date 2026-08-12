@@ -54,7 +54,7 @@ public class UT_ProductSemanticSearch
         var fixture = new SemanticSearchFixture(emptyPoints: true);
         Filter? captured = null;
         fixture.Qdrant.Setup(service => service.HybridSearchAsync(
-                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), 40, It.IsAny<CancellationToken>()))
+                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Callback<float[], float[], Filter, int, CancellationToken>((_, _, filter, _, _) => captured = filter)
             .ReturnsAsync([]);
 
@@ -76,7 +76,7 @@ public class UT_ProductSemanticSearch
         var fixture = new SemanticSearchFixture(emptyPoints: true);
         Filter? captured = null;
         fixture.Qdrant.Setup(service => service.HybridSearchAsync(
-                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), 40, It.IsAny<CancellationToken>()))
+                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Callback<float[], float[], Filter, int, CancellationToken>((_, _, filter, _, _) => captured = filter)
             .ReturnsAsync([]);
 
@@ -90,11 +90,38 @@ public class UT_ProductSemanticSearch
     }
 
     [Fact]
+    public async Task Handle_WhenProductsAreExcluded_AddsQdrantMustNotConditionsAndDoesNotReturnThem()
+    {
+        var fixture = new SemanticSearchFixture(productCount: 3);
+        var excludedIds = new[]
+        {
+            fixture.Products[0].Id.ToString(),
+            fixture.Products[1].Id.ToString()
+        };
+        Filter? captured = null;
+        fixture.Qdrant.Setup(service => service.HybridSearchAsync(
+                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Callback<float[], float[], Filter, int, CancellationToken>((_, _, filter, _, _) => captured = filter)
+            .ReturnsAsync(fixture.Products.Select(product => SemanticSearchFixture.Point(product.Id.ToString())).ToList());
+
+        var result = await fixture.Handler.Handle(
+            fixture.Query(excludeProductIds: excludedIds),
+            CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.MustNot.Should().HaveCount(2);
+        captured.MustNot.Select(condition => condition.Field.Match.Keyword)
+            .Should().BeEquivalentTo(excludedIds);
+        result.Data.Should().ContainSingle()
+            .Which.ProductId.Should().Be(fixture.Products[2].Id.ToString());
+    }
+
+    [Fact]
     public async Task Handle_WhenQdrantPointsHaveNoValidProductIds_ReturnsEmptyWithoutRepositoryCall()
     {
         var fixture = new SemanticSearchFixture(emptyPoints: true);
         fixture.Qdrant.Setup(service => service.HybridSearchAsync(
-                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), 40, It.IsAny<CancellationToken>()))
+                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([SemanticSearchFixture.Point(null), SemanticSearchFixture.Point("not-an-object-id")]);
 
         var result = await fixture.Handler.Handle(fixture.Query(), CancellationToken.None);
@@ -113,7 +140,7 @@ public class UT_ProductSemanticSearch
         var fixture = new SemanticSearchFixture();
         var id = fixture.Products[0].Id.ToString();
         fixture.Qdrant.Setup(service => service.HybridSearchAsync(
-                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), 40, It.IsAny<CancellationToken>()))
+                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([SemanticSearchFixture.Point(id), SemanticSearchFixture.Point(id)]);
         fixture.Gemini.Setup(service => service.RerankerAsyncV2(
                 It.IsAny<string>(), It.IsAny<IEnumerable<RankRecord>>(), It.IsAny<CancellationToken>()))
@@ -132,7 +159,7 @@ public class UT_ProductSemanticSearch
         var first = fixture.Products[0];
         var second = fixture.Products[1];
         fixture.Qdrant.Setup(service => service.HybridSearchAsync(
-                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), 40, It.IsAny<CancellationToken>()))
+                It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([SemanticSearchFixture.Point(second.Id.ToString()), SemanticSearchFixture.Point(first.Id.ToString())]);
         fixture.Gemini.Setup(service => service.RerankerAsyncV2(
                 It.IsAny<string>(), It.IsAny<IEnumerable<RankRecord>>(), It.IsAny<CancellationToken>()))
@@ -241,7 +268,7 @@ public class UT_ProductSemanticSearch
                 ? new List<ScoredPoint>()
                 : Products.Select(product => Point(product.Id.ToString())).ToList();
             Qdrant.Setup(service => service.HybridSearchAsync(
-                    It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), 40, It.IsAny<CancellationToken>()))
+                    It.IsAny<float[]>(), It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(points);
             ProductRepository.Setup(repository => repository.FindAllAsync(
                     It.IsAny<Expression<Func<Product, bool>>>(),
@@ -268,14 +295,18 @@ public class UT_ProductSemanticSearch
                 Mock.Of<ILogger<ProductSemanticSearchQueryHandler>>(), Redis.Object, ProductRepository.Object);
         }
 
-        public ProductSemanticSearchQuery Query(decimal? minimum = null, decimal? maximum = null) => new()
+        public ProductSemanticSearchQuery Query(
+            decimal? minimum = null,
+            decimal? maximum = null,
+            IEnumerable<string>? excludeProductIds = null) => new()
         {
             Request = new ProductSemanticSearchRequest
             {
                 SemanticQuery = "gaming laptop",
                 TechnicalQuery = "laptop RTX",
                 MinPrice = minimum,
-                MaxPrice = maximum
+                MaxPrice = maximum,
+                ExcludeProductIds = excludeProductIds?.ToList() ?? []
             }
         };
 

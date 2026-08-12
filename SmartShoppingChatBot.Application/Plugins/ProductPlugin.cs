@@ -24,6 +24,8 @@ namespace SmartShoppingChatBot.Application.Plugins
         [Description(
             "Tìm kiếm sản phẩm mới theo nhu cầu ngôn ngữ tự nhiên khi chưa có canonical productId phù hợp. " +
             "Dùng cho xem, tìm, mua, gợi ý, tư vấn, tìm lựa chọn thay thế, nâng cấp hoặc phụ kiện. " +
+            "Khi người dùng yêu cầu sản phẩm khác, lựa chọn tiếp theo hoặc sản phẩm tương tự không trùng, " +
+            "truyền các productId đã hiển thị vào ExcludeProductIds. " +
             "Nếu sản phẩm đã có productId trong conversation context thì dùng GetProductsByIds thay vì function này.")]
         [return: Description(
           "Product search result. When IsSuccess is true and Data contains products, " +

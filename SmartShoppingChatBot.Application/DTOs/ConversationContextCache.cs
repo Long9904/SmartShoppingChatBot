@@ -46,6 +46,7 @@
     {
         public int DisplayOrder { get; init; } = 0;
         public string ProductId { get; init; } = string.Empty;
+        public string? ExternalProductId { get; init; }
         public string DisplayName { get; init; } = string.Empty;
     }
 }

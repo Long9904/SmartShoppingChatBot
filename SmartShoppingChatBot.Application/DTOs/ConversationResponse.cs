@@ -8,5 +8,7 @@
 
 
         public required string MessageResponse { get; set; }
+
+        public List<MessageProductResponse>? ProductReferences { get; set; }
     }
 }

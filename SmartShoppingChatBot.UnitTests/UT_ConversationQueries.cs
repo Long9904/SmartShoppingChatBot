@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using FluentAssertions;
 using Moq;
 using SmartShoppingChatBot.Application.Commons.Results;
+using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.GetChatHistory;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.GetCustomerConversationDetail;
 using SmartShoppingChatBot.Application.Interface;
@@ -101,7 +102,11 @@ public class UT_ConversationQueries
         result.IsSuccess.Should().BeTrue();
         result.Data!.HasMore.Should().BeTrue();
         result.Data.NextCursor.Should().Be("next-cursor");
-        result.Data.Items.Should().ContainSingle().Which.Content.Should().Be("Hello");
+        var message = result.Data.Items.Should().ContainSingle().Which;
+        message.Content.Should().Be("Hello");
+        message.ProductReferences.Should().ContainSingle()
+            .Which.ExternalId.Should().Be(fixture.ResolvedProduct.ExternalProductId);
+        message.ProductReferences[0].ProductId.Should().Be(fixture.ResolvedProduct.ProductId);
         fixture.MessageRepository.Verify(repository => repository.MessageCursorPaging(
             fixture.Conversation.Id, 7, cursor, null, null), Times.Once);
     }
@@ -186,7 +191,11 @@ public class UT_ConversationQueries
         var result = await fixture.DetailHandler.Handle(query, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data!.Items.Should().ContainSingle().Which.SenderType.Should().Be(SenderTypeEnum.ChatBot);
+        var message = result.Data!.Items.Should().ContainSingle().Which;
+        message.SenderType.Should().Be(SenderTypeEnum.ChatBot);
+        message.ProductReferences.Should().ContainSingle()
+            .Which.ExternalId.Should().Be(fixture.ResolvedProduct.ExternalProductId);
+        message.ProductReferences[0].ProductId.Should().Be(fixture.ResolvedProduct.ProductId);
         result.Data.HasMore.Should().BeTrue();
         fixture.MessageRepository.Verify(repository => repository.MessageCursorPaging(
             fixture.Conversation.Id, 9, cursor, "laptop", SenderTypeEnum.ChatBot), Times.Once);
@@ -198,10 +207,12 @@ public class UT_ConversationQueries
         public Customer Customer { get; }
         public Conversation Conversation { get; }
         public Message Message { get; }
+        public ProductResponseV2 ResolvedProduct { get; }
         public Mock<ICurrentUserService> CurrentUser { get; } = new();
         public Mock<ICustomerRepository> CustomerRepository { get; } = new();
         public Mock<IConversationRepository> ConversationRepository { get; } = new();
         public Mock<IMessageRepository> MessageRepository { get; } = new();
+        public Mock<IProductReferenceResolver> ProductReferenceResolver { get; } = new();
         public GetChatHistoryQueryHandler ChatHistoryHandler { get; }
         public GetCustomerConversationDetailQueryHandler DetailHandler { get; }
 
@@ -209,6 +220,11 @@ public class UT_ConversationQueries
         {
             Customer = TestData.Customer(Business);
             Conversation = TestData.Conversation(Business, Customer);
+            var storedProductId = ObjectId.GenerateNewId().ToString();
+            ResolvedProduct = TestData.ProductResponse(
+                storedProductId,
+                "Referenced product",
+                "external-referenced-product");
             Message = new Message
             {
                 Id = ObjectId.GenerateNewId(),
@@ -218,7 +234,16 @@ public class UT_ConversationQueries
                 SenderType = SenderTypeEnum.ChatBot,
                 ContentType = ContentTypeEnum.Text,
                 Status = MessageStatus.Completed,
-                CreatedAt = TestData.Now
+                CreatedAt = TestData.Now,
+                CacheProductReference =
+                [
+                    new ProductReference
+                    {
+                        ProductId = storedProductId,
+                        ExternalProductId = ResolvedProduct.ExternalProductId,
+                        DisplayName = ResolvedProduct.Name
+                    }
+                ]
             };
             CurrentUser.Setup(service => service.GetBusiness()).ReturnsAsync(Result<Business>.Success(Business));
             CustomerRepository.Setup(repository => repository.FindAsync(
@@ -238,10 +263,36 @@ public class UT_ConversationQueries
                     HasMore = true,
                     NextCursor = "next-cursor"
                 });
+            ProductReferenceResolver.Setup(resolver => resolver.ResolveAsync(
+                    It.IsAny<ObjectId>(),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<IEnumerable<ProductResponseV2>?>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Dictionary<string, ProductResponseV2>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [storedProductId] = ResolvedProduct
+                });
+            ProductReferenceResolver.Setup(resolver => resolver.GetInOrder(
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<IReadOnlyDictionary<string, ProductResponseV2>>()))
+                .Returns((
+                    IEnumerable<string> productIds,
+                    IReadOnlyDictionary<string, ProductResponseV2> productById) => productIds
+                    .Where(productById.ContainsKey)
+                    .Select(productId => productById[productId])
+                    .ToList());
             ChatHistoryHandler = new GetChatHistoryQueryHandler(
-                CurrentUser.Object, CustomerRepository.Object, ConversationRepository.Object, MessageRepository.Object);
+                CurrentUser.Object,
+                CustomerRepository.Object,
+                ConversationRepository.Object,
+                MessageRepository.Object,
+                ProductReferenceResolver.Object);
             DetailHandler = new GetCustomerConversationDetailQueryHandler(
-                CurrentUser.Object, CustomerRepository.Object, ConversationRepository.Object, MessageRepository.Object);
+                CurrentUser.Object,
+                CustomerRepository.Object,
+                ConversationRepository.Object,
+                MessageRepository.Object,
+                ProductReferenceResolver.Object);
         }
 
         public GetChatHistoryQuery ChatHistoryQuery() => new()

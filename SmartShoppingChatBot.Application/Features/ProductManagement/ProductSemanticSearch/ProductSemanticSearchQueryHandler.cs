@@ -116,7 +116,8 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             _logger.LogInformation("4. Build 2 vertor: {kernel} ms", sw.ElapsedMilliseconds);
             Console.WriteLine("----------------------------------");
 
-            var filter = BuildFilter(business.Data.Id, request);
+            var excludedProductIds = BuildExcludedProductIds(request.ExcludeProductIds);
+            var filter = BuildFilter(business.Data.Id, request, excludedProductIds);
 
             sw = Stopwatch.StartNew();
 
@@ -135,7 +136,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             sw = Stopwatch.StartNew();
 
-            var products = await LoadProductsAsync(points, business.Data.Id);
+            var products = await LoadProductsAsync(points, business.Data.Id, excludedProductIds);
 
             sw.Stop();
             Console.WriteLine("----------------------------------");
@@ -183,7 +184,10 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 "Product semantic search successfully.");
         }
 
-        private static Filter BuildFilter(ObjectId businessId, ProductSemanticSearchRequest request)
+        private static Filter BuildFilter(
+            ObjectId businessId,
+            ProductSemanticSearchRequest request,
+            IReadOnlySet<ObjectId> excludedProductIds)
         {
             var filter = new Filter();
 
@@ -229,17 +233,31 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 });
             }
 
+            foreach (var excludedProductId in excludedProductIds)
+            {
+                filter.MustNot.Add(new Condition
+                {
+                    Field = new FieldCondition
+                    {
+                        Key = ProductPayloadNames.ProductId,
+                        Match = new Match { Keyword = excludedProductId.ToString() }
+                    }
+                });
+            }
+
             return filter;
         }
 
         private async Task<List<Product>> LoadProductsAsync(
             IEnumerable<ScoredPoint> points,
-            ObjectId businessId)
+            ObjectId businessId,
+            IReadOnlySet<ObjectId> excludedProductIds)
         {
             var orderedIds = points
                 .Select(GetProductId)
                 .Where(x => x.HasValue)
                 .Select(x => x!.Value)
+                .Where(x => !excludedProductIds.Contains(x))
                 .Distinct()
                 .ToList();
 
@@ -259,6 +277,15 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 .Where(productById.ContainsKey)
                 .Select(id => productById[id])
                 .ToList();
+        }
+
+        private static HashSet<ObjectId> BuildExcludedProductIds(IEnumerable<string> productIds)
+        {
+            return productIds
+                .Select(id => ObjectId.TryParse(id, out var productId) ? productId : (ObjectId?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToHashSet();
         }
 
         private async Task<Result<List<Product>>> RerankAsync(
@@ -296,7 +323,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 .Select(x => productById[x.Id])
                 .ToList();
 
-            if (rankedProducts is null)
+            if (!rankedProducts.Any())
             {
                 rankedProducts = reranked.Data.Result
                 .OrderByDescending(x => x.Score)

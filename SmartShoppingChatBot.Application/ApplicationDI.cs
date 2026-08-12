@@ -3,6 +3,9 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using SmartShoppingChatBot.Application.Commons.Behaviors;
 using SmartShoppingChatBot.Application.Commons.Mapper;
+using SmartShoppingChatBot.Application.Commons.Services;
+using SmartShoppingChatBot.Application.Interface;
+
 namespace SmartShoppingChatBot.Application;
 
 public static class ApplicationDI
@@ -23,6 +26,8 @@ public static class ApplicationDI
 
         // Time zone
         services.AddSingleton<TimeProvider, VietnamTimeProvider>();
+
+        services.AddScoped<IProductReferenceResolver, ProductReferenceResolver>();
 
         return services;
     }

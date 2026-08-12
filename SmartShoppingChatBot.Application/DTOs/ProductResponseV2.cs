@@ -6,6 +6,9 @@
         [System.ComponentModel.Description("Canonical product ID. Copy this exact value when referencing the product.")]
         public string ProductId { get; set; } = string.Empty;
 
+        [System.Text.Json.Serialization.JsonPropertyName("externalProductId")]
+        public string ExternalProductId { get; set; } = string.Empty;
+
         public string ExternalProductUrl { get; set; } = string.Empty;
 
         public string Name { get; set; } = default!;
