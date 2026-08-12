@@ -27,6 +27,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         private readonly TimeProvider _time;
         private readonly IKernelChatService _kernelChatService;
         private readonly IProductReferenceCollector _productReferenceCollector;
+        private readonly IProductReferenceResolver _productReferenceResolver;
         private readonly IConversationContextService _conversationContextService;
         private readonly RedisOptions _options;
 
@@ -42,6 +43,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             ILogger<SendMessageCommandHandler> logger,
             ICurrentUserService currentUserService,
             IProductReferenceCollector productReferenceCollector,
+            IProductReferenceResolver productReferenceResolver,
             IConversationContextService conversationContextService,
             IKernelChatService kernelChatService)
 
@@ -57,6 +59,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             _logger = logger;
             _options = options.Value;
             _productReferenceCollector = productReferenceCollector;
+            _productReferenceResolver = productReferenceResolver;
             _conversationContextService = conversationContextService;
             _kernelChatService = kernelChatService;
         }
@@ -208,7 +211,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                var selectedProductReferences = selectedProductIds
+                var selectedProductReferenceCandidates = selectedProductIds
                     .Where(productById.ContainsKey)
                     .Select((productId, index) =>
                     {
@@ -219,7 +222,38 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                             DisplayOrder = index + 1,
                             DisplayName = product.DisplayName,
                             ProductId = product.ProductId,
+                            ExternalProductId = product.ExternalProductId,
                         };
+                    })
+                    .ToList();
+
+                var responseProductIds = selectedProductReferenceCandidates
+                    .Select(product => product.ProductId)
+                    .ToList();
+
+                var responseProductById = await _productReferenceResolver.ResolveAsync(
+                    business.Data.Id,
+                    responseProductIds,
+                    cacheProducts,
+                    cancellationToken);
+
+                var productListResponse = _productReferenceResolver
+                    .GetInOrder(responseProductIds, responseProductById)
+                    .Select(MessageProductResponse.FromProduct)
+                    .ToList();
+
+                var resolvedProductById = productListResponse
+                    .ToDictionary(product => product.ProductId, StringComparer.OrdinalIgnoreCase);
+
+                var selectedProductReferences = selectedProductReferenceCandidates
+                    .Select((product, index) => new CachedProductReference
+                    {
+                        DisplayOrder = index + 1,
+                        ProductId = product.ProductId,
+                        ExternalProductId = resolvedProductById.TryGetValue(product.ProductId, out var resolvedProduct)
+                            ? NormalizeExternalProductId(resolvedProduct.ExternalId)
+                            : NormalizeExternalProductId(product.ExternalProductId),
+                        DisplayName = product.DisplayName
                     })
                     .ToList();
 
@@ -229,13 +263,14 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                         return new ProductReference
                         {
                             ProductId = product.ProductId,
+                            ExternalProductId = product.ExternalProductId,
                             DisplayName = product.DisplayName
                         };
                     })
                     .ToList();
 
 
-                sw.Stop();
+
                 var gptCredits = kernelResult.InputTokens + kernelResult.OutputTokens * 6;
                 var usageLog = new UsageQuotaLog
                 {
@@ -265,6 +300,10 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
                 await _buinessQuotaRepository.UpdateAsync(businessCurrentQuota);
                 await _usageQuotaLogRepository.AddAsync(usageLog);
+
+                sw.Stop();
+                _logger.LogInformation("Total time AI reposne: {time} ms", sw.ElapsedMilliseconds);
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -311,6 +350,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     ConversationId = conversation.Id.ToString(),
                     ConversationTitle = conversation.Title,
                     MessageResponse = aiMessage.Content,
+                    ProductReferences = productListResponse
                 };
 
                 return Result<ConversationResponse>.Success(response, 200, "Kernel response success", ConversationMessageCode.Success);
@@ -352,6 +392,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 productById.TryAdd(productId, new CachedProductReference
                 {
                     ProductId = productId,
+                    ExternalProductId = product.ExternalProductId,
                     DisplayName = product.DisplayName,
                     DisplayOrder = product.DisplayOrder,
                 });
@@ -369,11 +410,19 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 productById[productId] = new CachedProductReference
                 {
                     ProductId = productId,
+                    ExternalProductId = product.ExternalProductId,
                     DisplayName = product.Name,
                 };
             }
 
             return productById;
+        }
+
+        private static string? NormalizeExternalProductId(string? externalProductId)
+        {
+            return string.IsNullOrWhiteSpace(externalProductId)
+                ? null
+                : externalProductId.Trim();
         }
 
         private async Task<Result<Customer>> GetOrCreateCustomerAsync(

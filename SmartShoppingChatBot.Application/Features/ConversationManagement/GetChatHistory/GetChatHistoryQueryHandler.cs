@@ -15,17 +15,20 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.GetCh
         private readonly ICustomerRepository _customerRepository;
         private readonly IConversationRepository _conversationRepository;
         private readonly IMessageRepository _messageRepository;
+        private readonly IProductReferenceResolver _productReferenceResolver;
 
         public GetChatHistoryQueryHandler(
             ICurrentUserService currentUserService,
             ICustomerRepository customerRepository,
             IConversationRepository conversationRepository,
-            IMessageRepository messageRepository)
+            IMessageRepository messageRepository,
+            IProductReferenceResolver productReferenceResolver)
         {
             _currentUserService = currentUserService;
             _customerRepository = customerRepository;
             _conversationRepository = conversationRepository;
             _messageRepository = messageRepository;
+            _productReferenceResolver = productReferenceResolver;
         }
 
         public async Task<Result<CursorPage<ConversationMessageResponse>>> Handle(
@@ -83,6 +86,15 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.GetCh
                 request.Limit,
                 lastCursor);
 
+            var productIds = messages.Items
+                .SelectMany(message => message.CacheProductReference ?? [])
+                .Select(product => product.ProductId);
+
+            var productById = await _productReferenceResolver.ResolveAsync(
+                businessId,
+                productIds,
+                cancellationToken: cancellationToken);
+
             var response = new CursorPage<ConversationMessageResponse>
             {
                 Items = messages.Items.Select(x => new ConversationMessageResponse
@@ -91,7 +103,13 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.GetCh
                     Content = x.Content,
                     SenderType = x.SenderType,
                     ContentType = x.ContentType,
-                    CreatedAt = x.CreatedAt
+                    CreatedAt = x.CreatedAt,
+                    ProductReferences = _productReferenceResolver
+                        .GetInOrder(
+                            (x.CacheProductReference ?? []).Select(product => product.ProductId),
+                            productById)
+                        .Select(MessageProductResponse.FromProduct)
+                        .ToList()
                 }).ToList(),
                 HasMore = messages.HasMore,
                 NextCursor = messages.NextCursor

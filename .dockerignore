@@ -31,3 +31,5 @@ docs
 artifacts
 .agents
 .env
+SmartShoppingChatBot.UnitTests/
+SmartShoppingChatBot.UnitTests

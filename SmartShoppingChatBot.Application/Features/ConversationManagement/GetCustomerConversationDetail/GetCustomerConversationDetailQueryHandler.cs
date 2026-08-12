@@ -17,17 +17,20 @@ public sealed class GetCustomerConversationDetailQueryHandler
     private readonly ICustomerRepository _customerRepository;
     private readonly IConversationRepository _conversationRepository;
     private readonly IMessageRepository _messageRepository;
+    private readonly IProductReferenceResolver _productReferenceResolver;
 
     public GetCustomerConversationDetailQueryHandler(
         ICurrentUserService currentUserService,
         ICustomerRepository customerRepository,
         IConversationRepository conversationRepository,
-        IMessageRepository messageRepository)
+        IMessageRepository messageRepository,
+        IProductReferenceResolver productReferenceResolver)
     {
         _currentUserService = currentUserService;
         _customerRepository = customerRepository;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
+        _productReferenceResolver = productReferenceResolver;
     }
 
     public async Task<Result<CursorPage<ConversationMessageResponse>>> Handle(
@@ -100,9 +103,20 @@ public sealed class GetCustomerConversationDetailQueryHandler
             filter.Search?.Trim(),
             filter.SenderType);
 
+        var productIds = messages.Items
+            .SelectMany(message => message.CacheProductReference ?? [])
+            .Select(product => product.ProductId);
+
+        var productById = await _productReferenceResolver.ResolveAsync(
+            businessId,
+            productIds,
+            cancellationToken: cancellationToken);
+
         var response = new CursorPage<ConversationMessageResponse>
         {
-            Items = messages.Items.Select(MapMessage).ToList(),
+            Items = messages.Items
+                .Select(message => MapMessage(message, productById))
+                .ToList(),
             HasMore = messages.HasMore,
             NextCursor = messages.NextCursor
         };
@@ -114,7 +128,9 @@ public sealed class GetCustomerConversationDetailQueryHandler
             MessageCodeForMessage.Success);
     }
 
-    private static ConversationMessageResponse MapMessage(Message message)
+    private ConversationMessageResponse MapMessage(
+        Message message,
+        IReadOnlyDictionary<string, ProductResponseV2> productById)
     {
         return new ConversationMessageResponse
         {
@@ -122,7 +138,13 @@ public sealed class GetCustomerConversationDetailQueryHandler
             Content = message.Content,
             SenderType = message.SenderType,
             ContentType = message.ContentType,
-            CreatedAt = message.CreatedAt
+            CreatedAt = message.CreatedAt,
+            ProductReferences = _productReferenceResolver
+                .GetInOrder(
+                    (message.CacheProductReference ?? []).Select(product => product.ProductId),
+                    productById)
+                .Select(MessageProductResponse.FromProduct)
+                .ToList()
         };
     }
 }

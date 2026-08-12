@@ -13,5 +13,7 @@ namespace SmartShoppingChatBot.Application.DTOs
         public ContentTypeEnum ContentType { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; }
+
+        public List<MessageProductResponse>? ProductReferences { get; set; }
     }
 }

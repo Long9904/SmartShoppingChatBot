@@ -1,4 +1,5 @@
 using FluentValidation;
+using MongoDB.Bson;
 
 namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSemanticSearch
 {
@@ -24,6 +25,14 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             RuleFor(x => x.Request)
                 .Must(x => !x.MinPrice.HasValue || !x.MaxPrice.HasValue || x.MinPrice <= x.MaxPrice)
                 .WithMessage("MinPrice cannot exceed MaxPrice.");
+
+            RuleFor(x => x.Request.ExcludeProductIds)
+                .NotNull().WithMessage("ExcludeProductIds is required.")
+                .Must(ids => ids.Count <= 100).WithMessage("ExcludeProductIds cannot contain more than 100 items.");
+
+            RuleForEach(x => x.Request.ExcludeProductIds)
+                .Must(id => ObjectId.TryParse(id, out _))
+                .WithMessage("Each ExcludeProductIds item must be a valid product ID.");
         }
     }
 }

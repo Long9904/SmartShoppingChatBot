@@ -187,6 +187,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     {
                         DisplayOrder = index + 1,
                         ProductId = product.ProductId,
+                        ExternalProductId = product.ExternalProductId,
                         DisplayName = product.DisplayName ?? "",
                     }).ToList();
         }
