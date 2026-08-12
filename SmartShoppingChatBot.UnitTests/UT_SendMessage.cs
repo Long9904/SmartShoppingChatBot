@@ -200,6 +200,8 @@ public class UT_SendMessage
         var fixture = new SendMessageFixture();
         var historyProductId = ObjectId.GenerateNewId().ToString();
         var currentProductId = ObjectId.GenerateNewId().ToString();
+        const string historyExternalProductId = "external-history-product";
+        const string currentExternalProductId = "external-current-product";
         fixture.Context.RecentTurns.Add(new CachedConversationTurn
         {
             TurnId = "old-turn",
@@ -213,12 +215,14 @@ public class UT_SendMessage
                     new CachedProductReference
                     {
                         ProductId = historyProductId,
+                        ExternalProductId = historyExternalProductId,
                         DisplayName = "Historical product",
                         DisplayOrder = 9
                     },
                     new CachedProductReference
                     {
                         ProductId = currentProductId,
+                        ExternalProductId = "stale-external-product",
                         DisplayName = "Stale name",
                         DisplayOrder = 8
                     }
@@ -226,7 +230,7 @@ public class UT_SendMessage
             }
         });
         fixture.ProductCollector.Setup(collector => collector.GetProducts())
-            .Returns([TestData.ProductResponse(currentProductId, "Fresh name")]);
+            .Returns([TestData.ProductResponse(currentProductId, "Fresh name", currentExternalProductId)]);
         fixture.Kernel.Setup(service => service.ChatAsync(It.IsAny<KernelChatRequest>()))
             .ReturnsAsync(Result<KernelChatResult>.Success(TestData.KernelResult(
                 selectedProductIds: [historyProductId, currentProductId, currentProductId.ToUpperInvariant(), "missing"])));
@@ -240,8 +244,15 @@ public class UT_SendMessage
         result.IsSuccess.Should().BeTrue();
         var aiMessage = messages.Single(message => message.SenderType == Domain.Enums.SenderTypeEnum.ChatBot);
         aiMessage.CacheProductReference.Should().HaveCount(2);
+        aiMessage.CacheProductReference[0].ProductId.Should().Be(historyProductId);
+        aiMessage.CacheProductReference[0].ExternalProductId.Should().Be(historyExternalProductId);
+        aiMessage.CacheProductReference[1].ProductId.Should().Be(currentProductId);
+        aiMessage.CacheProductReference[1].ExternalProductId.Should().Be(currentExternalProductId);
         aiMessage.CacheProductReference[0].DisplayName.Should().Be("Historical product");
         aiMessage.CacheProductReference[1].DisplayName.Should().Be("Fresh name");
+        result.Data!.ProductReferences.Should().ContainSingle()
+            .Which.ExternalId.Should().Be(currentExternalProductId);
+        result.Data.ProductReferences[0].ProductId.Should().Be(currentProductId);
     }
 
     [Fact]
@@ -278,6 +289,7 @@ public class UT_SendMessage
         public Mock<ICurrentUserService> CurrentUser { get; } = new();
         public Mock<IKernelChatService> Kernel { get; } = new();
         public Mock<IProductReferenceCollector> ProductCollector { get; } = new();
+        public Mock<IProductReferenceResolver> ProductReferenceResolver { get; } = new();
         public Mock<IConversationContextService> ContextService { get; } = new();
         public SendMessageCommandHandler Handler { get; }
 
@@ -300,6 +312,36 @@ public class UT_SendMessage
                 .ReturnsAsync(Result<KernelChatResult>.Success(TestData.KernelResult()));
             ProductCollector.Setup(collector => collector.GetProducts())
                 .Returns([]);
+            ProductReferenceResolver.Setup(resolver => resolver.ResolveAsync(
+                    It.IsAny<ObjectId>(),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<IEnumerable<ProductResponseV2>?>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync((
+                    ObjectId businessId,
+                    IEnumerable<string> productIds,
+                    IEnumerable<ProductResponseV2>? knownProducts,
+                    CancellationToken cancellationToken) =>
+                {
+                    var requestedIds = productIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    IReadOnlyDictionary<string, ProductResponseV2> productsById = (knownProducts ?? [])
+                        .Where(product => requestedIds.Contains(product.ProductId))
+                        .ToDictionary(
+                            product => product.ProductId,
+                            StringComparer.OrdinalIgnoreCase);
+
+                    return productsById;
+                });
+            ProductReferenceResolver.Setup(resolver => resolver.GetInOrder(
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<IReadOnlyDictionary<string, ProductResponseV2>>()))
+                .Returns((
+                    IEnumerable<string> productIds,
+                    IReadOnlyDictionary<string, ProductResponseV2> productById) => productIds
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Where(productById.ContainsKey)
+                    .Select(productId => productById[productId])
+                    .ToList());
 
             Handler = new SendMessageCommandHandler(
                 CustomerRepository.Object,
@@ -313,6 +355,7 @@ public class UT_SendMessage
                 Mock.Of<ILogger<SendMessageCommandHandler>>(),
                 CurrentUser.Object,
                 ProductCollector.Object,
+                ProductReferenceResolver.Object,
                 ContextService.Object,
                 Kernel.Object);
         }

@@ -132,9 +132,13 @@ internal static class TestData
         OutputTokens = outputTokens
     };
 
-    public static ProductResponseV2 ProductResponse(string id, string name) => new()
+    public static ProductResponseV2 ProductResponse(
+        string id,
+        string name,
+        string externalProductId = "SKU-001") => new()
     {
         ProductId = id,
+        ExternalProductId = externalProductId,
         Name = name
     };
 

@@ -21,5 +21,11 @@ namespace SmartShoppingChatBot.Application.DTOs
 
         [Description("Giá tối đa; null nếu không yêu cầu.")]
         public decimal? MaxPrice { get; init; }
+
+        [Description(
+            "Danh sách canonical productId phải loại khỏi kết quả. " +
+            "Dùng productId từ productReferences khi người dùng yêu cầu sản phẩm khác, lựa chọn tiếp theo, " +
+            "hoặc sản phẩm tương tự nhưng không muốn lặp lại các sản phẩm đã hiển thị; dùng mảng rỗng nếu không cần loại trừ.")]
+        public List<string> ExcludeProductIds { get; init; } = [];
     }
 }

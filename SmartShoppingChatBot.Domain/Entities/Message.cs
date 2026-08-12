@@ -32,6 +32,7 @@ namespace SmartShoppingChatBot.Domain.Entities
     public class ProductReference
     {
         public string ProductId { get; init; } = string.Empty;
+        public string? ExternalProductId { get; init; }
         public string DisplayName { get; init; } = string.Empty;
     }
 }
