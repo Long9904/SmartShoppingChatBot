@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
@@ -11,6 +13,8 @@ using SmartShoppingChatBot.Domain.Commons;
 namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/dashboards")]
+    [Authorize(Roles = "ADMIN")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [ApiController]
     public class DashboardController : ControllerBase
     {
@@ -21,6 +25,7 @@ namespace SmartShoppingChatBot.API.Controllers
             _mediator = mediator;
         }
         [HttpGet("subscriptions")]
+        [EndpointDescription("Get subscription dashboard data")]
         public async Task<IActionResult> Get([FromQuery] SubscriptionDashboardQuery query)
         {
             var result = await _mediator.Send(query);
@@ -29,6 +34,7 @@ namespace SmartShoppingChatBot.API.Controllers
             return StatusCode(result.StatusCode, ApiResponse<BasePaginatedList<SubscriptionDashboardResponse>>.Fail(result.Message!, result.Errors, result.MessageCode));
         }
         [HttpGet("revenue")]
+        [EndpointDescription("Get revenue dashboard data")]
         public async Task<IActionResult> GetRevenue([FromQuery] RevenueDashboardQuery query)
         {
             var result = await _mediator.Send(query);
@@ -37,6 +43,7 @@ namespace SmartShoppingChatBot.API.Controllers
             return StatusCode(result.StatusCode, ApiResponse<BasePaginatedList<RevenueDashboardResponse>>.Fail(result.Message!, result.Errors, result.MessageCode));
         }
         [HttpGet("summary")]
+        [EndpointDescription("Get summary dashboard data")]
         public async Task<IActionResult> GetSummary([FromQuery] SummaryDashboardQuery query)
         {
             var result = await _mediator.Send(query);
