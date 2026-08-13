@@ -14,6 +14,7 @@ namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/dashboards")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "internal")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class DashboardController : ControllerBase
     {
