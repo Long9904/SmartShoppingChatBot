@@ -13,9 +13,8 @@ using SmartShoppingChatBot.Domain.Commons;
 namespace SmartShoppingChatBot.API.Controllers
 {
     [Route("api/v1/dashboards")]
-    [Authorize(Roles = "ADMIN")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class DashboardController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -26,6 +25,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
         [HttpGet("subscriptions")]
         [EndpointDescription("Get subscription dashboard data")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Get([FromQuery] SubscriptionDashboardQuery query)
         {
             var result = await _mediator.Send(query);
@@ -35,6 +35,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
         [HttpGet("revenue")]
         [EndpointDescription("Get revenue dashboard data")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetRevenue([FromQuery] RevenueDashboardQuery query)
         {
             var result = await _mediator.Send(query);
@@ -44,6 +45,7 @@ namespace SmartShoppingChatBot.API.Controllers
         }
         [HttpGet("summary")]
         [EndpointDescription("Get summary dashboard data")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetSummary([FromQuery] SummaryDashboardQuery query)
         {
             var result = await _mediator.Send(query);
