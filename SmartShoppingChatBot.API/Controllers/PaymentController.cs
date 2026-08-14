@@ -63,7 +63,7 @@ namespace SmartShoppingChatBot.API.Controllers
 
         [HttpGet]
         [EndpointSummary("Admin-Get All Payments")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> GetAllPayments([FromQuery] GetPaymentQuery query)
         {
