@@ -14,7 +14,8 @@ Sắp xếp theo thứ tự ưu tiên — mục nào có dữ liệu thì khai t
 2. **Đối tượng người dùng** — giới tính, độ tuổi, nghề nghiệp, phong cách được nêu trực tiếp (vd: "dành cho nam", "phong cách công sở", "cho bé sơ sinh"...).
 3. **Nhu cầu/vấn đề sản phẩm giải quyết** — nếu mô tả nói rõ (vd: "giữ ấm khi trời lạnh", "chống nước khi đi mưa").
 4. **Đặc điểm nổi bật liên quan đến use-case** — chỉ nêu đặc điểm nào *dẫn tới* hoặc *giải thích* use-case đó, không liệt kê thông số kỹ thuật thuần túy (vd: nếu mô tả nói "vải thoáng khí, phù hợp mặc tập luyện" → giữ lại vì gắn với use-case; nhưng "RAM 8GB" thì bỏ qua vì đây là spec đã xử lý riêng).
-5. **Câu hỏi/diễn đạt tự nhiên người dùng có thể dùng** — đây là phần quan trọng nhất. Dựa trên use-case, đối tượng, và category đã xác nhận, hãy paraphrase thành các câu hỏi/tình huống tìm kiếm tự nhiên, kiểu người dùng thật sự gõ vào ô chat (vd: "đi đám cưới nên mặc gì", "áo khoác đi mưa cho nữ", "quà tặng sinh nhật cho bé trai"). **Chỉ paraphrase từ use-case/đối tượng đã có trong data, không tự bịa thêm dịp/đối tượng mới.**
+5. **Câu hỏi/diễn đạt tự nhiên người dùng có thể dùng** — đây là phần quan trọng nhất. Dựa trên use-case, đối tượng, và category đã xác nhận, hãy paraphrase thành các câu hỏi/tình huống tìm kiếm tự nhiên, kiểu người dùng thật sự gõ vào ô chat (vd: "đi đám cưới nên mặc gì", "áo khoác đi mưa cho nữ", "quà tặng sinh nhật cho bé trai"). **Chỉ paraphrase từ use-case/đối tượng đã có trong data, không tự bịa thêm dịp/đối tượng mới.**'
+6. **Danh ngắn 3-4 các sản phẩm có thể mua chung**, ví dụ Áo ba lỗ thì sẽ có Tương thích với sản phẩm: Quần sọc ngắn, mũ lưỡi trai nam, giày lê
 
 # Quy tắc bắt buộc (không đổi)
 - Không bịa use-case, đối tượng, hoặc hoàn cảnh sử dụng nếu data không nêu trực tiếp. Ví dụ: sản phẩm có "5G" không tự suy ra "phù hợp chơi game"; sản phẩm là "váy" không tự suy ra "đi tiệc" nếu mô tả không nói.

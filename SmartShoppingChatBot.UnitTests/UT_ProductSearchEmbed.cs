@@ -220,6 +220,8 @@ public class UT_ProductSemanticSearch
 
         result.Data!.Select(product => product.ProductId)
             .Should().Equal(fixture.Products[1].Id.ToString(), fixture.Products[3].Id.ToString());
+        result.Data[0].Score.Should().BeApproximately(0.99, 0.0001);
+        result.Data[1].Score.Should().BeApproximately(0.95, 0.0001);
     }
 
     [Fact]
@@ -281,8 +283,8 @@ public class UT_ProductSemanticSearch
                 .ReturnsAsync(Rerank(Products.Select(product => (product.Id.ToString(), 0.95f)).ToArray()));
 
             var mapper = new Mock<IMapper>();
-            mapper.Setup(value => value.Map<List<ProductResponseV2>>(It.IsAny<object>()))
-                .Returns((object source) => ((IEnumerable<Product>)source).Select(product => new ProductResponseV2
+            mapper.Setup(value => value.Map<List<ProductResponseV3>>(It.IsAny<object>()))
+                .Returns((object source) => ((IEnumerable<Product>)source).Select(product => new ProductResponseV3
                 {
                     ProductId = product.Id.ToString(),
                     Name = product.Name,

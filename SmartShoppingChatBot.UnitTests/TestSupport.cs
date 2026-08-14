@@ -142,6 +142,16 @@ internal static class TestData
         Name = name
     };
 
+    public static ProductResponseV3 ProductReferenceResponse(
+        string id,
+        string name,
+        string externalProductId = "SKU-001") => new()
+    {
+        ProductId = id,
+        ExternalProductId = externalProductId,
+        Name = name
+    };
+
     public static HttpContextAccessor HttpContext(string? authenticationType = null, params Claim[] claims)
     {
         var identity = new ClaimsIdentity(claims, authenticationType);

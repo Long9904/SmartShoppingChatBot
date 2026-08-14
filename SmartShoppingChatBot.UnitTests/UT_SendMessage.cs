@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using FluentAssertions;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -7,6 +8,7 @@ using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.SendMessage;
+using SmartShoppingChatBot.Application.Events;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
@@ -118,6 +120,73 @@ public class UT_SendMessage
         fixture.ContextService.Verify(service => service.SaveConversationCacheAsync(
             It.Is<ConversationContextCache>(cache => cache.RecentTurns.Count == 1),
             It.IsAny<CancellationToken>()), Times.Once);
+        fixture.Publisher.Verify(endpoint => endpoint.Publish(
+            It.Is<SearchQueryLogRequestedEvent>(message =>
+                message.UserRawQuery == command.Message
+                && message.ConversationId == savedConversation.Id.ToString()),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_MarkdownComparison_PublishesComparisonEventWithSnapshots()
+    {
+        var fixture = new SendMessageFixture();
+        var first = TestData.ProductReferenceResponse(ObjectId.GenerateNewId().ToString(), "Laptop A");
+        first.Price = "1000";
+        first.Category = "Laptop";
+        first.Score = 0.96;
+        var second = TestData.ProductReferenceResponse(ObjectId.GenerateNewId().ToString(), "Laptop B");
+        second.Price = "1200";
+        second.Category = "Laptop";
+        second.Score = 0.88;
+        fixture.ProductCollector.Setup(collector => collector.GetProducts()).Returns([first, second]);
+        fixture.Kernel.Setup(service => service.ChatAsync(It.IsAny<KernelChatRequest>()))
+            .ReturnsAsync(Result<KernelChatResult>.Success(new KernelChatResult
+            {
+                Answer = "## So sánh\n| Sản phẩm | Giá |\n|---|---:|\n| A | 1000 |\n| B | 1200 |",
+                Summary = "Comparison summary",
+                AISummaryContent = "Laptop comparison",
+                SelectedProductIds = [first.ProductId, second.ProductId],
+                ComparedProductIds = [first.ProductId, second.ProductId],
+                InteractionType = "ProductComparison",
+                TrendKeywords = [" laptop ", "LAPTOP", "laptop gaming", "laptop pin tot", "ignored"],
+                InputTokens = 10,
+                OutputTokens = 5
+            }));
+
+        var result = await fixture.Handler.Handle(fixture.Command(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        fixture.Publisher.Verify(endpoint => endpoint.Publish(
+            It.Is<ProductComparisonDetectedEvent>(message =>
+                message.Title == "So sánh"
+                && message.Products.Count == 2
+                && message.Products[0].ProductName == "Laptop A"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        fixture.Publisher.Verify(endpoint => endpoint.Publish(
+            It.Is<SearchQueryLogRequestedEvent>(message =>
+                message.ProductResults.Count == 2
+                && message.ProductResults[0].ProductScore == 0.96
+                && message.ProductResults[1].ProductScore == 0.88
+                && message.TrendKeywords != null
+                && message.TrendKeywords.SequenceEqual(new[] { "laptop", "laptop gaming", "laptop pin tot" })),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_PipeTextWithoutMarkdownSeparator_DoesNotPublishComparisonEvent()
+    {
+        var fixture = new SendMessageFixture();
+        fixture.Kernel.Setup(service => service.ChatAsync(It.IsAny<KernelChatRequest>()))
+            .ReturnsAsync(Result<KernelChatResult>.Success(TestData.KernelResult(
+                answer: "A | B | C")));
+
+        var result = await fixture.Handler.Handle(fixture.Command(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        fixture.Publisher.Verify(endpoint => endpoint.Publish(
+            It.IsAny<ProductComparisonDetectedEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -156,6 +225,20 @@ public class UT_SendMessage
         result.StatusCode.Should().Be(404);
         result.Message.Should().Be("Conversation not found");
         fixture.MessageRepository.Verify(repository => repository.AddAsync(It.IsAny<Message>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenConversationIdIsInvalid_ReturnsBadRequestWithoutQueryingMessages()
+    {
+        var fixture = new SendMessageFixture();
+
+        var result = await fixture.Handler.Handle(
+            fixture.Command(conversationId: "invalid"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        fixture.MessageRepository.Verify(repository =>
+            repository.AddAsync(It.IsAny<Message>()), Times.Never);
     }
 
     [Fact]
@@ -230,7 +313,7 @@ public class UT_SendMessage
             }
         });
         fixture.ProductCollector.Setup(collector => collector.GetProducts())
-            .Returns([TestData.ProductResponse(currentProductId, "Fresh name", currentExternalProductId)]);
+            .Returns([TestData.ProductReferenceResponse(currentProductId, "Fresh name", currentExternalProductId)]);
         fixture.Kernel.Setup(service => service.ChatAsync(It.IsAny<KernelChatRequest>()))
             .ReturnsAsync(Result<KernelChatResult>.Success(TestData.KernelResult(
                 selectedProductIds: [historyProductId, currentProductId, currentProductId.ToUpperInvariant(), "missing"])));
@@ -291,6 +374,7 @@ public class UT_SendMessage
         public Mock<IProductReferenceCollector> ProductCollector { get; } = new();
         public Mock<IProductReferenceResolver> ProductReferenceResolver { get; } = new();
         public Mock<IConversationContextService> ContextService { get; } = new();
+        public Mock<IPublishEndpoint> Publisher { get; } = new();
         public SendMessageCommandHandler Handler { get; }
 
         public SendMessageFixture(int recentTurnLimit = 8)
@@ -357,7 +441,8 @@ public class UT_SendMessage
                 ProductCollector.Object,
                 ProductReferenceResolver.Object,
                 ContextService.Object,
-                Kernel.Object);
+                Kernel.Object,
+                Publisher.Object);
         }
 
         public SendMessageCommand Command(
