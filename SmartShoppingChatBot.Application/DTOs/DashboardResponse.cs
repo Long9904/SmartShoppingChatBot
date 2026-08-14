@@ -39,4 +39,18 @@ namespace SmartShoppingChatBot.Application.DTOs
         public int TotalRevenue { get; set; }
         public int ActiveSubscriptionCount { get; set; }
     }
+
+    public class AIUsageDashboardResponse
+    {
+        public int TotalTokenUsed { get; set; }
+        public int InputTokenUsed { get; set; }
+        public int OutputTokenUsed { get; set; }
+        public int TotalMessageUsed { get; set; }
+        public List<AIUsageDashboardChartResponse> ChartData { get; set; } = new List<AIUsageDashboardChartResponse>();
+    }
+    public class AIUsageDashboardChartResponse
+    {
+        public DateOnly Date { get; set; }
+        public int TotalTokenUsed { get; set; }
+    }
 }
