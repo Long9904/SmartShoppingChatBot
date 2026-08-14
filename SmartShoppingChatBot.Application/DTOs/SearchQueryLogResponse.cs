@@ -11,6 +11,7 @@ public sealed record SearchQueryLogResponse
     public bool ZeroResult { get; init; }
     public int ResultCount { get; init; }
     public int TopKResult { get; init; }
+    public double HitRateScore { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
     public long RetrievalLatencyMilliseconds { get; init; }
     public IReadOnlyList<ProductLogSnapshotResponse> Products { get; init; } = [];
@@ -24,6 +25,7 @@ public sealed record SearchQueryLogResponse
         ZeroResult = entity.ZeroResult,
         ResultCount = entity.ResultCountNumber,
         TopKResult = entity.TopKResult,
+        HitRateScore = entity.HitRateScore ?? 0,
         CreatedAt = entity.CreatedAt,
         RetrievalLatencyMilliseconds = entity.RetrievalLatency,
         Products = entity.ProductResults.Select(product => new ProductLogSnapshotResponse
