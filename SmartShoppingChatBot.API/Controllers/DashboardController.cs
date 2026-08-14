@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.DashboardManagement.AIUsageDashboard;
 using SmartShoppingChatBot.Application.Features.DashboardManagement.RevenueDashboard;
 using SmartShoppingChatBot.Application.Features.DashboardManagement.SubscriptionsDashboard;
 using SmartShoppingChatBot.Application.Features.DashboardManagement.SummaryDashboard;
@@ -53,6 +54,16 @@ namespace SmartShoppingChatBot.API.Controllers
             if (result.IsSuccess)
                 return StatusCode(result.StatusCode, ApiResponse<SummaryResponse>.Ok(result.Data!, result.Message, result.MessageCode));
             return StatusCode(result.StatusCode, ApiResponse<SummaryResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
+        }
+        [HttpGet("ai-usage")]
+        [EndpointDescription("Get AI usage dashboard data")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> GetAIUsage([FromQuery] AIUsageDashboardQuery query)
+        {
+            var result = await _mediator.Send(query);
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<AIUsageDashboardResponse>.Ok(result.Data!, result.Message, result.MessageCode));
+            return StatusCode(result.StatusCode, ApiResponse<AIUsageDashboardResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
         }
     }
 }
