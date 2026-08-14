@@ -25,4 +25,6 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public Dictionary<string, string> MetaData { get; set; } = [];
     }
+
+
 }

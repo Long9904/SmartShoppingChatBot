@@ -15,7 +15,7 @@ using SmartShoppingChatBot.Domain.QdrantConfig;
 namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSemanticSearch
 {
     public class ProductSemanticSearchQueryHandler
-        : IRequestHandler<ProductSemanticSearchQuery, Result<List<ProductResponseV2>>>
+        : IRequestHandler<ProductSemanticSearchQuery, Result<List<ProductResponseV3>>>
     {
         private readonly ICurrentUserService _currentUserService;
         private readonly IGeminiService _geminiService;
@@ -43,21 +43,21 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             _mapper = mapper;
         }
 
-        public Task<Result<List<ProductResponseV2>>> Handle(
+        public Task<Result<List<ProductResponseV3>>> Handle(
             ProductSemanticSearchQuery query,
             CancellationToken cancellationToken)
         {
             return SearchAsync(query.Request, cancellationToken);
         }
 
-        private async Task<Result<List<ProductResponseV2>>> SearchAsync(
+        private async Task<Result<List<ProductResponseV3>>> SearchAsync(
             ProductSemanticSearchRequest request,
             CancellationToken ct)
         {
             var business = await _currentUserService.GetBusiness();
             if (!business.IsSuccess || business.Data == null)
             {
-                return Result<List<ProductResponseV2>>.Failure(
+                return Result<List<ProductResponseV3>>.Failure(
                     business.StatusCode,
                     business.Message,
                     business.Errors,
@@ -75,7 +75,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             if (!buildVectors.IsSuccess || buildVectors.Data == null)
             {
-                return Result<List<ProductResponseV2>>.Failure(
+                return Result<List<ProductResponseV3>>.Failure(
                     buildVectors.StatusCode,
                     buildVectors.Message,
                     buildVectors.Errors,
@@ -89,7 +89,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             //if (!embeddingSemantic.IsSuccess || embeddingSemantic.Data == null)
             //{
-            //    return Result<List<ProductResponseV2>>.Failure(
+            //    return Result<List<ProductResponseV3>>.Failure(
             //        embeddingSemantic.StatusCode,
             //        embeddingSemantic.Message,
             //        embeddingSemantic.Errors,
@@ -104,7 +104,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             //if (!embeddingTechnical.IsSuccess || embeddingTechnical.Data == null)
             //{
-            //    return Result<List<ProductResponseV2>>.Failure(
+            //    return Result<List<ProductResponseV3>>.Failure(
             //        embeddingTechnical.StatusCode,
             //        embeddingTechnical.Message,
             //        embeddingTechnical.Errors,
@@ -145,7 +145,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             if (products.Count == 0)
             {
-                return Result<List<ProductResponseV2>>.Success(
+                return Result<List<ProductResponseV3>>.Success(
                     [],
                     200,
                     "No matching products found.");
@@ -169,16 +169,22 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             if (!reranked.IsSuccess || reranked.Data == null)
             {
-                return Result<List<ProductResponseV2>>.Failure(
+                return Result<List<ProductResponseV3>>.Failure(
                     reranked.StatusCode,
                     reranked.Message,
                     reranked.Errors,
                     reranked.MessageCode);
             }
 
-            var responses = _mapper.Map<List<ProductResponseV2>>(reranked.Data);
+            var responses = _mapper.Map<List<ProductResponseV3>>(
+                reranked.Data.Select(item => item.Product).ToList());
 
-            return Result<List<ProductResponseV2>>.Success(
+            for (var index = 0; index < responses.Count; index++)
+            {
+                responses[index].Score = reranked.Data[index].Score;
+            }
+
+            return Result<List<ProductResponseV3>>.Success(
                 responses,
                 200,
                 "Product semantic search successfully.");
@@ -288,7 +294,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 .ToHashSet();
         }
 
-        private async Task<Result<List<Product>>> RerankAsync(
+        private async Task<Result<List<RankedProduct>>> RerankAsync(
             string query,
             IReadOnlyCollection<Product> products,
             int topK,
@@ -309,7 +315,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             var reranked = await _geminiService.RerankerAsyncV2(query, records, ct);
             if (!reranked.IsSuccess || reranked.Data == null)
             {
-                return Result<List<Product>>.Failure(
+                return Result<List<RankedProduct>>.Failure(
                     reranked.StatusCode,
                     reranked.Message,
                     reranked.Errors,
@@ -320,7 +326,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 .OrderByDescending(x => x.Score)
                 .Where(x => productById.ContainsKey(x.Id) && x.Score >= score)
                 .Take(topK)
-                .Select(x => productById[x.Id])
+                .Select(x => new RankedProduct(productById[x.Id], x.Score))
                 .ToList();
 
             if (!rankedProducts.Any())
@@ -329,12 +335,14 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 .OrderByDescending(x => x.Score)
                 .Where(x => productById.ContainsKey(x.Id))
                 .Take(topK)
-                .Select(x => productById[x.Id])
+                .Select(x => new RankedProduct(productById[x.Id], x.Score))
                 .ToList();
             }
 
-            return Result<List<Product>>.Success(rankedProducts);
+            return Result<List<RankedProduct>>.Success(rankedProducts);
         }
+
+        private sealed record RankedProduct(Product Product, double Score);
 
         private static ObjectId? GetProductId(ScoredPoint point)
         {

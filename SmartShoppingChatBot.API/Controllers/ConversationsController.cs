@@ -5,6 +5,7 @@ using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.CustomerGetConversations;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.GetChatHistory;
+using SmartShoppingChatBot.Application.Features.ConversationManagement.ReceiveConversationOrderEvent;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.SendMessage;
 using SmartShoppingChatBot.Domain.Commons;
 
@@ -79,6 +80,36 @@ namespace SmartShoppingChatBot.API.Controllers
                     result.Message!,
                     result.Errors,
                     result.MessageCode));
+        }
+
+        [HttpPost("{conversationId}/order-events")]
+        [EndpointDescription("Receives an order event from the external business system")]
+        [EndpointSummary("Receive conversation order event")]
+        public async Task<IActionResult> ReceiveOrderEvent(
+            [FromRoute] string conversationId,
+            [FromBody] ConversationOrderEventRequest request,
+            CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new ReceiveConversationOrderEventCommand
+                {
+                    ConversationId = conversationId,
+                    Event = request
+                },
+                cancellationToken);
+
+            if (result.IsSuccess)
+            {
+                return StatusCode(
+                    result.StatusCode,
+                    ApiResponse<ConversationOrderEventResponse>.Ok(
+                        result.Data!, result.Message, result.MessageCode));
+            }
+
+            return StatusCode(
+                result.StatusCode,
+                ApiResponse<ConversationOrderEventResponse>.Fail(
+                    result.Message!, result.Errors, result.MessageCode));
         }
 
 

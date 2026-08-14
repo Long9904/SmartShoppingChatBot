@@ -60,6 +60,9 @@ public static class InfrastructureDI
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IImportJobRepository, ImportJobRepository>();
         services.AddScoped<IUsageQuotaLogRepository, UsageQuotaLogRepository>();
+        services.AddScoped<IProductComparationRepository, ProductComparationRepository>();
+        services.AddScoped<IConversationOrderEventRepository, ConversationOrderEventRepository>();
+        services.AddScoped<ISearchQueryLogRepository, SearchQueryLogRepository>();
 
         return services;
     }

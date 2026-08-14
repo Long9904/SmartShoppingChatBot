@@ -29,6 +29,11 @@ namespace SmartShoppingChatBot.Application.DTOs
             "Must be empty unless interactionType is ProductComparison.")]
         public required List<string> ComparedProductIds { get; init; }
 
+        [JsonPropertyName("trendKeywords")]
+        [System.ComponentModel.Description(
+            "Short search-trend keyword phrases inferred from the user's current shopping intent, in relevance order.")]
+        public List<string>? TrendKeywords { get; init; }
+
         [JsonIgnore]
         public long InputTokens { get; set; }
 
