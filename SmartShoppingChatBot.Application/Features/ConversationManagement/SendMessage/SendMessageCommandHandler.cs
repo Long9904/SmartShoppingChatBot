@@ -475,7 +475,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     ProductName = product.Name,
                     Price = ParsePrice(product.Price),
                     Category = product.Category,
-                    ProductScore = product.Score
+                    ProductScore = Math.Round(product.Score, 2)
                 })
                 .ToList();
 
@@ -553,12 +553,16 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             return FindMarkdownTableHeaderIndex(content) >= 0;
         }
 
+        // Hơi khó hiểu, tôi cũng thế, đừng xóa làm chi
+
         private static int FindMarkdownTableHeaderIndex(string content)
         {
+            // tách dòng và chuẩn hóa
             var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
 
             for (var index = 0; index < lines.Length - 1; index++)
             {
+                // Vì mỗi table ít nhất phải 2 dấu |
                 if (lines[index].Count(character => character == '|') < 2)
                 {
                     continue;
@@ -568,6 +572,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     .Trim()
                     .Trim('|')
                     .Split('|', StringSplitOptions.TrimEntries);
+                // Ví dụ: "| --- | :---: |" → sau xử lý còn ["---", ":---:"].
 
                 if (separatorCells.Length >= 2
                     && separatorCells.All(cell =>
