@@ -33,6 +33,12 @@ public class MongoDbContext : DbContext
 
     public DbSet<UsageQuotaLog> UsageQuotaLogs { get; set; }
 
+    public DbSet<ProductComparation> ProductComparations { get; set; }
+
+    public DbSet<ConversationOrderEvent> ConversationOrderEvents { get; set; }
+
+    public DbSet<SearchQueryLog> SearchQueryLogs { get; set; }
+
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
@@ -128,6 +134,27 @@ public class MongoDbContext : DbContext
                 x.SourceType,
                 x.SourceId
             }).IsUnique();
+        });
+
+        modelBuilder.Entity<ProductComparation>(e =>
+        {
+            e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.MessageId })
+                .IsUnique();
+            e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
+        });
+
+        modelBuilder.Entity<ConversationOrderEvent>(e =>
+        {
+            e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
+        });
+        modelBuilder.Entity<SearchQueryLog>(e =>
+        {
+            e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.MessageId })
+                .IsUnique();
+            e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
         });
     }
 }

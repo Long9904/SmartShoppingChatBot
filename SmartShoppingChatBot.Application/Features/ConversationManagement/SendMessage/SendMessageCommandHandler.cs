@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
+using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,6 +9,7 @@ using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
 using SmartShoppingChatBot.Application.Commons.Options;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Events;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
@@ -29,6 +32,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         private readonly IProductReferenceCollector _productReferenceCollector;
         private readonly IProductReferenceResolver _productReferenceResolver;
         private readonly IConversationContextService _conversationContextService;
+        private readonly IPublishEndpoint _publisher;
         private readonly RedisOptions _options;
 
         public SendMessageCommandHandler(
@@ -45,7 +49,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             IProductReferenceCollector productReferenceCollector,
             IProductReferenceResolver productReferenceResolver,
             IConversationContextService conversationContextService,
-            IKernelChatService kernelChatService)
+            IKernelChatService kernelChatService,
+            IPublishEndpoint publisher)
 
         {
             _customerRepository = customerRepository;
@@ -62,6 +67,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             _productReferenceResolver = productReferenceResolver;
             _conversationContextService = conversationContextService;
             _kernelChatService = kernelChatService;
+            _publisher = publisher;
         }
 
         public async Task<Result<ConversationResponse>> Handle(
@@ -106,8 +112,6 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             {
                 var createTime = _time.GetUtcNow();
 
-                await _unitOfWork.BeginTransactionAsync(cancellationToken);
-
                 // 1. Create new or load conversation
 
                 if (string.IsNullOrEmpty(request.ConversationId) || request.ConversationId == null)
@@ -128,8 +132,18 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 }
                 else
                 {
+                    if (!ObjectId.TryParse(request.ConversationId, out var conversationId))
+                    {
+                        return Result<ConversationResponse>.Failure(
+                            400,
+                            "Invalid conversation ID.",
+                            messageCode: ConversationMessageCode.InvalidId);
+                    }
+
                     conversation = await _conversationRepository.FindAsync(x =>
-                    x.Id == ObjectId.Parse(request.ConversationId));
+                        x.Id == conversationId
+                        && x.BusinessId == business.Data.Id
+                        && x.CustomerId == customer.Data!.Id);
 
                     if (conversation == null) return Result<ConversationResponse>
                             .Failure(404, "Conversation not found", null, ConversationMessageCode.NotFound);
@@ -185,7 +199,6 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 var kernelResult = sematicKernelResponse.Data!;
                 var responseTime = _time.GetUtcNow();
 
-                _logger.LogInformation($"{kernelResult.ComparedProductIds.ToArray()}");
                 // 4. Build AI response
                 var aiMessage = new Message
                 {
@@ -200,6 +213,9 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 };
 
                 var cacheProducts = _productReferenceCollector.GetProducts();
+                var cachedProductDetails = cacheProducts
+                    .Select(product => product.ToProductResponseV2())
+                    .ToList();
 
                 var productById = BuildAvailableProductReferences(
                     cacheProducts,
@@ -234,7 +250,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 var responseProductById = await _productReferenceResolver.ResolveAsync(
                     business.Data.Id,
                     responseProductIds,
-                    cacheProducts,
+                    cachedProductDetails,
                     cancellationToken);
 
                 var productListResponse = _productReferenceResolver
@@ -277,7 +293,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     BillableTokens = gptCredits,
                     OutputTokens = kernelResult.OutputTokens,
                     InputTokens = kernelResult.InputTokens,
-                    CreatedAt = DateTimeOffset.UtcNow,
+                    CreatedAt = _time.GetUtcNow(),
                     Id = ObjectId.GenerateNewId(),
                     BusinessId = business.Data.Id,
                     BusinessQuotaId = businessCurrentQuota.Id,
@@ -304,13 +320,25 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 sw.Stop();
                 _logger.LogInformation("Total time AI reposne: {time} ms", sw.ElapsedMilliseconds);
 
+                await _unitOfWork.BeginTransactionAsync(cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-                // 5. Build turn cache to save orther context to redis
-                var turnCreateTime = _time.GetUtcNow();
+                await PublishAnalyticsEventsAsync(
+                    business.Data.Id,
+                    customer.Data!.Id,
+                    conversation.Id,
+                    userMessage.Id,
+                    aiMessage,
+                    request.Message,
+                    kernelResult,
+                    cacheProducts,
+                    productListResponse,
+                    sw.ElapsedMilliseconds,
+                    cancellationToken);
 
+                // 5. Build turn cache to save orther context to redis
                 var turn = new CachedConversationTurn
                 {
                     TurnId = userMessage.Id.ToString(),
@@ -368,7 +396,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         }
 
         private static Dictionary<string, CachedProductReference> BuildAvailableProductReferences(
-            IEnumerable<ProductResponseV2> currentProducts,
+            IEnumerable<ProductResponseV3> currentProducts,
             ConversationContextCache conversationContext)
         {
 
@@ -423,6 +451,177 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             return string.IsNullOrWhiteSpace(externalProductId)
                 ? null
                 : externalProductId.Trim();
+        }
+
+        private async Task PublishAnalyticsEventsAsync(
+            ObjectId businessId,
+            ObjectId customerId,
+            ObjectId conversationId,
+            ObjectId queryMessageId,
+            Message aiMessage,
+            string rawQuery,
+            KernelChatResult kernelResult,
+            IReadOnlyCollection<ProductResponseV3> retrievedProducts,
+            IReadOnlyCollection<MessageProductResponse> selectedProducts,
+            long retrievalLatency,
+            CancellationToken cancellationToken)
+        {
+            var searchProducts = retrievedProducts
+                .Where(product => ObjectId.TryParse(product.ProductId, out _))
+                .DistinctBy(product => product.ProductId, StringComparer.OrdinalIgnoreCase)
+                .Select(product => new SearchQueryProductSnapshot
+                {
+                    ProductId = product.ProductId,
+                    ProductName = product.Name,
+                    Price = ParsePrice(product.Price),
+                    Category = product.Category,
+                    ProductScore = Math.Round(product.Score, 2)
+                })
+                .ToList();
+
+            await _publisher.Publish(new SearchQueryLogRequestedEvent
+            {
+                BusinessId = businessId.ToString(),
+                ConversationId = conversationId.ToString(),
+                MessageId = queryMessageId.ToString(),
+                UserRawQuery = rawQuery,
+                TrendKeywords = kernelResult.TrendKeywords?
+                    .Where(keyword => !string.IsNullOrWhiteSpace(keyword))
+                    .Select(keyword => keyword.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Take(3)
+                    .ToList(),
+                CreatedAt = aiMessage.CreatedAt,
+                RetrievalLatency = retrievalLatency,
+                TopKResult = selectedProducts.Count,
+                ProductResults = searchProducts
+            }, cancellationToken);
+
+            if (!ContainsMarkdownTable(aiMessage.Content))
+            {
+                return;
+            }
+
+            var comparedProductIds = kernelResult.ComparedProductIds
+                .Concat(kernelResult.SelectedProductIds)
+                .Where(productId => ObjectId.TryParse(productId?.Trim(), out _))
+                .Select(productId => productId.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (comparedProductIds.Count < 2)
+            {
+                return;
+            }
+
+            var comparedProductById = await _productReferenceResolver.ResolveAsync(
+                businessId,
+                comparedProductIds,
+                retrievedProducts.Select(product => product.ToProductResponseV2()),
+                cancellationToken);
+            var comparedProducts = _productReferenceResolver
+                .GetInOrder(comparedProductIds, comparedProductById)
+                .Take(10)
+                .ToList();
+
+            if (comparedProducts.Count < 2)
+            {
+                return;
+            }
+
+            await _publisher.Publish(new ProductComparisonDetectedEvent
+            {
+                BusinessId = businessId.ToString(),
+                ConversationId = conversationId.ToString(),
+                MessageId = aiMessage.Id.ToString(),
+                CustomerId = customerId.ToString(),
+                CreatedAt = aiMessage.CreatedAt,
+                Title = ExtractMarkdownTableTitle(aiMessage.Content),
+                Summary = aiMessage.SummaryContent,
+                Products = comparedProducts.Select(product => new ComparedProductSnapshot
+                {
+                    ProductId = product.ProductId,
+                    ProductName = product.Name,
+                    Price = ParsePrice(product.Price),
+                    Category = product.Category
+                }).ToList()
+            }, cancellationToken);
+        }
+
+        private static bool ContainsMarkdownTable(string content)
+        {
+            return FindMarkdownTableHeaderIndex(content) >= 0;
+        }
+
+        // Hơi khó hiểu, tôi cũng thế, đừng xóa làm chi
+
+        private static int FindMarkdownTableHeaderIndex(string content)
+        {
+            // tách dòng và chuẩn hóa
+            var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+
+            for (var index = 0; index < lines.Length - 1; index++)
+            {
+                // Vì mỗi table ít nhất phải 2 dấu |
+                if (lines[index].Count(character => character == '|') < 2)
+                {
+                    continue;
+                }
+
+                var separatorCells = lines[index + 1]
+                    .Trim()
+                    .Trim('|')
+                    .Split('|', StringSplitOptions.TrimEntries);
+                // Ví dụ: "| --- | :---: |" → sau xử lý còn ["---", ":---:"].
+
+                if (separatorCells.Length >= 2
+                    && separatorCells.All(cell =>
+                    {
+                        var value = cell.Trim().TrimStart(':').TrimEnd(':');
+                        return value.Length >= 3 && value.All(character => character == '-');
+                    }))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        private static string? ExtractMarkdownTableTitle(string content)
+        {
+            var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+            var tableIndex = FindMarkdownTableHeaderIndex(content);
+            if (tableIndex <= 0)
+            {
+                return null;
+            }
+
+            return lines
+                .Take(tableIndex)
+                .Reverse()
+                .Select(line => line.Trim().TrimStart('#').Trim())
+                .FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
+        }
+
+        private static decimal ParsePrice(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return 0;
+            }
+
+            var numericValue = new string(value
+                .Trim()
+                .TakeWhile(character => char.IsDigit(character)
+                    || character is ' ' or '.' or ',' or '-' or '+')
+                .ToArray())
+                .Trim();
+
+            return decimal.TryParse(numericValue, NumberStyles.Number, CultureInfo.CurrentCulture, out var price)
+                || decimal.TryParse(numericValue, NumberStyles.Number, CultureInfo.InvariantCulture, out price)
+                    ? price
+                    : 0;
         }
 
         private async Task<Result<Customer>> GetOrCreateCustomerAsync(

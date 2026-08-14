@@ -5,6 +5,9 @@ using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.GetChatHistory;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.GetCustomerConversationDetail;
+using SmartShoppingChatBot.Application.Features.ConversationManagement.GetConversationOrderEvents;
+using SmartShoppingChatBot.Application.Features.ConversationManagement.GetConversationProductComparisons;
+using SmartShoppingChatBot.Application.Features.ConversationManagement.GetConversationSearchQueryLogs;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
@@ -201,6 +204,145 @@ public class UT_ConversationQueries
             fixture.Conversation.Id, 9, cursor, "laptop", SenderTypeEnum.ChatBot), Times.Once);
     }
 
+    [Fact]
+    public async Task GetConversationOrderEvents_ValidRequest_PassesCursorAndMapsPage()
+    {
+        var fixture = new ConversationQueryFixture();
+        var cursor = ObjectId.GenerateNewId();
+
+        var result = await fixture.OrderEventsHandler.Handle(
+            new GetConversationOrderEventsQuery
+            {
+                CustomerExternalId = fixture.Customer.CustomerExternalId,
+                ConversationId = fixture.Conversation.Id.ToString(),
+                Filter = new GetConversationOrderEventsFilter
+                {
+                    LastCursor = cursor.ToString(),
+                    Limit = 7
+                }
+            },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Items.Should().ContainSingle()
+            .Which.ExternalOrderId.Should().Be("ORDER-001");
+        result.Data.HasMore.Should().BeTrue();
+        result.Data.NextCursor.Should().Be("order-next-cursor");
+        fixture.ConversationOrderEventRepository.Verify(repository => repository.CursorPagingAsync(
+            fixture.Business.Id,
+            fixture.Conversation.Id,
+            7,
+            cursor,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetConversationOrderEvents_InvalidCursor_ReturnsBadRequestWithoutRepositoryQuery()
+    {
+        var fixture = new ConversationQueryFixture();
+
+        var result = await fixture.OrderEventsHandler.Handle(
+            new GetConversationOrderEventsQuery
+            {
+                CustomerExternalId = fixture.Customer.CustomerExternalId,
+                ConversationId = fixture.Conversation.Id.ToString(),
+                Filter = new GetConversationOrderEventsFilter { LastCursor = "invalid" }
+            },
+            CancellationToken.None);
+
+        result.StatusCode.Should().Be(400);
+        fixture.ConversationOrderEventRepository.Verify(repository => repository.CursorPagingAsync(
+            It.IsAny<ObjectId>(),
+            It.IsAny<ObjectId>(),
+            It.IsAny<int>(),
+            It.IsAny<ObjectId?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetConversationProductComparisons_ValidRequest_ReturnsIndependentCursorPage()
+    {
+        var fixture = new ConversationQueryFixture();
+        var cursor = ObjectId.GenerateNewId();
+
+        var result = await fixture.ProductComparisonsHandler.Handle(
+            new GetConversationProductComparisonsQuery
+            {
+                CustomerExternalId = fixture.Customer.CustomerExternalId,
+                ConversationId = fixture.Conversation.Id.ToString(),
+                Filter = new GetConversationProductComparisonsFilter
+                {
+                    LastCursor = cursor.ToString(),
+                    Limit = 5
+                }
+            },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Items.Should().ContainSingle()
+            .Which.MessageId.Should().Be(fixture.Message.Id.ToString());
+        result.Data.NextCursor.Should().Be("comparison-next-cursor");
+        fixture.ProductComparationRepository.Verify(repository => repository.CursorPagingAsync(
+            fixture.Business.Id,
+            fixture.Conversation.Id,
+            5,
+            cursor,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetConversationSearchQueryLogs_ValidRequest_ReturnsIndependentCursorPage()
+    {
+        var fixture = new ConversationQueryFixture();
+        var cursor = ObjectId.GenerateNewId();
+
+        var result = await fixture.SearchQueryLogsHandler.Handle(
+            new GetConversationSearchQueryLogsQuery
+            {
+                CustomerExternalId = fixture.Customer.CustomerExternalId,
+                ConversationId = fixture.Conversation.Id.ToString(),
+                Filter = new GetConversationSearchQueryLogsFilter
+                {
+                    LastCursor = cursor.ToString(),
+                    Limit = 6
+                }
+            },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Items.Should().ContainSingle()
+            .Which.UserRawQuery.Should().Be("laptop");
+        result.Data.NextCursor.Should().Be("search-log-next-cursor");
+        fixture.SearchQueryLogRepository.Verify(repository => repository.CursorPagingAsync(
+            fixture.Business.Id,
+            fixture.Conversation.Id,
+            6,
+            cursor,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void ConversationAnalyticsValidators_InvalidCursors_AreRejected()
+    {
+        var productResult = new GetConversationProductComparisonsQueryValidator().Validate(
+            new GetConversationProductComparisonsQuery
+            {
+                CustomerExternalId = "customer-1",
+                ConversationId = ObjectId.GenerateNewId().ToString(),
+                Filter = new GetConversationProductComparisonsFilter { LastCursor = "invalid" }
+            });
+        var searchResult = new GetConversationSearchQueryLogsQueryValidator().Validate(
+            new GetConversationSearchQueryLogsQuery
+            {
+                CustomerExternalId = "customer-1",
+                ConversationId = ObjectId.GenerateNewId().ToString(),
+                Filter = new GetConversationSearchQueryLogsFilter { LastCursor = "invalid" }
+            });
+
+        productResult.IsValid.Should().BeFalse();
+        searchResult.IsValid.Should().BeFalse();
+    }
+
     private sealed class ConversationQueryFixture
     {
         public Business Business { get; } = TestData.Business();
@@ -213,8 +355,14 @@ public class UT_ConversationQueries
         public Mock<IConversationRepository> ConversationRepository { get; } = new();
         public Mock<IMessageRepository> MessageRepository { get; } = new();
         public Mock<IProductReferenceResolver> ProductReferenceResolver { get; } = new();
+        public Mock<IProductComparationRepository> ProductComparationRepository { get; } = new();
+        public Mock<IConversationOrderEventRepository> ConversationOrderEventRepository { get; } = new();
+        public Mock<ISearchQueryLogRepository> SearchQueryLogRepository { get; } = new();
         public GetChatHistoryQueryHandler ChatHistoryHandler { get; }
         public GetCustomerConversationDetailQueryHandler DetailHandler { get; }
+        public GetConversationOrderEventsQueryHandler OrderEventsHandler { get; }
+        public GetConversationProductComparisonsQueryHandler ProductComparisonsHandler { get; }
+        public GetConversationSearchQueryLogsQueryHandler SearchQueryLogsHandler { get; }
 
         public ConversationQueryFixture()
         {
@@ -281,12 +429,96 @@ public class UT_ConversationQueries
                     .Where(productById.ContainsKey)
                     .Select(productId => productById[productId])
                     .ToList());
+            ProductComparationRepository.Setup(repository => repository.CursorPagingAsync(
+                    It.IsAny<ObjectId>(),
+                    It.IsAny<ObjectId>(),
+                    It.IsAny<int>(),
+                    It.IsAny<ObjectId?>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CursorPage<ProductComparation>
+                {
+                    Items =
+                    [
+                        new ProductComparation
+                        {
+                            Id = ObjectId.GenerateNewId(),
+                            BusinessId = Business.Id,
+                            ConversationId = Conversation.Id,
+                            MessageId = Message.Id,
+                            CustomerId = Customer.Id,
+                            CreatedAt = TestData.Now
+                        }
+                    ],
+                    HasMore = true,
+                    NextCursor = "comparison-next-cursor"
+                });
+            ConversationOrderEventRepository.Setup(repository => repository.CursorPagingAsync(
+                    It.IsAny<ObjectId>(),
+                    It.IsAny<ObjectId>(),
+                    It.IsAny<int>(),
+                    It.IsAny<ObjectId?>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CursorPage<ConversationOrderEvent>
+                {
+                    Items =
+                    [
+                        new ConversationOrderEvent
+                        {
+                            Id = ObjectId.GenerateNewId(),
+                            BusinessId = Business.Id,
+                            ConversationId = Conversation.Id,
+                            ExternalOrderId = "ORDER-001",
+                            Status = ConversationOrderEventStatus.Success,
+                            CreatedAt = TestData.Now
+                        }
+                    ],
+                    HasMore = true,
+                    NextCursor = "order-next-cursor"
+                });
+            SearchQueryLogRepository.Setup(repository => repository.CursorPagingAsync(
+                    It.IsAny<ObjectId>(),
+                    It.IsAny<ObjectId>(),
+                    It.IsAny<int>(),
+                    It.IsAny<ObjectId?>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CursorPage<SearchQueryLog>
+                {
+                    Items =
+                    [
+                        new SearchQueryLog
+                        {
+                            Id = ObjectId.GenerateNewId(),
+                            BusinessId = Business.Id,
+                            ConversationId = Conversation.Id,
+                            MessageId = Message.Id,
+                            UserRawQuery = "laptop",
+                            CreatedAt = TestData.Now
+                        }
+                    ],
+                    HasMore = true,
+                    NextCursor = "search-log-next-cursor"
+                });
             ChatHistoryHandler = new GetChatHistoryQueryHandler(
                 CurrentUser.Object,
                 CustomerRepository.Object,
                 ConversationRepository.Object,
                 MessageRepository.Object,
                 ProductReferenceResolver.Object);
+            OrderEventsHandler = new GetConversationOrderEventsQueryHandler(
+                CurrentUser.Object,
+                CustomerRepository.Object,
+                ConversationRepository.Object,
+                ConversationOrderEventRepository.Object);
+            ProductComparisonsHandler = new GetConversationProductComparisonsQueryHandler(
+                CurrentUser.Object,
+                CustomerRepository.Object,
+                ConversationRepository.Object,
+                ProductComparationRepository.Object);
+            SearchQueryLogsHandler = new GetConversationSearchQueryLogsQueryHandler(
+                CurrentUser.Object,
+                CustomerRepository.Object,
+                ConversationRepository.Object,
+                SearchQueryLogRepository.Object);
             DetailHandler = new GetCustomerConversationDetailQueryHandler(
                 CurrentUser.Object,
                 CustomerRepository.Object,
