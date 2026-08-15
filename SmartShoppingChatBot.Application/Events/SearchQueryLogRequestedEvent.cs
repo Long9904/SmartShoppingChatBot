@@ -12,6 +12,8 @@ public record SearchQueryLogRequestedEvent
 
     public List<string>? TrendKeywords { get; init; }
 
+    public string? InteractionType { get; init; }
+
     public required DateTimeOffset CreatedAt { get; init; }
 
     public long RetrievalLatency { get; init; }

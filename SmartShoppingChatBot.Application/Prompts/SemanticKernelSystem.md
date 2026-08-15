@@ -154,8 +154,11 @@ Lặp nguyên khối trên cho từng sản phẩm. Không đưa action `+` vào
 | Thông số chính | Thông số A                                           | Thông số B                                           |
 | Tồn kho        | Tồn kho A                                            | Tồn kho B                                            |
 | Tiêu chí thứ N | N của A                                              | N của B                                              |
-```
 
+- Nên chọn mẫu nào: lí do
+- Liệt kê 2-4 lí do
+- Có thể chọn mẫu khác nếu: lí do chọn mẫu khác
+```
 ## 5. Output bắt buộc
 
 Luôn trả đúng một JSON object có đủ bảy field sau và không thêm field khác:

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.DashboardManagement.AIUsageDashboard;
+using SmartShoppingChatBot.Application.Features.DashboardManagement.BusinessDashboard;
 using SmartShoppingChatBot.Application.Features.DashboardManagement.RevenueDashboard;
 using SmartShoppingChatBot.Application.Features.DashboardManagement.SubscriptionsDashboard;
 using SmartShoppingChatBot.Application.Features.DashboardManagement.SummaryDashboard;
@@ -63,7 +64,21 @@ namespace SmartShoppingChatBot.API.Controllers
             var result = await _mediator.Send(query);
             if (result.IsSuccess)
                 return StatusCode(result.StatusCode, ApiResponse<AIUsageDashboardResponse>.Ok(result.Data!, result.Message, result.MessageCode));
-            return StatusCode(result.StatusCode, ApiResponse<AIUsageDashboardResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
+                return StatusCode(result.StatusCode, ApiResponse<AIUsageDashboardResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
+        }
+
+        [HttpGet("business")]
+        [EndpointDescription("Get business chatbot analytics dashboard data")]
+        [Authorize(Roles = "BUSINESS_OWNER,CATALOG_TEAM")]
+        public async Task<IActionResult> GetBusinessDashboard(
+            [FromQuery] BusinessDashboardQuery query,
+            CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(query, cancellationToken);
+            if (result.IsSuccess)
+                return StatusCode(result.StatusCode, ApiResponse<BusinessDashboardResponse>.Ok(result.Data!, result.Message, result.MessageCode));
+
+            return StatusCode(result.StatusCode, ApiResponse<BusinessDashboardResponse>.Fail(result.Message!, result.Errors, result.MessageCode));
         }
     }
 }

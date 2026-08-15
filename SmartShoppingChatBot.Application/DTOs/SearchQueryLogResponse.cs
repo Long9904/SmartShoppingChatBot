@@ -8,6 +8,7 @@ public sealed record SearchQueryLogResponse
     public required string MessageId { get; init; }
     public string? UserRawQuery { get; init; }
     public IReadOnlyList<string>? TrendKeywords { get; init; }
+    public string? InteractionType { get; init; }
     public bool ZeroResult { get; init; }
     public int ResultCount { get; init; }
     public int TopKResult { get; init; }
@@ -22,6 +23,7 @@ public sealed record SearchQueryLogResponse
         MessageId = entity.MessageId.ToString(),
         UserRawQuery = entity.UserRawQuery,
         TrendKeywords = entity.TrendKeywords,
+        InteractionType = entity.InteractionType,
         ZeroResult = entity.ZeroResult,
         ResultCount = entity.ResultCountNumber,
         TopKResult = entity.TopKResult,

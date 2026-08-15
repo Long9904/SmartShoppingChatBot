@@ -168,6 +168,7 @@ public class UT_SendMessage
                 message.ProductResults.Count == 2
                 && message.ProductResults[0].ProductScore == 0.96
                 && message.ProductResults[1].ProductScore == 0.88
+                && message.InteractionType == "ProductComparison"
                 && message.TrendKeywords != null
                 && message.TrendKeywords.SequenceEqual(new[] { "laptop", "laptop gaming", "laptop pin tot" })),
             It.IsAny<CancellationToken>()), Times.Once);
