@@ -2,15 +2,18 @@ using SmartShoppingChatBot.Domain.Enums;
 
 namespace SmartShoppingChatBot.Application.DTOs;
 
-public sealed class ConversationOrderEventRequest
+public sealed class RegisterConversationOrderRequest
 {
-    public string? ExternalOrderId { get; init; }
-
-    public ConversationOrderEventStatus Status { get; init; }
+    public string ExternalOrderId { get; init; } = string.Empty;
 
     public decimal Amount { get; init; }
 
     public List<ProductOrderSnapshotRequest> Products { get; init; } = [];
+}
+
+public sealed class UpdateConversationOrderStatusRequest
+{
+    public ConversationOrderEventStatus Status { get; init; }
 }
 
 public sealed class ProductOrderSnapshotRequest
