@@ -37,7 +37,6 @@ public class VerifyAccountCommandHandler : IRequestHandler<VerifyAccountCommand,
     public async Task<Result<bool>> Handle(VerifyAccountCommand request, CancellationToken cancellationToken)
     {
         var tokenHash = TokenHelper.BuildHashToken(request.Token);
-        Console.WriteLine(tokenHash);
         // Check if the token exists and is valid
         var existingToken = await _tokenRepository.FindAsync(t => t.TokenValue == tokenHash && t.Type == TokenType.EMAIL_VERIFICATION);
 
