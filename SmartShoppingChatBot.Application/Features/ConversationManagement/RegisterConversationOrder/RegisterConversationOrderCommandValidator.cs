@@ -1,30 +1,25 @@
 using FluentValidation;
 using MongoDB.Bson;
-using SmartShoppingChatBot.Domain.Enums;
 
-namespace SmartShoppingChatBot.Application.Features.ConversationManagement.ReceiveConversationOrderEvent;
+namespace SmartShoppingChatBot.Application.Features.ConversationManagement.RegisterConversationOrder;
 
-public sealed class ReceiveConversationOrderEventCommandValidator
-    : AbstractValidator<ReceiveConversationOrderEventCommand>
+public sealed class RegisterConversationOrderCommandValidator
+    : AbstractValidator<RegisterConversationOrderCommand>
 {
-    public ReceiveConversationOrderEventCommandValidator()
+    public RegisterConversationOrderCommandValidator()
     {
         RuleFor(command => command.ConversationId)
             .Must(id => ObjectId.TryParse(id, out _))
             .WithMessage("Conversation ID is invalid.");
 
-        RuleFor(command => command.Event.ExternalOrderId)
+        RuleFor(command => command.Order.ExternalOrderId)
             .NotEmpty()
             .MaximumLength(100);
 
-        RuleFor(command => command.Event.Status)
-            .NotEqual(ConversationOrderEventStatus.None)
-            .WithMessage("Order event status is required.");
-
-        RuleFor(command => command.Event.Amount)
+        RuleFor(command => command.Order.Amount)
             .GreaterThanOrEqualTo(0);
 
-        RuleForEach(command => command.Event.Products).ChildRules(product =>
+        RuleForEach(command => command.Order.Products).ChildRules(product =>
         {
             product.RuleFor(item => item.ExternalProductId)
                 .NotEmpty()

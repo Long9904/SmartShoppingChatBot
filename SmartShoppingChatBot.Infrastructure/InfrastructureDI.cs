@@ -62,6 +62,7 @@ public static class InfrastructureDI
         services.AddScoped<IUsageQuotaLogRepository, UsageQuotaLogRepository>();
         services.AddScoped<IProductComparationRepository, ProductComparationRepository>();
         services.AddScoped<IConversationOrderEventRepository, ConversationOrderEventRepository>();
+        services.AddScoped<IConversationOrderRepository, ConversationOrderRepository>();
         services.AddScoped<ISearchQueryLogRepository, SearchQueryLogRepository>();
 
         return services;

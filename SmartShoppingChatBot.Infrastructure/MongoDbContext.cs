@@ -37,6 +37,8 @@ public class MongoDbContext : DbContext
 
     public DbSet<ConversationOrderEvent> ConversationOrderEvents { get; set; }
 
+    public DbSet<ConversationOrder> ConversationOrders { get; set; }
+
     public DbSet<SearchQueryLog> SearchQueryLogs { get; set; }
 
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
@@ -147,6 +149,12 @@ public class MongoDbContext : DbContext
         modelBuilder.Entity<ConversationOrderEvent>(e =>
         {
             e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
+        });
+        modelBuilder.Entity<ConversationOrder>(e =>
+        {
+            e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.BusinessId, e.ExternalOrderId }).IsUnique();
             e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
         });
         modelBuilder.Entity<SearchQueryLog>(e =>
