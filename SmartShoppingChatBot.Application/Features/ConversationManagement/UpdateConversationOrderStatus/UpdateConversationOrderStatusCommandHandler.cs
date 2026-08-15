@@ -34,9 +34,11 @@ public sealed class UpdateConversationOrderStatusCommandHandler(
         }
 
         var externalOrderId = request.ExternalOrderId.Trim();
+
         var order = await orderRepository.FindAsync(item =>
             item.BusinessId == businessResult.Data.Id
             && item.ExternalOrderId == externalOrderId);
+
         if (order is null)
         {
             logger.LogWarning(
