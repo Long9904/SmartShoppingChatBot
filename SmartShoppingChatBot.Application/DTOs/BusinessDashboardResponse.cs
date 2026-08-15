@@ -9,7 +9,8 @@ public sealed class BusinessDashboardResponse
     public int TotalKnowledgeDocuments { get; init; }
     public int TotalChatSessions { get; init; }
     public int TotalChatMessages { get; init; }
-    public int SuccessfulOrderConversations { get; init; }
+    public int TotalOrders { get; init; }
+    public int PaidOrders { get; init; }
     public double ConversionRate { get; init; }
     public double? AverageRetrievalLatencyMilliseconds { get; init; }
     public double? AverageSearchHitRatePercentage { get; init; }

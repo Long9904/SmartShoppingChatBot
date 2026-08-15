@@ -162,6 +162,7 @@ public class MongoDbContext : DbContext
             e.HasKey(e => e.Id);
             e.HasIndex(e => new { e.BusinessId, e.ExternalOrderId }).IsUnique();
             e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
+            e.HasIndex(e => new { e.BusinessId, e.CreatedAt, e.Status });
         });
         modelBuilder.Entity<SearchQueryLog>(e =>
         {
