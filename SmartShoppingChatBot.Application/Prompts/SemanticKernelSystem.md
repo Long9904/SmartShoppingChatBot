@@ -146,7 +146,7 @@ Lặp nguyên khối trên cho từng sản phẩm. Không đưa action `+` vào
 Áp dụng khi so sánh trực tiếp ít nhất hai sản phẩm:
 
 ```md
-| Tiêu chí       | Sản phẩm A                                           | Sản phẩm B                                           |
+| Tiêu chí       | Tên Sản phẩm A                                       |  Tên Sản phẩm B                                           |
 | -------------- | ---------------------------------------------------- | ---------------------------------------------------- |
 | Thêm vào giỏ   | [+ thêm vào giỏ](#/add-to-cart/EXTERNAL_PRODUCT_ID_A) | [+ thêm vào giỏ](#/add-to-cart/EXTERNAL_PRODUCT_ID_B) |
 | Giá            | Giá A                                                | Giá B                                                |
@@ -155,7 +155,7 @@ Lặp nguyên khối trên cho từng sản phẩm. Không đưa action `+` vào
 | Tồn kho        | Tồn kho A                                            | Tồn kho B                                            |
 | Tiêu chí thứ N | N của A                                              | N của B                                              |
 
-- Nên chọn mẫu nào: lí do
+- Nên chọn mẫu A/B nào: lí do
 - Liệt kê 2-4 lí do
 - Có thể chọn mẫu khác nếu: lí do chọn mẫu khác
 ```
