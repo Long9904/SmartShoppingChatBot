@@ -30,6 +30,7 @@ namespace SmartShoppingChatBot.Application.Commons.Mapper
                 .ForMember(dest => dest.Brand, opt => opt.MapFrom(src => src.Brand))
                 .ForMember(dest => dest.StockQuantity, opt => opt.MapFrom(src => src.StockQuantity))
                 .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category))
+                .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.Images))
                 .ForMember(dest => dest.Score, opt => opt.Ignore());
         }
 

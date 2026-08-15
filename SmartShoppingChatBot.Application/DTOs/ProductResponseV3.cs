@@ -21,6 +21,8 @@ public sealed class ProductResponseV3
 
     public string Category { get; set; } = string.Empty;
 
+    public List<string> Images { get; set; } = [];
+
     public double Score { get; set; }
 
     public static ProductResponseV3 FromProduct(ProductResponseV2 product, double score = 0)
@@ -35,6 +37,7 @@ public sealed class ProductResponseV3
             Brand = product.Brand,
             StockQuantity = product.StockQuantity,
             Category = product.Category,
+            Images = product.Images.ToList(),
             Score = score
         };
     }
@@ -51,6 +54,7 @@ public sealed class ProductResponseV3
             Brand = Brand,
             StockQuantity = StockQuantity,
             Category = Category,
+            Images = Images.ToList(),
             Score = Score
         };
     }
@@ -66,7 +70,8 @@ public sealed class ProductResponseV3
             Price = Price,
             Brand = Brand,
             StockQuantity = StockQuantity,
-            Category = Category
+            Category = Category,
+            Images = Images.ToList()
         };
     }
 }

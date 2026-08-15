@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Security.Authentication;
 using System.Security.Claims;
+using System.IO;
 using FluentAssertions;
 using FluentValidation;
 using MediatR;
@@ -111,6 +112,27 @@ public class UT_Login
 
 public class UT_VerifyAccount
 {
+    [Fact]
+    public async Task UT_AUTH_01_Handle_ValidToken_DoesNotWriteVerificationTokenHashToConsole()
+    {
+        var fixture = new VerifyFixture();
+        var output = new StringWriter();
+        var originalOutput = Console.Out;
+
+        try
+        {
+            Console.SetOut(output);
+
+            await fixture.Handler.Handle(fixture.Command(), CancellationToken.None);
+        }
+        finally
+        {
+            Console.SetOut(originalOutput);
+        }
+
+        output.ToString().Should().BeEmpty("verification-token hashes must not be exposed in console output");
+    }
+
     [Fact]
     public async Task Handle_WhenTokenDoesNotExist_ReturnsBadRequest()
     {
