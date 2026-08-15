@@ -39,10 +39,16 @@ public sealed class UpdateConversationOrderStatusCommandHandler(
             && item.ExternalOrderId == externalOrderId);
         if (order is null)
         {
-            return Result<ConversationOrderResponse>.Failure(
-                404,
-                "Conversation order not found.",
-                messageCode: ConversationOrderMessageCode.NotFound);
+            logger.LogWarning(
+                "Ignoring status update for unregistered external order {ExternalOrderId} in business {BusinessId}",
+                externalOrderId,
+                businessResult.Data.Id);
+
+            return Result<ConversationOrderResponse>.Success(
+                null,
+                204,
+                "External order is not associated with a chat conversation.",
+                ConversationOrderMessageCode.NotFound);
         }
 
         // Payment providers retry webhooks. Returning the current state keeps this API idempotent.

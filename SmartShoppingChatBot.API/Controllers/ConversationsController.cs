@@ -129,6 +129,9 @@ namespace SmartShoppingChatBot.API.Controllers
 
             if (result.IsSuccess)
             {
+                if (result.StatusCode == StatusCodes.Status204NoContent)
+                    return NoContent();
+
                 return StatusCode(
                     result.StatusCode,
                     ApiResponse<ConversationOrderResponse>.Ok(
