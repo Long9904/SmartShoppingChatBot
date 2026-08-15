@@ -5,8 +5,9 @@ using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.CustomerGetConversations;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.GetChatHistory;
-using SmartShoppingChatBot.Application.Features.ConversationManagement.ReceiveConversationOrderEvent;
+using SmartShoppingChatBot.Application.Features.ConversationManagement.RegisterConversationOrder;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.SendMessage;
+using SmartShoppingChatBot.Application.Features.ConversationManagement.UpdateConversationOrderStatus;
 using SmartShoppingChatBot.Domain.Commons;
 
 namespace SmartShoppingChatBot.API.Controllers
@@ -82,19 +83,47 @@ namespace SmartShoppingChatBot.API.Controllers
                     result.MessageCode));
         }
 
-        [HttpPost("{conversationId}/order-events")]
-        [EndpointDescription("Receives an order event from the external business system")]
-        [EndpointSummary("Receive conversation order event")]
-        public async Task<IActionResult> ReceiveOrderEvent(
+        [HttpPost("{conversationId}/orders")]
+        [EndpointDescription(
+            "Registers the external order-to-conversation mapping before checkout")]
+        [EndpointSummary("Register a conversation order")]
+        public async Task<IActionResult> RegisterOrder(
             [FromRoute] string conversationId,
-            [FromBody] ConversationOrderEventRequest request,
+            [FromBody] RegisterConversationOrderRequest request,
             CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(
-                new ReceiveConversationOrderEventCommand
+                new RegisterConversationOrderCommand
                 {
                     ConversationId = conversationId,
-                    Event = request
+                    Order = request
+                },
+                cancellationToken);
+
+            if (result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, ApiResponse<ConversationOrderResponse>.Ok(
+                        result.Data!, result.Message, result.MessageCode));
+            }
+
+            return StatusCode(result.StatusCode, ApiResponse<ConversationOrderResponse>.Fail(
+                    result.Message!, result.Errors, result.MessageCode));
+        }
+
+        [HttpPatch("orders/{externalOrderId}/status")]
+        [EndpointDescription(
+            "Updates an order status by the external order ID previously registered for the current business")]
+        [EndpointSummary("Update a conversation order status")]
+        public async Task<IActionResult> UpdateOrderStatus(
+            [FromRoute] string externalOrderId,
+            [FromBody] UpdateConversationOrderStatusRequest request,
+            CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new UpdateConversationOrderStatusCommand
+                {
+                    ExternalOrderId = externalOrderId,
+                    Status = request.Status
                 },
                 cancellationToken);
 
@@ -102,13 +131,13 @@ namespace SmartShoppingChatBot.API.Controllers
             {
                 return StatusCode(
                     result.StatusCode,
-                    ApiResponse<ConversationOrderEventResponse>.Ok(
+                    ApiResponse<ConversationOrderResponse>.Ok(
                         result.Data!, result.Message, result.MessageCode));
             }
 
             return StatusCode(
                 result.StatusCode,
-                ApiResponse<ConversationOrderEventResponse>.Fail(
+                ApiResponse<ConversationOrderResponse>.Fail(
                     result.Message!, result.Errors, result.MessageCode));
         }
 
