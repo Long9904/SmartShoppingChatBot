@@ -16,6 +16,8 @@ namespace SmartShoppingChatBot.Domain.Entities
 
         public List<string>? TrendKeywords { get; set; }
 
+        public string? InteractionType { get; set; }
+
         public bool ZeroResult { get; set; }
 
         public int ResultCountNumber { get; set; }

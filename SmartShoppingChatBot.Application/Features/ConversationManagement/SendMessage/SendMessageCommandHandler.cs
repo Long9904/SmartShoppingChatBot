@@ -491,6 +491,9 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .Take(3)
                     .ToList(),
+                InteractionType = string.IsNullOrWhiteSpace(kernelResult.InteractionType)
+                    ? null
+                    : kernelResult.InteractionType.Trim(),
                 CreatedAt = aiMessage.CreatedAt,
                 RetrievalLatency = retrievalLatency,
                 TopKResult = selectedProducts.Count,

@@ -97,11 +97,13 @@ public class MongoDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.QdrantPointId).IsUnique();
+            entity.HasIndex(e => new { e.BusinessId, e.Status });
         });
 
         modelBuilder.Entity<KnowledgeDocument>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.BusinessId, e.CreatedAt });
         });
         modelBuilder.Entity<KnowledgeEntry>(entity =>
         {
@@ -114,18 +116,21 @@ public class MongoDbContext : DbContext
             e.HasKey(e => e.Id);
             e.HasIndex(e => new { e.BusinessId, e.CustomerExternalId })
             .IsUnique();
+            e.HasIndex(e => new { e.BusinessId, e.CreatedAt });
         });
 
         modelBuilder.Entity<Conversation>(e =>
         {
             e.HasKey(e => e.Id);
             e.HasIndex(e => new { e.BusinessId, e.CustomerId, e.CreateAt });
+            e.HasIndex(e => new { e.BusinessId, e.CreateAt });
         });
 
         modelBuilder.Entity<Message>(e =>
         {
             e.HasKey(e => e.Id);
             e.HasIndex(e => new { e.ConversationId, e.Id });
+            e.HasIndex(e => new { e.BusinessId, e.CreatedAt, e.SenderType });
         });
 
         modelBuilder.Entity<UsageQuotaLog>(e =>
@@ -150,6 +155,7 @@ public class MongoDbContext : DbContext
         {
             e.HasKey(e => e.Id);
             e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
+            e.HasIndex(e => new { e.BusinessId, e.CreatedAt, e.Status });
         });
         modelBuilder.Entity<ConversationOrder>(e =>
         {
@@ -163,6 +169,7 @@ public class MongoDbContext : DbContext
             e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.MessageId })
                 .IsUnique();
             e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
+            e.HasIndex(e => new { e.BusinessId, e.CreatedAt });
         });
     }
 }

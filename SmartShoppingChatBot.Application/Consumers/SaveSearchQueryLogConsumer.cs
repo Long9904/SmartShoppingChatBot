@@ -30,6 +30,7 @@ public sealed class SaveSearchQueryLogConsumer(
             MessageId = messageId,
             UserRawQuery = message.UserRawQuery,
             TrendKeywords = message.TrendKeywords?.ToList(),
+            InteractionType = message.InteractionType,
             ZeroResult = message.ProductResults.Count == 0,
             ResultCountNumber = message.ProductResults.Count,
             TopKResult = message.TopKResult,
