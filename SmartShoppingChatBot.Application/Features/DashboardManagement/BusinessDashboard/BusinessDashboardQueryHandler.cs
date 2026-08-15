@@ -14,7 +14,7 @@ public sealed class BusinessDashboardQueryHandler(
     IKnowledgeDocumentRepository knowledgeDocumentRepository,
     IConversationRepository conversationRepository,
     IMessageRepository messageRepository,
-    IConversationOrderEventRepository orderEventRepository,
+    IConversationOrderRepository orderRepository,
     ISearchQueryLogRepository searchQueryLogRepository)
     : IRequestHandler<BusinessDashboardQuery, Result<BusinessDashboardResponse>>
 {
@@ -84,11 +84,10 @@ public sealed class BusinessDashboardQueryHandler(
                 && message.CreatedAt < to)
             .ToList();
 
-        var orderEvents = orderEventRepository.AsQueryable()
-            .Where(orderEvent => orderEvent.BusinessId == businessId
-                && orderEvent.Status == ConversationOrderEventStatus.Success
-                && orderEvent.CreatedAt >= from
-                && orderEvent.CreatedAt < to)
+        var orders = orderRepository.AsQueryable()
+            .Where(order => order.BusinessId == businessId
+                && order.CreatedAt >= from
+                && order.CreatedAt < to)
             .ToList();
 
         var searchLogs = searchQueryLogRepository.AsQueryable()
@@ -97,14 +96,11 @@ public sealed class BusinessDashboardQueryHandler(
                 && log.CreatedAt < to)
             .ToList();
 
-        var successfulOrderConversations = orderEvents
-            .Select(orderEvent => orderEvent.ConversationId)
-            .Distinct()
-            .Count();
-
-        var conversionRate = conversations.Count == 0
+        var totalOrders = orders.Count;
+        var paidOrders = orders.Count(order => order.Status == ConversationOrderEventStatus.Paid);
+        var conversionRate = totalOrders == 0
             ? 0
-            : (double)successfulOrderConversations / conversations.Count * 100;
+            : (double)paidOrders / totalOrders * 100;
 
         var response = new BusinessDashboardResponse
         {
@@ -114,7 +110,8 @@ public sealed class BusinessDashboardQueryHandler(
             TotalKnowledgeDocuments = documents.Count,
             TotalChatSessions = conversations.Count,
             TotalChatMessages = messages.Count,
-            SuccessfulOrderConversations = successfulOrderConversations,
+            TotalOrders = totalOrders,
+            PaidOrders = paidOrders,
             ConversionRate = conversionRate,
             AverageRetrievalLatencyMilliseconds = searchLogs.Count == 0
                 ? null
