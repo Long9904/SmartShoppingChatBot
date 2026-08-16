@@ -78,7 +78,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 return Result<ProductResponse>.Failure(500, "Failed to build semantic search text.");
             }
 
-
+            _logger.LogInformation(sematicSearchText.Data.Result);
             var productTechnicalVector = await _geminiService.EmbeddingsAsyncV2(
                 embeddingText,
                 "RETRIEVAL_DOCUMENT",
