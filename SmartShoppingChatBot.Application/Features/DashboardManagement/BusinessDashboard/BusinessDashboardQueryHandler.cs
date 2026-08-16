@@ -97,7 +97,7 @@ public sealed class BusinessDashboardQueryHandler(
             .ToList();
 
         var totalOrders = orders.Count;
-        var paidOrders = orders.Count(order => order.Status == ConversationOrderEventStatus.Paid);
+        var paidOrders = orders.Count(order => order.Status == ConversationOrderEventStatus.Success);
         var conversionRate = totalOrders == 0
             ? 0
             : (double)paidOrders / totalOrders * 100;
