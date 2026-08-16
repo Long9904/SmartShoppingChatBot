@@ -98,9 +98,14 @@ public sealed class BusinessDashboardQueryHandler(
 
         var totalOrders = orders.Count;
         var paidOrders = orders.Count(order => order.Status == ConversationOrderEventStatus.Success);
+
+        var totalConversations = conversations
+                .Select(conversation => conversation.Id)
+                .Distinct()
+                .Count();
         var conversionRate = totalOrders == 0
             ? 0
-            : (double)paidOrders / totalOrders * 100;
+            : (double)paidOrders / totalConversations * 100;
 
         var response = new BusinessDashboardResponse
         {
@@ -108,7 +113,7 @@ public sealed class BusinessDashboardQueryHandler(
             To = toVietnam,
             TotalProducts = products.Count,
             TotalKnowledgeDocuments = documents.Count,
-            TotalChatSessions = conversations.Count,
+            TotalChatSessions = totalConversations,
             TotalChatMessages = messages.Count,
             TotalOrders = totalOrders,
             PaidOrders = paidOrders,
