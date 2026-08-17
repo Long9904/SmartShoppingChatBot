@@ -36,6 +36,7 @@
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.78.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.78.0" />
     <PackageReference Include="Qdrant.Client" Version="1.18.1" />
+    <PackageReference Include="Quartz" Version="3.19.1" />
     <PackageReference Include="StackExchange.Redis" Version="3.0.17" />
   </ItemGroup>
 

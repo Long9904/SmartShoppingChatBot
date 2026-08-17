@@ -8,6 +8,7 @@ using SmartShoppingChatBot.Application.Commons.Mapper;
 using SmartShoppingChatBot.Application.Features.SubscriptionManagement.CreateSubscription;
 using SmartShoppingChatBot.Application.Features.SubscriptionManagement.DeleteSubscription;
 using SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAllSubscription;
+using SmartShoppingChatBot.Application.Features.SubscriptionManagement.ResetSubscription;
 using SmartShoppingChatBot.Application.Features.SubscriptionManagement.UpdateSubscription;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
@@ -297,16 +298,92 @@ public class UT_SubscriptionPlanManagement
         fixture.Repository.Verify(repository => repository.UpdateAsync(fixture.ExistingPlan), Times.Once);
     }
 
+    [Fact]
+    public async Task ExpirationJob_WhenBasicPlanMissing_DoesNotChangeSubscriptions()
+    {
+        var fixture = new SubscriptionFixture();
+        var expired = fixture.BusinessSubscription(fixture.ExistingPlan.Id, TestData.Now.AddDays(-1));
+        fixture.SubscriptionRepository.Setup(repository => repository.FilterByAsync(
+                It.IsAny<Expression<Func<BusinessSubscription, bool>>>(),
+                It.IsAny<Func<IQueryable<BusinessSubscription>, IQueryable<BusinessSubscription>>?>()))
+            .ReturnsAsync([expired]);
+        fixture.Repository.Setup(repository => repository.FindAsync(
+                It.IsAny<Expression<Func<SubscriptionPlan, bool>>>(),
+                It.IsAny<Func<IQueryable<SubscriptionPlan>, IQueryable<SubscriptionPlan>>?>()))
+            .ReturnsAsync((SubscriptionPlan?)null);
+
+        await fixture.ExpirationJob.Execute(Mock.Of<Quartz.IJobExecutionContext>());
+
+        expired.Status.Should().Be(StatusEnums.Active);
+        fixture.SubscriptionRepository.Verify(repository => repository.UpdateRangeAsync(
+            It.IsAny<IEnumerable<BusinessSubscription>>()), Times.Never);
+        fixture.SubscriptionRepository.Verify(repository => repository.AddRangeAsync(
+            It.IsAny<IEnumerable<BusinessSubscription>>()), Times.Never);
+        fixture.QuotaRepository.Verify(repository => repository.AddRangeAsync(
+            It.IsAny<IEnumerable<BusinessQuota>>()), Times.Never);
+        fixture.UnitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExpirationJob_WhenActiveSubscriptionsExpired_CreatesBasicSubscriptionsAndQuotas()
+    {
+        var fixture = new SubscriptionFixture();
+        var basic = fixture.Plan("Basic", level: 0);
+        basic.TokenLimit = 10_000;
+        basic.MessageLimit = 100;
+        basic.MaxProductAllowed = 100;
+        basic.MaxDocumentAllowed = 15;
+        var expired = fixture.BusinessSubscription(fixture.ExistingPlan.Id, TestData.Now.AddDays(-1));
+        List<BusinessSubscription>? closedSubscriptions = null;
+        List<BusinessSubscription>? newSubscriptions = null;
+        List<BusinessQuota>? newQuotas = null;
+        fixture.SubscriptionRepository.Setup(repository => repository.FilterByAsync(
+                It.IsAny<Expression<Func<BusinessSubscription, bool>>>(),
+                It.IsAny<Func<IQueryable<BusinessSubscription>, IQueryable<BusinessSubscription>>?>()))
+            .ReturnsAsync([expired]);
+        fixture.Repository.Setup(repository => repository.FindAsync(
+                It.IsAny<Expression<Func<SubscriptionPlan, bool>>>(),
+                It.IsAny<Func<IQueryable<SubscriptionPlan>, IQueryable<SubscriptionPlan>>?>()))
+            .ReturnsAsync(basic);
+        fixture.SubscriptionRepository.Setup(repository => repository.UpdateRangeAsync(It.IsAny<IEnumerable<BusinessSubscription>>()))
+            .Callback<IEnumerable<BusinessSubscription>>(subscriptions => closedSubscriptions = subscriptions.ToList())
+            .Returns(Task.CompletedTask);
+        fixture.SubscriptionRepository.Setup(repository => repository.AddRangeAsync(It.IsAny<IEnumerable<BusinessSubscription>>()))
+            .Callback<IEnumerable<BusinessSubscription>>(subscriptions => newSubscriptions = subscriptions.ToList())
+            .Returns(Task.CompletedTask);
+        fixture.QuotaRepository.Setup(repository => repository.AddRangeAsync(It.IsAny<IEnumerable<BusinessQuota>>()))
+            .Callback<IEnumerable<BusinessQuota>>(quotas => newQuotas = quotas.ToList())
+            .Returns(Task.CompletedTask);
+
+        await fixture.ExpirationJob.Execute(Mock.Of<Quartz.IJobExecutionContext>());
+
+        closedSubscriptions.Should().ContainSingle().Which.Id.Should().Be(expired.Id);
+        expired.Status.Should().Be(StatusEnums.Inactive);
+        newSubscriptions.Should().ContainSingle();
+        newSubscriptions![0].BusinessId.Should().Be(expired.BusinessId);
+        newSubscriptions[0].SubscriptionPlanId.Should().Be(basic.Id);
+        newSubscriptions[0].Status.Should().Be(StatusEnums.Active);
+        newQuotas.Should().ContainSingle();
+        newQuotas![0].BusinessId.Should().Be(expired.BusinessId);
+        newQuotas[0].BusinessSubscriptionId.Should().Be(newSubscriptions[0].Id);
+        newQuotas[0].TokenLimit.Should().Be(basic.TokenLimit);
+        newQuotas[0].MessageLimit.Should().Be(basic.MessageLimit);
+        newQuotas[0].MaxProductAllowed.Should().Be(basic.MaxProductAllowed);
+        fixture.UnitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private sealed class SubscriptionFixture
     {
         public SubscriptionPlan ExistingPlan { get; }
         public Mock<ISubscriptionPlanRepository> Repository { get; } = new();
         public Mock<ISubscriptionRepository> SubscriptionRepository { get; } = new();
+        public Mock<IBusinessQuotaRepository> QuotaRepository { get; } = new();
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
         public SubscriptionAddCommandHandler CreateHandler { get; }
         public GetSubscriptionQueryHandle GetAllHandler { get; }
         public SubscriptionUpdateCommandHandler UpdateHandler { get; }
         public DeleteSubscriptionCommandHandler DeleteHandler { get; }
+        public ResetExpiredSubscriptionJob ExpirationJob { get; }
 
         public SubscriptionFixture()
         {
@@ -331,6 +408,13 @@ public class UT_SubscriptionPlanManagement
                 Repository.Object,
                 SubscriptionRepository.Object,
                 UnitOfWork.Object);
+            ExpirationJob = new ResetExpiredSubscriptionJob(
+                Repository.Object,
+                SubscriptionRepository.Object,
+                QuotaRepository.Object,
+                UnitOfWork.Object,
+                new FixedTimeProvider(TestData.Now),
+                Mock.Of<ILogger<ResetExpiredSubscriptionJob>>());
         }
 
         public SubscriptionPlan Plan(
@@ -376,6 +460,16 @@ public class UT_SubscriptionPlanManagement
             MessageLimit = ExistingPlan.MessageLimit,
             MaxProductAllowed = ExistingPlan.MaxProductAllowed,
             MaxDocumentAllowed = ExistingPlan.MaxDocumentAllowed
+        };
+
+        public BusinessSubscription BusinessSubscription(ObjectId planId, DateTimeOffset endDate) => new()
+        {
+            Id = ObjectId.GenerateNewId(),
+            BusinessId = ObjectId.GenerateNewId(),
+            SubscriptionPlanId = planId,
+            StartDate = endDate.AddDays(-30),
+            EndDate = endDate,
+            Status = StatusEnums.Active
         };
     }
 }
