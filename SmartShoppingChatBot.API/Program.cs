@@ -12,6 +12,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.SemanticKernel;
 using Qdrant.Client;
+using Quartz;
+using SmartShoppingChatBot.Application.Features.SubscriptionManagement.ResetSubscription;
 using SmartShoppingChatBot.API.Extensions;
 using SmartShoppingChatBot.API.Middlewares;
 using SmartShoppingChatBot.Application;
@@ -80,6 +82,33 @@ var apiSecret = builder.Configuration["Cloudinary:ApiSecret"];
 var account = new Account(cloudName, apiKey, apiSecret);
 var cloudinary = new Cloudinary(account);
 builder.Services.AddSingleton<ICloudinary>(sp => cloudinary);
+//Quartz 
+builder.Services.AddQuartz(q =>
+{
+    q.UseSimpleTypeLoader();
+    q.UseDefaultThreadPool(tp =>
+    {
+        tp.MaxConcurrency = 1;
+    });
+
+    var jobKey = new JobKey("ResetExpiredSubscriptionJob");
+
+    q.AddJob<ResetExpiredSubscriptionJob>(options =>
+        options.WithIdentity(jobKey));
+
+    q.AddTrigger(options => options
+        .ForJob(jobKey)
+        .WithIdentity("ResetExpiredSubscriptionTrigger")
+        .StartNow()
+        .WithSimpleSchedule(x => x
+            .WithIntervalInHours(2)
+            .RepeatForever()));
+});
+
+builder.Services.AddQuartzHostedService(options =>
+{
+    options.WaitForJobsToComplete = true;
+});
 // Swagger configuration with JWT support
 builder.Services.AddSwaggerGen(c =>
 {
