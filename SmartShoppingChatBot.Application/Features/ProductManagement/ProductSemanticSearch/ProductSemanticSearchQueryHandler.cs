@@ -329,15 +329,15 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 .Select(x => new RankedProduct(productById[x.Id], x.Score))
                 .ToList();
 
-            if (!rankedProducts.Any())
-            {
-                rankedProducts = reranked.Data.Result
-                .OrderByDescending(x => x.Score)
-                .Where(x => productById.ContainsKey(x.Id) && x.Score > 0.2)
-                .Take(topK)
-                .Select(x => new RankedProduct(productById[x.Id], x.Score))
-                .ToList();
-            }
+            //if (!rankedProducts.Any())
+            //{
+            //    rankedProducts = reranked.Data.Result
+            //    .OrderByDescending(x => x.Score)
+            //    .Where(x => productById.ContainsKey(x.Id) && x.Score > 0.6)
+            //    .Take(topK)
+            //    .Select(x => new RankedProduct(productById[x.Id], x.Score))
+            //    .ToList();
+            //}
 
             return Result<List<RankedProduct>>.Success(rankedProducts);
         }
