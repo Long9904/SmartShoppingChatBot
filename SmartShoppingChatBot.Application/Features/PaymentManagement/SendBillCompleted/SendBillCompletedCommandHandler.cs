@@ -38,6 +38,7 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCo
 
         public async Task<Result<string>> Handle(SendBillCompletedCommand request, CancellationToken cancellationToken)
         {
+            _logger.LogInformation("Handling SendBillCompletedCommand for PaymentId: {PaymentId}", request.PaymentId);
             if (!ObjectId.TryParse(request.PaymentId, out ObjectId paymentId))
             {
                 return Result<string>.Failure(400, "Invalid Payment Id");
@@ -84,9 +85,17 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCo
                 InvoiceUrl = $"https://lunarai.com/invoice/{payment.Id}"
 
             });
-            // Send the email to the user with the bill details
-            await _emailService.SendEmailAsync(user.Email, "Bill Completed", emailContent);
-            return Result<string>.Success("Bill sent successfully");
+            try 
+            {
+                // Send the email to the user with the bill details
+                await _emailService.SendEmailAsync(user.Email, "Bill Completed", emailContent);
+                return Result<string>.Success("Bill sent successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while sending bill email for PaymentId: {PaymentId}", request.PaymentId);
+                return Result<string>.Failure(500, "Failed to send bill email");
+            }
         }
     }
 }

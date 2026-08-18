@@ -256,6 +256,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 switch (data.Code)
                 {
                     case "00":
+                        _logger.LogInformation("Processing successful payment webhook for order code {OrderCode}", webhookData.Data.OrderCode);
                         // Only create subscription and quota for successful payments
                         var now = DateTimeOffset.UtcNow;
                         var canApplySubscription = await CloseCurrentSubscriptionForUpgradeIfNeededAsync(
@@ -264,6 +265,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                             now);
                         if (!canApplySubscription)
                         {
+                            _logger.LogWarning("Cannot apply subscription for payment {PaymentId}", existingPayment.Id);
                             await _unitOfWork.RollBackAsync();
                             return false;
                         }
@@ -293,13 +295,16 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         };
 
                         existingPayment.Status = PaymentEnums.Completed;
+                        _logger.LogInformation("Setting payment {PaymentId} status to Completed", existingPayment.Id);
                         await _subscriptionRepository.AddAsync(subscription);
                         await _businessQuotaRepository.AddAsync(businessQuota);
                         break;
                     case "01":
+                        _logger.LogInformation("Payment failed for order code {OrderCode}", webhookData.Data.OrderCode);
                         existingPayment.Status = PaymentEnums.Failed;
                         break;
                     case "02":
+                        _logger.LogInformation("Payment pending for order code {OrderCode}", webhookData.Data.OrderCode);
                         existingPayment.Status = PaymentEnums.Pending;
                         break;
                     default:
@@ -309,12 +314,26 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 await _paymentRepository.UpdateAsync(existingPayment);
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
+                _logger.LogInformation("Payment {PaymentId} status after transaction: {Status}", existingPayment.Id, existingPayment.Status);
                 if (existingPayment.Status == PaymentEnums.Completed)
                 {
-                    await _publishEndpoint.Publish(new PaymentCompletedEvent
+                    _logger.LogInformation("Publishing PaymentCompletedEvent for payment {PaymentId}", existingPayment.Id);
+                    try
                     {
-                        PaymentId = existingPayment.Id.ToString()
-                    });
+                        await _publishEndpoint.Publish(new PaymentCompletedEvent
+                        {
+                            PaymentId = existingPayment.Id.ToString()
+                        });
+                        _logger.LogInformation("Successfully published PaymentCompletedEvent for payment {PaymentId}", existingPayment.Id);
+                    }
+                    catch (Exception pubEx)
+                    {
+                        _logger.LogError(pubEx, "Failed to publish PaymentCompletedEvent for payment {PaymentId}", existingPayment.Id);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Skipping PaymentCompletedEvent publish - payment status is {Status}, not Completed", existingPayment.Status);
                 }
                 return true;
             }

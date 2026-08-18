@@ -72,7 +72,9 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.DocumentS
                     errors: null,
                     messageCode: "DOCUMENTS_NOT_FOUND");
             }
+            //convert double[] to float[] for qdrant
             var vector = embedding.Data.Result.Select(x => (float)x).ToArray();
+            //filter current business id and document
             var filter = BuildFilter(business.Data.Id, request);
             var points = await _qdrantService.HybridDocumentSearchAsync(vector, vector, request.CandidateLimit, filter, ct);
             _logger.LogInformation(
