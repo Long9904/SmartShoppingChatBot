@@ -51,7 +51,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     //check heading and return num
                     if (IsHeading(styleId, out var level))
                     {
-                        //#heanding 1, ##heading 2, ###heading 3, ####heading 4, #####heading 5, ######heading 6
+                        //# = heanding 1, ##=heading 2, ### = heading 3, #### = heading 4, #####heading 5, ######heading 6
                         sb.AppendLine($"{new string('#', level)} {text}");
                         sb.AppendLine();
                     }
