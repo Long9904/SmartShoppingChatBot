@@ -113,7 +113,7 @@ public sealed class BusinessDashboardQueryHandler(
             To = toVietnam,
             TotalProducts = products.Count,
             TotalKnowledgeDocuments = documents.Count,
-            TotalChatSessions = conversations.Count,
+            TotalChatSessions = totalConversations,
             TotalChatMessages = messages.Count,
             TotalOrders = totalOrders,
             PaidOrders = paidOrders,

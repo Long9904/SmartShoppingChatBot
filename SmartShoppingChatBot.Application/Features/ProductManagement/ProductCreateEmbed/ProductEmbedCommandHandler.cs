@@ -101,6 +101,14 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
             if (currentBusinessQuota == null)
                 return Result<ProductResponse>.Failure(404, "Business quota not found", null, BusinessQuotaMessageCode.NotFound);
 
+            // Product embedding events can be delivered more than once by RabbitMQ/MassTransit.
+            // The UsageQuotaLogs index allows only one record per quota/product/type, so do not
+            // charge and insert another log when this is a retry or a duplicate event.
+            var existingUsageQuotaLog = await _usageQuotaLogRepository.FindAsync(x =>
+                x.BusinessQuotaId == currentBusinessQuota.Id
+                && x.SourceType == SourceTypeEnum.EmbeddingProduct
+                && x.SourceId == product.Id);
+
             var totalTokenEmbebProduct =
                  (long)Math.Ceiling(productTechnicalVector.Data!.InputTokens / 3.0)
                  + (long)Math.Ceiling(productSemanticVector.Data!.InputTokens / 3.0)
@@ -124,7 +132,10 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                 SourceType = SourceTypeEnum.EmbeddingProduct,
             };
 
-            currentBusinessQuota.UsedTokens += totalTokenEmbebProduct;
+            if (existingUsageQuotaLog == null)
+            {
+                currentBusinessQuota.UsedTokens += totalTokenEmbebProduct;
+            }
 
             var embeddedAt = _timeProvider.GetUtcNow();
             product.Status = ProductStatus.Active;
@@ -159,8 +170,13 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                     cancellationToken);
 
                 await _productRepository.UpdateAsync(product);
-                await _businessQuotaRepository.UpdateAsync(currentBusinessQuota);
-                await _usageQuotaLogRepository.AddAsync(newUsageQuotaLog);
+
+                if (existingUsageQuotaLog == null)
+                {
+                    await _businessQuotaRepository.UpdateAsync(currentBusinessQuota);
+                    await _usageQuotaLogRepository.AddAsync(newUsageQuotaLog);
+                }
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result<ProductResponse>.Success(ProductMappings.ToResponse(product));
