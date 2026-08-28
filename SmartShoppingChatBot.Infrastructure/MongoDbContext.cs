@@ -40,6 +40,7 @@ public class MongoDbContext : DbContext
     public DbSet<ConversationOrder> ConversationOrders { get; set; }
 
     public DbSet<SearchQueryLog> SearchQueryLogs { get; set; }
+    public DbSet<ActivityLog> ActivityLogs { get; set; }
 
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
@@ -171,6 +172,11 @@ public class MongoDbContext : DbContext
                 .IsUnique();
             e.HasIndex(e => new { e.BusinessId, e.ConversationId, e.Id });
             e.HasIndex(e => new { e.BusinessId, e.CreatedAt });
+        });
+        modelBuilder.Entity<ActivityLog>(e =>
+        {
+            e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.BusinessId, e.ActorId, e.Action, e.CreatedAt });
         });
     }
 }

@@ -34,7 +34,7 @@ public static class InfrastructureDI
         services.AddScoped<IConversationContextService, ConversationContextService>();
         services.AddScoped<IProductReferenceCollector, ProductReferenceCollector>();
         services.AddScoped<IRedisBusinessConfig, RedisBusinessConfig>();
-
+        services.AddScoped<IActivityLogService, ActivityLogService>();
         services.AddSingleton<GoogleAccessTokenProvider>();
 
         // Seeder
@@ -64,6 +64,7 @@ public static class InfrastructureDI
         services.AddScoped<IConversationOrderEventRepository, ConversationOrderEventRepository>();
         services.AddScoped<IConversationOrderRepository, ConversationOrderRepository>();
         services.AddScoped<ISearchQueryLogRepository, SearchQueryLogRepository>();
+        services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
 
         return services;
     }
