@@ -11,5 +11,6 @@ namespace SmartShoppingChatBot.Application.Interface
         string? GetBusinessId();
 
         Task<Result<User>> GetUser();
+        string? GetIpAddress();
     }
 }

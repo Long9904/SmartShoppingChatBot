@@ -7,30 +7,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartShoppingChatBot.Domain.Entities
+namespace SmartShoppingChatBot.Application.DTOs
 {
-    public class ActivityLog
+    public class ActivityLogResponse
     {
-        public ObjectId Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public string? BusinessId { get; set; }
         public string? ActorId { get; set; }
         public string? ActorEmail { get; set; }
-        [BsonRepresentation(BsonType.String)]
         public RoleEnums? ActorRole { get; set; }
-        [BsonRepresentation(BsonType.String)]
         public ActionLogEnums Action { get; set; }
-
         public string? TargetType { get; set; }
         public string? TargetId { get; set; }
-        [BsonRepresentation(BsonType.String)]
-        public StatusLogEnums Status { get; set; } = StatusLogEnums.Success;
-        [BsonRepresentation(BsonType.String)]
-        public SeverityLogEnums Severity { get; set; } = SeverityLogEnums.Info;
-
+        public StatusLogEnums Status { get; set; }
+        public SeverityLogEnums Severity { get; set; }
         public string? Description { get; set; }
         public string? IpAddress { get; set; }
-
-        public string? MetadataJson { get; set; }
-        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public object? Metadata { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
     }
 }

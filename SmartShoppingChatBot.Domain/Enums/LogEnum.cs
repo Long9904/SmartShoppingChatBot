@@ -11,15 +11,14 @@ namespace SmartShoppingChatBot.Domain.Enums
         Create = 1,
         Update = 2,
         Delete = 3,
-        Read = 4,
-        Login = 5,
-        Logout = 6,
-        PasswordChange = 7,
-        PasswordReset = 8,
-        PermissionChange = 9,
-        RoleChange = 10,
-        DataExport = 11,
-        DataImport = 12
+        Login = 4,
+        Logout = 5,
+        PasswordChange = 6,
+        PasswordReset = 7,
+        PermissionChange = 8,
+        RoleChange = 9,
+        DataExport = 10,
+        DataImport = 11
     }
     public enum SeverityLogEnums
     {

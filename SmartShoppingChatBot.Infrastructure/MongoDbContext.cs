@@ -176,7 +176,11 @@ public class MongoDbContext : DbContext
         modelBuilder.Entity<ActivityLog>(e =>
         {
             e.HasKey(e => e.Id);
-            e.HasIndex(e => new { e.BusinessId, e.ActorId, e.Action, e.CreatedAt });
+
+            e.HasIndex(e => new { e.BusinessId, e.CreatedAt });
+            e.HasIndex(e => new { e.BusinessId, e.ActorId, e.CreatedAt });
+            e.HasIndex(e => new { e.BusinessId, e.Action, e.CreatedAt });
+            e.HasIndex(e => new { e.BusinessId, e.TargetType, e.TargetId, e.CreatedAt });
         });
     }
 }

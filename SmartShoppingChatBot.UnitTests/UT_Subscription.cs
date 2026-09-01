@@ -10,6 +10,7 @@ using SmartShoppingChatBot.Application.Features.SubscriptionManagement.DeleteSub
 using SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAllSubscription;
 using SmartShoppingChatBot.Application.Features.SubscriptionManagement.ResetSubscription;
 using SmartShoppingChatBot.Application.Features.SubscriptionManagement.UpdateSubscription;
+using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
@@ -379,6 +380,7 @@ public class UT_SubscriptionPlanManagement
         public Mock<ISubscriptionRepository> SubscriptionRepository { get; } = new();
         public Mock<IBusinessQuotaRepository> QuotaRepository { get; } = new();
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
+        public Mock<IActivityLogRepository> ActivityLogRepository { get; } = new();
         public SubscriptionAddCommandHandler CreateHandler { get; }
         public GetSubscriptionQueryHandle GetAllHandler { get; }
         public SubscriptionUpdateCommandHandler UpdateHandler { get; }
@@ -403,11 +405,13 @@ public class UT_SubscriptionPlanManagement
                 UnitOfWork.Object,
                 Mock.Of<ILogger<SubscriptionUpdateCommandHandler>>(),
                 new FixedTimeProvider(TestData.Now),
-                mapper);
+                mapper,
+                Mock.Of<IActivityLogService>());
             DeleteHandler = new DeleteSubscriptionCommandHandler(
                 Repository.Object,
                 SubscriptionRepository.Object,
-                UnitOfWork.Object);
+                UnitOfWork.Object,
+                Mock.Of<IActivityLogService>());
             ExpirationJob = new ResetExpiredSubscriptionJob(
                 Repository.Object,
                 SubscriptionRepository.Object,
