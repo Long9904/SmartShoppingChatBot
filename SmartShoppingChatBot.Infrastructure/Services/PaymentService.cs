@@ -31,13 +31,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         private readonly IPaymentRepository _paymentRepository;
         private readonly ICurrentUserService _currentUserService;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IActivityLogService _activityLogService;
 
 
         public PaymentService(IUnitOfWork unitOfWork, ILogger<PaymentService> logger,
             IMapper mapper, IPaymentRepository paymentRepository, IConfiguration config,
             IUserRepository userRepository, ISubscriptionPlanRepository subscriptionPlanRepository,
             ISubscriptionRepository subscriptionRepository, IBusinessRepository businessRepository,
-            IBusinessQuotaRepository businessQuotaRepository, ICurrentUserService currentUserService, IPublishEndpoint publishEndpoint)
+            IBusinessQuotaRepository businessQuotaRepository, ICurrentUserService currentUserService,
+            IPublishEndpoint publishEndpoint, IActivityLogService activityLogService)
         {
             _payOSClient = new PayOSClient(
                 config["PayOS:ClientId"]!,
@@ -56,6 +58,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             _businessQuotaRepository = businessQuotaRepository;
             _currentUserService = currentUserService;
             _publishEndpoint = publishEndpoint;
+            _activityLogService = activityLogService;
         }
 
 
@@ -149,6 +152,17 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 payment.PayOsPaymentLink = result.CheckoutUrl;
                 await _paymentRepository.AddAsync(payment);
                 await _unitOfWork.SaveChangesAsync();
+                await _activityLogService.LogAsync(new ActivityLogRequest
+                {
+                    Action = ActionLogEnums.Create,
+                    TargetType = "Payment",
+                    TargetId = payment.Id.ToString(),
+                    ActorId = businessLogin.Data.Id.ToString(),
+                    Status = StatusLogEnums.Success,
+                    Severity = SeverityLogEnums.Info,
+                    Description = $"Payment created successfully for business {businessLogin.Data.BusinessName}."
+
+                });
                 return Result<PaymentResponsed>.Success(new PaymentResponsed
                 {
                     CheckoutUrl = payment.PayOsPaymentLink,
@@ -298,14 +312,44 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         _logger.LogInformation("Setting payment {PaymentId} status to Completed", existingPayment.Id);
                         await _subscriptionRepository.AddAsync(subscription);
                         await _businessQuotaRepository.AddAsync(businessQuota);
+                        await _activityLogService.LogAsync(new ActivityLogRequest
+                        {
+                            Action = ActionLogEnums.Create,
+                            TargetType = "Payment",
+                            TargetId = existingPayment.Id.ToString(),
+                            ActorId = existingPayment.BussinessId.ToString(),
+                            Status = StatusLogEnums.Success,
+                            Severity = SeverityLogEnums.Info,
+                            Description = $"Payment completed successfully for business {existingPayment.BussinessId}."
+                        });
                         break;
                     case "01":
                         _logger.LogInformation("Payment failed for order code {OrderCode}", webhookData.Data.OrderCode);
                         existingPayment.Status = PaymentEnums.Failed;
+                        await _activityLogService.LogAsync(new ActivityLogRequest
+                        {
+                            Action = ActionLogEnums.Update,
+                            TargetType = "Payment",
+                            TargetId = existingPayment.Id.ToString(),
+                            ActorId = existingPayment.BussinessId.ToString(),
+                            Status = StatusLogEnums.Failure,
+                            Severity = SeverityLogEnums.Warning,
+                            Description = $"Payment failed for business {existingPayment.BussinessId}."
+                        });
                         break;
                     case "02":
                         _logger.LogInformation("Payment pending for order code {OrderCode}", webhookData.Data.OrderCode);
                         existingPayment.Status = PaymentEnums.Pending;
+                        await _activityLogService.LogAsync(new ActivityLogRequest
+                        {
+                            Action = ActionLogEnums.Update,
+                            TargetType = "Payment",
+                            TargetId = existingPayment.Id.ToString(),
+                            ActorId = existingPayment.BussinessId.ToString(),
+                            Status = StatusLogEnums.Failure,
+                            Severity = SeverityLogEnums.Info,
+                            Description = $"Payment is pending for business {existingPayment.BussinessId}."
+                        });
                         break;
                     default:
                         _logger.LogWarning("Unhandled webhook code: {Code}", data.Code);

@@ -12,15 +12,18 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
     private readonly IUserRepository _userRepository;
     private readonly ITokenService _tokenService;
     private readonly IPasswordService _passwordService;
+    private readonly IActivityLogService _activityLogService;
 
     public LoginCommandHandler(
         IUserRepository userRepository,
         ITokenService tokenService,
-        IPasswordService passwordService)
+        IPasswordService passwordService,
+        IActivityLogService activityLogService)
     {
         _userRepository = userRepository;
         _tokenService = tokenService;
         _passwordService = passwordService;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<LoginResponse>> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -58,7 +61,24 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
             IsEmailVerified = user.IsEmailVerified,
             IsProfileCompleted = user.IsProfileCompleted,
         };
-
+        await _activityLogService.LogAsync(new ActivityLogRequest
+        {
+            Action = ActionLogEnums.Login,
+            ActorId = user.Id.ToString(),
+            TargetType = "User",
+            TargetId = user.Id.ToString(),
+            Status = StatusLogEnums.Success,
+            Description = $"User {user.FullName} logged in successfully.",
+            Severity = SeverityLogEnums.Info,
+            Metadata = new Dictionary<string, object?>
+            {
+                { "UserId", user.Id.ToString() },
+                { "Email", user.Email },
+                { "Role", user.Business.Role.ToString() },
+                { "BusinessId", user.Business.Id.ToString() },
+                { "BusinessName", user.Business.BusinessName }
+            }
+        });
         return Result<LoginResponse>.Success(res, 200, "Login successful");
     }
 }

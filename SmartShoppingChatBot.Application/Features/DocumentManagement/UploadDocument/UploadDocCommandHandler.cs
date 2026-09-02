@@ -21,19 +21,22 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
         private readonly ICurrentUserService _currentUserService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPublishEndpoint _publisher;
+        private readonly IActivityLogService _activityLogService;
 
         public UploadDocCommandHandler(
             ICloudinaryService cloudinaryService,
             IKnowledgeDocumentRepository repository,
             ICurrentUserService currentUserService,
             IUnitOfWork unitOfWork,
-            IPublishEndpoint publisher)
+            IPublishEndpoint publisher,
+            IActivityLogService activityLogService)
         {
             _cloudinaryService = cloudinaryService;
             _repository = repository;
             _currentUserService = currentUserService;
             _unitOfWork = unitOfWork;
             _publisher = publisher;
+            _activityLogService = activityLogService;
         }
 
 
@@ -121,6 +124,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
                 var documentsList = documents.ToList();
                 await _repository.AddRangeAsync(documentsList);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                
                 // Publish events for each uploaded document
                 foreach (var doc in documentsList)
                 {
@@ -132,7 +136,15 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.UploadDoc
                 }
             }
             var items = responseList.OrderBy(r => r.Status == KnowledgeDocumentStatus.Failed).ToList();
-
+            await _activityLogService.LogAsync(new ActivityLogRequest
+            {
+                Action = ActionLogEnums.DataImport,
+                TargetType = nameof(KnowledgeDocument),
+                TargetId = null,
+                ActorId = currentBusiness.Data.Id.ToString(),
+                Status = StatusLogEnums.Success,
+                Description = "Uploaded documents successfully",
+            });
             return Result<BasePaginatedList<UploadedKnowledgeDocResponse>>.Success(new BasePaginatedList<UploadedKnowledgeDocResponse>
             {
                 Items = items,

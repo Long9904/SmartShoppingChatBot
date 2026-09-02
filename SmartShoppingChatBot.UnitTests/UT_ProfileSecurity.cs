@@ -97,6 +97,27 @@ public class UT_ForgotPassword
     }
 
     [Fact]
+    public async Task Handle_ExistingUser_LogsPasswordResetRequest()
+    {
+        var fixture = new ForgotPasswordFixture();
+        ActivityLogRequest? log = null;
+        fixture.ActivityLog.Setup(service => service.LogAsync(It.IsAny<ActivityLogRequest>()))
+            .Callback<ActivityLogRequest>(value => log = value)
+            .Returns(Task.CompletedTask);
+
+        await fixture.Handler.Handle(fixture.Command(), CancellationToken.None);
+
+        log.Should().NotBeNull();
+        log!.Action.Should().Be(ActionLogEnums.PasswordReset);
+        log.ActorId.Should().Be(fixture.User.Id.ToString());
+        log.TargetType.Should().Be("User");
+        log.TargetId.Should().Be(fixture.User.Id.ToString());
+        log.Status.Should().Be(StatusLogEnums.Success);
+        log.Severity.Should().Be(SeverityLogEnums.Info);
+        log.Description.Should().Be($"User {fixture.User.FullName} requested a password reset successfully.");
+    }
+
+    [Fact]
     public async Task Handle_WhenTokenPersistenceThrows_PropagatesAndDoesNotSendEmail()
     {
         var fixture = new ForgotPasswordFixture();
@@ -119,6 +140,7 @@ public class UT_ForgotPassword
         public Mock<IEmailService> Email { get; } = new();
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
         public Mock<IEmailTemplateService> Template { get; } = new();
+        public Mock<IActivityLogService> ActivityLog { get; } = new();
         public ForgotPasswordCommandHandler Handler { get; }
 
         public ForgotPasswordFixture()
@@ -139,7 +161,7 @@ public class UT_ForgotPassword
                 {
                     ExpireMinutes = 30,
                     UrlBase = "https://shop.example/reset?token="
-                }), Template.Object);
+                }), Template.Object, ActivityLog.Object);
         }
 
         public ForgotPasswordCommand Command() => new() { Email = " OWNER@EXAMPLE.COM " };
@@ -226,6 +248,27 @@ public class UT_ResetPassword
     }
 
     [Fact]
+    public async Task Handle_ValidRequest_LogsPasswordResetCompletion()
+    {
+        var fixture = new ResetPasswordFixture();
+        ActivityLogRequest? log = null;
+        fixture.ActivityLog.Setup(service => service.LogAsync(It.IsAny<ActivityLogRequest>()))
+            .Callback<ActivityLogRequest>(value => log = value)
+            .Returns(Task.CompletedTask);
+
+        await fixture.Handler.Handle(fixture.Command(), CancellationToken.None);
+
+        log.Should().NotBeNull();
+        log!.Action.Should().Be(ActionLogEnums.PasswordReset);
+        log.ActorId.Should().Be(fixture.User.Id.ToString());
+        log.TargetType.Should().Be("User");
+        log.TargetId.Should().Be(fixture.User.Id.ToString());
+        log.Status.Should().Be(StatusLogEnums.Success);
+        log.Severity.Should().Be(SeverityLogEnums.Info);
+        log.Description.Should().Be($"User {fixture.User.FullName} reset password successfully.");
+    }
+
+    [Fact]
     public async Task Handle_WhenUserUpdateThrows_PropagatesAndDoesNotConsumeToken()
     {
         var fixture = new ResetPasswordFixture();
@@ -248,6 +291,7 @@ public class UT_ResetPassword
         public Mock<IUserRepository> UserRepository { get; } = new();
         public Mock<IPasswordService> Password { get; } = new();
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
+        public Mock<IActivityLogService> ActivityLog { get; } = new();
         public ResetPasswordCommandHandler Handler { get; }
 
         public ResetPasswordFixture()
@@ -273,7 +317,7 @@ public class UT_ResetPassword
             Password.Setup(service => service.HashPassword("NewPassword1!")).Returns("new-hash");
             Handler = new ResetPasswordCommandHandler(
                 Mock.Of<ITokenService>(), TokenRepository.Object, UserRepository.Object,
-                Password.Object, UnitOfWork.Object);
+                Password.Object, UnitOfWork.Object, ActivityLog.Object);
         }
 
         public ResetPasswordCommand Command() => new()
@@ -355,6 +399,27 @@ public class UT_ChangePassword
     }
 
     [Fact]
+    public async Task Handle_ValidRequest_LogsPasswordChange()
+    {
+        var fixture = new ChangePasswordFixture();
+        ActivityLogRequest? log = null;
+        fixture.ActivityLog.Setup(service => service.LogAsync(It.IsAny<ActivityLogRequest>()))
+            .Callback<ActivityLogRequest>(value => log = value)
+            .Returns(Task.CompletedTask);
+
+        await fixture.Handler.Handle(fixture.Command(), CancellationToken.None);
+
+        log.Should().NotBeNull();
+        log!.Action.Should().Be(ActionLogEnums.PasswordChange);
+        log.ActorId.Should().Be(fixture.User.Id.ToString());
+        log.TargetType.Should().Be("User");
+        log.TargetId.Should().Be(fixture.User.Id.ToString());
+        log.Status.Should().Be(StatusLogEnums.Success);
+        log.Severity.Should().Be(SeverityLogEnums.Info);
+        log.Description.Should().Be($"User {fixture.User.FullName} changed password successfully.");
+    }
+
+    [Fact]
     public async Task Handle_WhenUpdateThrows_PropagatesAndSkipsSaveChanges()
     {
         var fixture = new ChangePasswordFixture();
@@ -375,6 +440,7 @@ public class UT_ChangePassword
         public Mock<IUserRepository> UserRepository { get; } = new();
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
         public Mock<IPasswordService> Password { get; } = new();
+        public Mock<IActivityLogService> ActivityLog { get; } = new();
         public ChangePasswordCommandHandler Handler { get; }
 
         public ChangePasswordFixture()
@@ -385,7 +451,8 @@ public class UT_ChangePassword
             Password.Setup(service => service.HashPassword("new-password")).Returns("new-hash");
             Handler = new ChangePasswordCommandHandler(
                 CurrentUser.Object, UserRepository.Object, UnitOfWork.Object,
-                Mock.Of<ILogger<ChangePasswordCommandHandler>>(), Password.Object);
+                Mock.Of<ILogger<ChangePasswordCommandHandler>>(), Password.Object,
+                ActivityLog.Object);
         }
 
         public ChangePasswordCommand Command() => new()

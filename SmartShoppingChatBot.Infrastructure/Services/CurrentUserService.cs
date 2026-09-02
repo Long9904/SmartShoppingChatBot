@@ -78,6 +78,31 @@ public class CurrentUserService : ICurrentUserService
         return businessId;
     }
 
+    public string? GetIpAddress()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        if (httpContext == null)
+            return null;
+
+        var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(forwardedFor))
+        {
+            return forwardedFor
+                .Split(',')
+                .Select(x => x.Trim())
+                .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+        }
+
+        var realIp = httpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(realIp))
+            return realIp.Trim();
+
+        return httpContext.Connection.RemoteIpAddress?.ToString();
+    }
+
     public async Task<Result<User>> GetUser()
     {
         var userId = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;

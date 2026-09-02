@@ -31,7 +31,7 @@ public class UT_Login
                 It.IsAny<Expression<Func<User, bool>>>(),
                 It.IsAny<Func<IQueryable<User>, IQueryable<User>>?>()))
             .ReturnsAsync((User?)null);
-        var handler = new LoginCommandHandler(repository.Object, Mock.Of<ITokenService>(), Mock.Of<IPasswordService>());
+        var handler = new LoginCommandHandler(repository.Object, Mock.Of<ITokenService>(), Mock.Of<IPasswordService>(), Mock.Of<IActivityLogService>());
 
         var result = await handler.Handle(new LoginCommand { Email = "none@example.com", Password = "secret" }, CancellationToken.None);
 
@@ -105,7 +105,7 @@ public class UT_Login
                 .ReturnsAsync(User);
             Password.Setup(service => service.VerifyPassword("secret", User.PasswordHash)).Returns(true);
             Token.Setup(service => service.CreateAccessToken(It.IsAny<AccessTokenPayload>())).Returns("jwt-token");
-            Handler = new LoginCommandHandler(Repository.Object, Token.Object, Password.Object);
+            Handler = new LoginCommandHandler(Repository.Object, Token.Object, Password.Object, Mock.Of<IActivityLogService>());
         }
     }
 }

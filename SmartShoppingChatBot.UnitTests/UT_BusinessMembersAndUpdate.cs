@@ -148,7 +148,7 @@ public class UT_BusinessMemberRegistration
         public Mock<ITokenService> TokenService { get; } = new();
         public Mock<ITokenRepository> TokenRepository { get; } = new();
         public MemberRegistrationCommandHandler Handler { get; }
-
+        public Mock<IActivityLogService> ActivityLogService { get; } = new();
         public MemberRegistrationFixture()
         {
             Owner = TestData.User(Business);
@@ -166,7 +166,7 @@ public class UT_BusinessMemberRegistration
                 {
                     ExpireDays = 2,
                     UrlBase = "https://shop.example/verify?token="
-                }));
+                }), ActivityLogService.Object);
         }
 
         public MemberRegistrationCommand Command() => new()
@@ -490,6 +490,7 @@ internal sealed class MemberMutationFixture
     public Mock<IUnitOfWork> UnitOfWork { get; } = new();
     public UpdateBusinessMemberCommandHandler UpdateHandler { get; }
     public DeleteBusinessMemberCommandHandler DeleteHandler { get; }
+    public Mock<IActivityLogService> ActivityLogService { get; } = new();
 
     public MemberMutationFixture()
     {
@@ -514,7 +515,8 @@ internal sealed class MemberMutationFixture
             Mock.Of<ILogger<UpdateBusinessMemberCommandHandler>>(), new FixedTimeProvider(TestData.Now));
         DeleteHandler = new DeleteBusinessMemberCommandHandler(
             UserRepository.Object, CurrentUser.Object, UnitOfWork.Object, mapper.Object,
-            Mock.Of<ILogger<DeleteBusinessMemberCommandHandler>>(), new FixedTimeProvider(TestData.Now));
+            Mock.Of<ILogger<DeleteBusinessMemberCommandHandler>>(), new FixedTimeProvider(TestData.Now),
+            ActivityLogService.Object);
     }
 
     public UpdateBusinessMemberCommand UpdateCommand() => new()

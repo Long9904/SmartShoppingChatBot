@@ -30,6 +30,7 @@ namespace SmartShoppingChatBot.Application.Features.BusinessMemberManagement.Bus
         private readonly IPublishEndpoint _publishEndpoint;
         private readonly ITokenService _tokenService;
         private readonly ITokenRepository _tokenRepository;
+        private readonly IActivityLogService _activityLogService;
 
         public MemberRegistrationCommandHandler(
             IUserRepository userRepository,
@@ -41,7 +42,8 @@ namespace SmartShoppingChatBot.Application.Features.BusinessMemberManagement.Bus
             IPublishEndpoint publishEndpoint,
             ITokenService tokenService,
             ITokenRepository tokenRepository,
-            IOptions<EmailTokenSettings> emailTokenSettingsOptions)
+            IOptions<EmailTokenSettings> emailTokenSettingsOptions,
+            IActivityLogService activityLogService)
         {
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
@@ -52,6 +54,7 @@ namespace SmartShoppingChatBot.Application.Features.BusinessMemberManagement.Bus
             _publishEndpoint = publishEndpoint;
             _tokenService = tokenService;
             _tokenRepository = tokenRepository;
+            _activityLogService = activityLogService;
             _emailTokenSettings = emailTokenSettingsOptions.Value;
         }
 
@@ -140,7 +143,16 @@ namespace SmartShoppingChatBot.Application.Features.BusinessMemberManagement.Bus
                 EmployeeEmail = employee.Email,
                 TokenVerification = buildURL,
             }, cancellationToken);
-
+            await _activityLogService.LogAsync(new ActivityLogRequest
+            {
+                Action = ActionLogEnums.Create,
+                ActorId = businessOwner.Id.ToString(),
+                TargetType = "User",
+                TargetId = employee.Id.ToString(),
+                Status = StatusLogEnums.Success,
+                Severity = SeverityLogEnums.Info,
+                Description = $"Business owner {businessOwner.FullName} registered employee {employee.FullName} successfully.",
+            });
             return Result<BusinessMemberRegistrationResponse>.Success(new BusinessMemberRegistrationResponse
             {
                 Id = employee.Id.ToString(),

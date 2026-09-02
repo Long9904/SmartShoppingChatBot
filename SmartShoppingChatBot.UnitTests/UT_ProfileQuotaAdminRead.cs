@@ -104,6 +104,27 @@ public class UT_ProfileFlows
     }
 
     [Fact]
+    public async Task UpdateProfile_ValidRequest_LogsProfileUpdate()
+    {
+        var fixture = new ProfileFlowFixture();
+        ActivityLogRequest? log = null;
+        fixture.ActivityLog.Setup(service => service.LogAsync(It.IsAny<ActivityLogRequest>()))
+            .Callback<ActivityLogRequest>(value => log = value)
+            .Returns(Task.CompletedTask);
+
+        await fixture.UpdateHandler.Handle(fixture.UpdateCommand(), CancellationToken.None);
+
+        log.Should().NotBeNull();
+        log!.Action.Should().Be(ActionLogEnums.Update);
+        log.ActorId.Should().Be(fixture.User.Id.ToString());
+        log.TargetType.Should().Be("UserProfile");
+        log.TargetId.Should().Be(fixture.User.Id.ToString());
+        log.Status.Should().Be(StatusLogEnums.Success);
+        log.Severity.Should().Be(SeverityLogEnums.Info);
+        log.Description.Should().Be($"User {fixture.User.FullName} updated their profile successfully.");
+    }
+
+    [Fact]
     public async Task UpdateProfile_WhenRepositoryThrows_PropagatesAndSkipsSaveChanges()
     {
         var fixture = new ProfileFlowFixture();
@@ -136,6 +157,7 @@ public class UT_ProfileFlows
         public Mock<ICurrentUserService> CurrentUser { get; } = new();
         public Mock<IUserRepository> UserRepository { get; } = new();
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
+        public Mock<IActivityLogService> ActivityLog { get; } = new();
         public GetMyProfileCommandHandler GetHandler { get; }
         public UpdateProfileCommandHandler UpdateHandler { get; }
 
@@ -154,10 +176,11 @@ public class UT_ProfileFlows
                         UserStatus = user.UserStatus, Role = user.Business.Role
                     };
                 });
-            GetHandler = new GetMyProfileCommandHandler(CurrentUser.Object, mapper.Object);
+            GetHandler = new GetMyProfileCommandHandler(CurrentUser.Object, mapper.Object, ActivityLog.Object);
             UpdateHandler = new UpdateProfileCommandHandler(
                 UserRepository.Object, CurrentUser.Object, UnitOfWork.Object, mapper.Object,
-                new FixedTimeProvider(TestData.Now), Mock.Of<ILogger<UpdateProfileCommandHandler>>());
+                new FixedTimeProvider(TestData.Now), Mock.Of<ILogger<UpdateProfileCommandHandler>>(),
+                ActivityLog.Object);
         }
 
         public UpdateProfileCommand UpdateCommand() => new()

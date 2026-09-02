@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
 
@@ -16,15 +17,17 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.Creat
         private readonly ILogger<SubscriptionAddCommandHandler> _logger;
         private readonly TimeProvider _time;
         private readonly IMapper _mapper;
+        private readonly IActivityLogService _activityLogService;
 
         public SubscriptionAddCommandHandler(ISubscriptionPlanRepository subscriptionRepository,
-            IUnitOfWork unitOfWork, ILogger<SubscriptionAddCommandHandler> logger, TimeProvider time, IMapper mapper)
+            IUnitOfWork unitOfWork, ILogger<SubscriptionAddCommandHandler> logger, TimeProvider time, IMapper mapper, IActivityLogService activityLogService)
         {
             _subscriptionRepository = subscriptionRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
             _time = time;
             _mapper = mapper;
+            _activityLogService = activityLogService;
         }
 
         public async Task<Result<SubscriptionResponse>> Handle(SubscriptionAddCommand request, CancellationToken cancellationToken)
@@ -54,6 +57,16 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.Creat
 
             await _subscriptionRepository.AddAsync(subscription);
             await _unitOfWork.SaveChangesAsync();
+            await _activityLogService.LogAsync(new ActivityLogRequest
+            {
+                Action = Domain.Enums.ActionLogEnums.Create,
+                TargetType = nameof(SubscriptionPlan),
+                TargetId = subscription.Id.ToString(),
+                Status = Domain.Enums.StatusLogEnums.Success,
+                Severity = Domain.Enums.SeverityLogEnums.Info,
+                Description = subscription.Description,
+
+            });
             return Result<SubscriptionResponse>.Success(_mapper.Map<SubscriptionResponse>(subscription), 201, "Subscription plan created successfully.");
         }
     }

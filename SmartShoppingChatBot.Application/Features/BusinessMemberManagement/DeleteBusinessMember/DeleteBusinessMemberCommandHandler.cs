@@ -18,6 +18,7 @@ public class DeleteBusinessMemberCommandHandler : IRequestHandler<DeleteBusiness
     private readonly IMapper _mapper;
     private readonly ILogger<DeleteBusinessMemberCommandHandler> _logger;
     private readonly TimeProvider _time;
+    private readonly IActivityLogService _activityLogService;
 
     public DeleteBusinessMemberCommandHandler(
         IUserRepository userRepository,
@@ -25,7 +26,8 @@ public class DeleteBusinessMemberCommandHandler : IRequestHandler<DeleteBusiness
         IUnitOfWork unitOfWork,
         IMapper mapper,
         ILogger<DeleteBusinessMemberCommandHandler> logger,
-        TimeProvider time)
+        TimeProvider time,
+        IActivityLogService activityLogService)
     {
         _userRepository = userRepository;
         _currentUserService = currentUserService;
@@ -33,6 +35,7 @@ public class DeleteBusinessMemberCommandHandler : IRequestHandler<DeleteBusiness
         _mapper = mapper;
         _logger = logger;
         _time = time;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<ProfileResponse>> Handle(
@@ -91,6 +94,16 @@ public class DeleteBusinessMemberCommandHandler : IRequestHandler<DeleteBusiness
             _logger.LogError(ex, "An error occurred while deleting catalog team member {MemberId}.", member.Id);
             return Result<ProfileResponse>.Failure(500, "An error occurred while deleting the catalog team member.");
         }
+        await _activityLogService.LogAsync(new ActivityLogRequest
+        {
+            Action = ActionLogEnums.Delete,
+            TargetType = "Profile",
+            TargetId = member.Id.ToString(),
+            ActorId = currentUserResult.Data!.Id.ToString(),
+            Status = StatusLogEnums.Success,
+            Severity = SeverityLogEnums.Info,
+            Description = $"Catalog team member {member.FullName} (ID: {member.Id}) deleted successfully.",
+        });
 
         var response = _mapper.Map<ProfileResponse>(member);
         return Result<ProfileResponse>.Success(response, 200, "Catalog team member deleted successfully.");
