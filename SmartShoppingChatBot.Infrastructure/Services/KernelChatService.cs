@@ -41,11 +41,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             ChatHistory history = new();
             history.AddSystemMessage(businessPrompt);
 
+            history.AddUserMessage(request.UserMessage);
+
             var contextJson = JsonSerializer.Serialize(
                 request.ConversationContextCache,
                 JsonOptions);
             history.AddSystemMessage($"Conversation context:\n{contextJson}");
-            history.AddUserMessage(request.UserMessage);
+
 
 
 

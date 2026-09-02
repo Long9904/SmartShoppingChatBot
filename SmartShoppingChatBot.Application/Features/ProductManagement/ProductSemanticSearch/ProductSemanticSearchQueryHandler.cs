@@ -333,7 +333,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             {
                 rankedProducts = reranked.Data.Result
                 .OrderByDescending(x => x.Score)
-                .Where(x => productById.ContainsKey(x.Id) && x.Score > 0.3)
+                .Where(x => productById.ContainsKey(x.Id) && x.Score > 0.25)
                 .Take(topK)
                 .Select(x => new RankedProduct(productById[x.Id], x.Score))
                 .ToList();
