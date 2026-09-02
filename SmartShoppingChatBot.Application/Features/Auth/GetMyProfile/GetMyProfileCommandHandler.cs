@@ -10,11 +10,12 @@ namespace SmartShoppingChatBot.Application.Features.Auth.GetMyProfile
     {
         private readonly ICurrentUserService _currentUserService;
         private readonly IMapper _mapper;
-
-        public GetMyProfileCommandHandler(ICurrentUserService currentUserService, IMapper mapper)
+        private readonly IActivityLogService _activityLogService;
+        public GetMyProfileCommandHandler(ICurrentUserService currentUserService, IMapper mapper, IActivityLogService activityLogService)
         {
             _currentUserService = currentUserService;
             _mapper = mapper;
+            _activityLogService = activityLogService;
         }
         public async Task<Result<ProfileResponse>> Handle(GetMyProfileCommand request, CancellationToken cancellationToken)
         {
@@ -26,6 +27,17 @@ namespace SmartShoppingChatBot.Application.Features.Auth.GetMyProfile
             }
 
             var response = _mapper.Map<ProfileResponse>(isUser.Data);
+            await _activityLogService.LogAsync(new ActivityLogRequest
+            {
+                
+                Action = Domain.Enums.ActionLogEnums.View,
+                ActorId = response.Id,
+                TargetType = "UserProfile",
+                TargetId = response.Id,
+                Description = $"User {response.FullName} viewed their profile.",
+                Status = Domain.Enums.StatusLogEnums.Success,
+                Severity = Domain.Enums.SeverityLogEnums.Info,
+            });
 
             return Result<ProfileResponse>.Success(response, 200, "User profile retrieved successfully.");
 

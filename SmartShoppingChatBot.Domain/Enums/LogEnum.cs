@@ -18,7 +18,8 @@ namespace SmartShoppingChatBot.Domain.Enums
         PermissionChange = 8,
         RoleChange = 9,
         DataExport = 10,
-        DataImport = 11
+        DataImport = 11,
+        View = 12,
     }
     public enum SeverityLogEnums
     {

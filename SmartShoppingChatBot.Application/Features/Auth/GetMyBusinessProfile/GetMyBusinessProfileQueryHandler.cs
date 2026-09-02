@@ -16,6 +16,7 @@ public class GetMyBusinessProfileQueryHandler : IRequestHandler<GetMyBusinessPro
     private readonly IBusinessQuotaRepository _businessQuotaRepository;
     private readonly TimeProvider _timeProvider;
     private readonly IMapper _mapper;
+    private readonly IActivityLogService _activityLogService;
 
     public GetMyBusinessProfileQueryHandler(
         ICurrentUserService currentUserService,
@@ -23,7 +24,8 @@ public class GetMyBusinessProfileQueryHandler : IRequestHandler<GetMyBusinessPro
         ISubscriptionPlanRepository subscriptionPlanRepository,
         IBusinessQuotaRepository businessQuotaRepository,
         TimeProvider timeProvider,
-        IMapper mapper)
+        IMapper mapper,
+        IActivityLogService activityLogService)
     {
         _currentUserService = currentUserService;
         _subscriptionRepository = subscriptionRepository;
@@ -31,6 +33,7 @@ public class GetMyBusinessProfileQueryHandler : IRequestHandler<GetMyBusinessPro
         _businessQuotaRepository = businessQuotaRepository;
         _timeProvider = timeProvider;
         _mapper = mapper;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<MyBusinessProfileResponse>> Handle(
@@ -93,6 +96,16 @@ public class GetMyBusinessProfileQueryHandler : IRequestHandler<GetMyBusinessPro
                 };
             }
         }
+        await _activityLogService.LogAsync(new ActivityLogRequest
+        {
+            Action = ActionLogEnums.View,
+            TargetType = nameof(MyBusinessProfileResponse),
+            ActorId = business.Id.ToString(),
+            Description = "Retrieved business profile.",
+            Status = StatusLogEnums.Success,
+            Severity = SeverityLogEnums.Info,
+            TargetId = business.Id.ToString(),
+        });
 
         return Result<MyBusinessProfileResponse>.Success(
             response,

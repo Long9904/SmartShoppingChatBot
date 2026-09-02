@@ -381,6 +381,7 @@ public class UT_SubscriptionPlanManagement
         public Mock<IBusinessQuotaRepository> QuotaRepository { get; } = new();
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
         public Mock<IActivityLogRepository> ActivityLogRepository { get; } = new();
+        public Mock<IUserRepository> UserRepository { get; } = new();
         public SubscriptionAddCommandHandler CreateHandler { get; }
         public GetSubscriptionQueryHandle GetAllHandler { get; }
         public SubscriptionUpdateCommandHandler UpdateHandler { get; }
@@ -398,7 +399,8 @@ public class UT_SubscriptionPlanManagement
                 UnitOfWork.Object,
                 Mock.Of<ILogger<SubscriptionAddCommandHandler>>(),
                 new FixedTimeProvider(TestData.Now),
-                mapper);
+                mapper,
+                Mock.Of<IActivityLogService>());
             GetAllHandler = new GetSubscriptionQueryHandle(Repository.Object, mapper);
             UpdateHandler = new SubscriptionUpdateCommandHandler(
                 Repository.Object,
