@@ -85,17 +85,9 @@ namespace SmartShoppingChatBot.Application.Features.PaymentManagement.SendBillCo
                 InvoiceUrl = $"https://lunarai.com/invoice/{payment.Id}"
 
             });
-            try 
-            {
-                // Send the email to the user with the bill details
-                await _emailService.SendEmailAsync(user.Email, "Bill Completed", emailContent);
-                return Result<string>.Success("Bill sent successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while sending bill email for PaymentId: {PaymentId}", request.PaymentId);
-                return Result<string>.Failure(500, "Failed to send bill email");
-            }
+            // Send the email to the user with the bill details
+            await _emailService.SendEmailAsync(user.Email, "Bill Completed", emailContent);
+            return Result<string>.Success("Bill sent successfully");
         }
     }
 }
