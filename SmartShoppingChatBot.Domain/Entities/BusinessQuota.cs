@@ -1,6 +1,6 @@
-﻿using MongoDB.Bson;
+﻿using System.ComponentModel.DataAnnotations;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using System.ComponentModel.DataAnnotations;
 
 namespace SmartShoppingChatBot.Domain.Entities
 {
@@ -19,6 +19,8 @@ namespace SmartShoppingChatBot.Domain.Entities
         public int UsedMessages { get; set; }
 
         public int MaxProductAllowed { get; set; }
+
+        public int MaxDocumentAllowed { get; set; } = 0;
         // Reset quota day
         public DateTimeOffset ResetDate { get; set; }
 
