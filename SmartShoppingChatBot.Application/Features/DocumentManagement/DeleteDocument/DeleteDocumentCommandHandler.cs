@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 using SmartShoppingChatBot.Domain.QdrantConfig;
 using System;
@@ -22,10 +23,11 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.DeleteDoc
         private readonly IKnowledgeEntryRepository _entryRepository;
         private readonly IQdrantService _qdrantService;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IActivityLogService _activityLogService;
 
         public DeleteDocumentCommandHandler(ILogger<DeleteDocumentCommandHandler> logger, 
             IKnowledgeDocumentRepository repository, IUnitOfWork unitOfWork, IKnowledgeEntryRepository entryRepository,
-            IQdrantService qdrantService, ICurrentUserService currentUserService)
+            IQdrantService qdrantService, ICurrentUserService currentUserService, IActivityLogService activityLogService    )
         {
             _logger = logger;
             _repository = repository;
@@ -33,6 +35,7 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.DeleteDoc
             _entryRepository = entryRepository;
             _qdrantService = qdrantService;
             _currentUserService = currentUserService;
+            _activityLogService = activityLogService;
         }
 
 
@@ -75,6 +78,16 @@ namespace SmartShoppingChatBot.Application.Features.DocumentManagement.DeleteDoc
                 await _entryRepository.DeleteAsync(entry.Id);
             }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _activityLogService.LogAsync(new DTOs.ActivityLogRequest
+            {
+                Action = ActionLogEnums.Delete,
+                TargetType = "KnowledgeDocument",
+                TargetId = document.Id.ToString(),
+                ActorId = business.Data.Id.ToString(),
+                Status = StatusLogEnums.Success,
+                Severity = SeverityLogEnums.Info,
+                Description = $"Document '{document.Title}' deleted successfully.",
+            });
             return Result<string>.Success("Document deleted successfully.");
         }
     }

@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.Commons.Utils;
+using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 using System;
 using System.Collections.Generic;
@@ -18,15 +20,18 @@ namespace SmartShoppingChatBot.Application.Features.ProfileManagement.ResetPassw
         private readonly IUserRepository _userRepository;
         private readonly IPasswordService _passwordService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IActivityLogService _activityLogService;
 
         public ResetPasswordCommandHandler(ITokenService tokenService, ITokenRepository tokenRepository,
-            IUserRepository userRepository, IPasswordService passwordService, IUnitOfWork unitOfWork)
+            IUserRepository userRepository, IPasswordService passwordService, IUnitOfWork unitOfWork,
+            IActivityLogService activityLogService)
         {
             _tokenService = tokenService;
             _tokenRepository = tokenRepository;
             _userRepository = userRepository;
             _passwordService = passwordService;
             _unitOfWork = unitOfWork;
+            _activityLogService = activityLogService;
         }
         public async Task<Result<string>> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
         {
@@ -59,6 +64,16 @@ namespace SmartShoppingChatBot.Application.Features.ProfileManagement.ResetPassw
             tokenEntity.TokenValue = null!;
             await _tokenRepository.UpdateAsync(tokenEntity);
             await _unitOfWork.SaveChangesAsync();
+            await _activityLogService.LogAsync(new ActivityLogRequest
+            {
+                Action = ActionLogEnums.PasswordReset,
+                ActorId = user.Id.ToString(),
+                TargetType = "User",
+                TargetId = user.Id.ToString(),
+                Status = StatusLogEnums.Success,
+                Severity = SeverityLogEnums.Info,
+                Description = $"User {user.FullName} reset password successfully.",
+            });
             return Result<string>.Success(null, 200, "Password reset successfully.");
 
         }

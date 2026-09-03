@@ -1,10 +1,14 @@
 ﻿using AutoMapper;
+using Google.Cloud.AIPlatform.V1;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
+using System.Text.Json;
 
 
 namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.UpdateSubscription
@@ -16,14 +20,17 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.Updat
         private readonly ILogger<SubscriptionUpdateCommandHandler> _logger;
         private readonly TimeProvider _time;
         private readonly IMapper _mapper;
+        private readonly IActivityLogService _activityLogService;
 
         public SubscriptionUpdateCommandHandler(ISubscriptionPlanRepository subscriptionRepository,
-            IUnitOfWork unitOfWork, ILogger<SubscriptionUpdateCommandHandler> logger, TimeProvider time, IMapper mapper)
+            IUnitOfWork unitOfWork, ILogger<SubscriptionUpdateCommandHandler> logger, TimeProvider time, IMapper mapper, IActivityLogService activityLogService)
         {
             _subscriptionRepository = subscriptionRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
             _time = time;
+            _mapper = mapper;
+            _activityLogService = activityLogService;
             _mapper = mapper;
         }
 
@@ -96,6 +103,20 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.Updat
             }
             await _subscriptionRepository.UpdateAsync(existingSubscription);
             await _unitOfWork.SaveChangesAsync();
+            await _activityLogService.LogAsync(new ActivityLogRequest
+            {
+                Action = ActionLogEnums.Update,
+                TargetType = nameof(existingSubscription),
+                TargetId = existingSubscription.Id.ToString(),
+                Status = StatusLogEnums.Success,
+                Severity = SeverityLogEnums.Info,
+                Description = $"Subscription plan '{existingSubscription.Name}' updated successfully.",
+                Metadata = new Dictionary<string, object?>
+                {
+                    { "SubscriptionId", existingSubscription.Id.ToString() },
+                    { "UpdatedFields", request }
+                }
+            });
             return Result<SubscriptionResponse>.Success(_mapper.Map<SubscriptionResponse>(existingSubscription), 200, "Subscription plan updated successfully.");
         }
     }

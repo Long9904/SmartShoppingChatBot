@@ -2,7 +2,9 @@
 using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Commons;
+using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAllSubscription
@@ -11,10 +13,12 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAl
     {
         private readonly ISubscriptionPlanRepository _subscriptionRepository;
         private readonly IMapper _mapper;
+       
         public GetSubscriptionQueryHandle(ISubscriptionPlanRepository subscriptionRepository, IMapper mapper)
         {
             _subscriptionRepository = subscriptionRepository;
             _mapper = mapper;
+         
         }
         public async Task<Result<BasePaginatedList<SubscriptionResponse>>> Handle(GetSubscriptionQuery request, CancellationToken cancellationToken)
         {
@@ -30,7 +34,6 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.GetAl
             subscriptionPlans = subscriptionPlans.OrderBy(s => s.Level);
             var pagingList = await _subscriptionRepository.PaginatedListAsync(subscriptionPlans, request.Filter?.PageIndex ?? 1, request.Filter?.PageSize ?? 10);
             var responseItems = _mapper.Map<IReadOnlyCollection<SubscriptionResponse>>(pagingList.Items);
-
             return Result<BasePaginatedList<SubscriptionResponse>>.Success(new BasePaginatedList<SubscriptionResponse>
             {
                 Items = responseItems,

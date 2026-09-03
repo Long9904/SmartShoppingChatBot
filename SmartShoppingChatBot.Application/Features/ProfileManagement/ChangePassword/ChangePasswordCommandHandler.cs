@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using SmartShoppingChatBot.Application.Commons.Results;
+using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 using System;
 using System.Collections.Generic;
@@ -18,16 +20,19 @@ namespace SmartShoppingChatBot.Application.Features.ProfileManagement.ChangePass
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPasswordService _passwordService;
         private readonly ILogger<ChangePasswordCommandHandler> _logger;
+        private readonly IActivityLogService _activityLogService;
 
 
         public ChangePasswordCommandHandler(ICurrentUserService currentUserService, IUserRepository userRepository,
-            IUnitOfWork unitOfWork, ILogger<ChangePasswordCommandHandler> logger, IPasswordService passwordService)
+            IUnitOfWork unitOfWork, ILogger<ChangePasswordCommandHandler> logger, IPasswordService passwordService,
+            IActivityLogService activityLogService)
         {
             _currentUserService = currentUserService;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
             _passwordService = passwordService;
+            _activityLogService = activityLogService;
         }
 
 
@@ -62,6 +67,16 @@ namespace SmartShoppingChatBot.Application.Features.ProfileManagement.ChangePass
             };
             await _userRepository.UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync();
+            await _activityLogService.LogAsync(new ActivityLogRequest
+            {
+                Action = ActionLogEnums.PasswordChange,
+                ActorId = user.Id.ToString(),
+                TargetType = "User",
+                TargetId = user.Id.ToString(),
+                Status = StatusLogEnums.Success,
+                Severity = SeverityLogEnums.Info,
+                Description = $"User {user.FullName} changed password successfully.",
+            });
             _logger.LogInformation($"User {user.FullName} changed password successfully.");
             return Result<string>.Success("Password changed successfully", 200);
         }

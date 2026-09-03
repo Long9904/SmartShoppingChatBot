@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.Results;
+using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.DeleteSubscription
@@ -10,11 +11,14 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.Delet
         private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
         private readonly ISubscriptionRepository _subscriptionRepository;
         private readonly IUnitOfWork _unitOfWork;
-        public DeleteSubscriptionCommandHandler(ISubscriptionPlanRepository subscriptionPlanRepository, ISubscriptionRepository subscriptionRepository, IUnitOfWork unitOfWork)
+        private readonly IActivityLogService _activityLogService;
+        public DeleteSubscriptionCommandHandler(ISubscriptionPlanRepository subscriptionPlanRepository,
+            ISubscriptionRepository subscriptionRepository, IUnitOfWork unitOfWork, IActivityLogService activityLogService)
         {
             _subscriptionPlanRepository = subscriptionPlanRepository;
             _subscriptionRepository = subscriptionRepository;
             _unitOfWork = unitOfWork;
+            _activityLogService = activityLogService;
         }
 
         public async Task<Result<string>> Handle(DeleteSubscriptionCommand request, CancellationToken cancellationToken)
@@ -35,6 +39,16 @@ namespace SmartShoppingChatBot.Application.Features.SubscriptionManagement.Delet
             }
             subscriptionPlan.Status = Domain.Enums.StatusEnums.Inactive;
             await _subscriptionPlanRepository.UpdateAsync(subscriptionPlan);
+            await _unitOfWork.SaveChangesAsync();
+            await _activityLogService.LogAsync(new DTOs.ActivityLogRequest
+            {
+                Action = Domain.Enums.ActionLogEnums.Delete,
+                TargetType = nameof(Domain.Entities.SubscriptionPlan),
+                TargetId = subscriptionPlan.Id.ToString(),
+                Status = Domain.Enums.StatusLogEnums.Success,
+                Severity = Domain.Enums.SeverityLogEnums.Info,
+                Description = $"Subscription plan '{subscriptionPlan.Name}' deleted successfully.",
+            });
             return Result<string>.Success("Subscription deleted successfully.");
         }
     }

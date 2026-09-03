@@ -572,6 +572,7 @@ public class UT_DocumentManagement
         public DeleteDocumentCommandHandler DeleteHandler { get; }
         public DocumentSemanticSearchQueryHandler SemanticSearchHandler { get; }
         public EmbeddingDocumentCommandHandler EmbeddingHandler { get; }
+        public Mock<IActivityLogService> ActivityLogService { get; } = new();
 
         public DocumentFixture()
         {
@@ -598,7 +599,8 @@ public class UT_DocumentManagement
                 DocumentRepository.Object,
                 CurrentUser.Object,
                 UnitOfWork.Object,
-                Publisher.Object);
+                Publisher.Object,
+                ActivityLogService.Object);
             GetHandler = new GetDocumentQueryHandler(
                 UnitOfWork.Object,
                 TestData.Mapper(),
@@ -612,7 +614,8 @@ public class UT_DocumentManagement
                 UnitOfWork.Object,
                 EntryRepository.Object,
                 Qdrant.Object,
-                CurrentUser.Object);
+                CurrentUser.Object,
+                ActivityLogService.Object);
             SemanticSearchHandler = new DocumentSemanticSearchQueryHandler(
                 CurrentUser.Object,
                 Gemini.Object,

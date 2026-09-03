@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Application.Features.ProfileManagement.UpdateProfile
@@ -17,6 +18,7 @@ namespace SmartShoppingChatBot.Application.Features.ProfileManagement.UpdateProf
         private readonly IMapper _mapper;
         private readonly TimeProvider _time;
         private readonly ILogger<UpdateProfileCommandHandler> _logger;
+        private readonly IActivityLogService _activityLogService;
 
         public UpdateProfileCommandHandler(
             IUserRepository userRepository,
@@ -24,7 +26,8 @@ namespace SmartShoppingChatBot.Application.Features.ProfileManagement.UpdateProf
             IUnitOfWork unitOfWork,
             IMapper mapper,
             TimeProvider time,
-            ILogger<UpdateProfileCommandHandler> logger)
+            ILogger<UpdateProfileCommandHandler> logger,
+            IActivityLogService activityLogService)
         {
             _userRepository = userRepository;
             _currentUserService = currentUserService;
@@ -32,6 +35,7 @@ namespace SmartShoppingChatBot.Application.Features.ProfileManagement.UpdateProf
             _mapper = mapper;
             _time = time;
             _logger = logger;
+            _activityLogService = activityLogService;
         }
 
         public async Task<Result<ProfileResponse>> Handle(UpdateProfileCommand request, CancellationToken cancellationToken)
@@ -57,6 +61,16 @@ namespace SmartShoppingChatBot.Application.Features.ProfileManagement.UpdateProf
 
             await _userRepository.UpdateAsync(existingUser);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _activityLogService.LogAsync(new ActivityLogRequest
+            {
+                Action = ActionLogEnums.Update,
+                ActorId = existingUser.Id.ToString(),
+                TargetType = "UserProfile",
+                TargetId = existingUser.Id.ToString(),
+                Status = StatusLogEnums.Success,
+                Severity = SeverityLogEnums.Info,
+                Description = $"User {existingUser.FullName} updated their profile successfully.",
+            });
 
             var profileResponse = _mapper.Map<ProfileResponse>(existingUser);
 
