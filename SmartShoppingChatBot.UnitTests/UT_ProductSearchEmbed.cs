@@ -283,8 +283,8 @@ public class UT_ProductSemanticSearch
                 .ReturnsAsync(Rerank(Products.Select(product => (product.Id.ToString(), 0.95f)).ToArray()));
 
             var mapper = new Mock<IMapper>();
-            mapper.Setup(value => value.Map<List<ProductResponseV3>>(It.IsAny<object>()))
-                .Returns((object source) => ((IEnumerable<Product>)source).Select(product => new ProductResponseV3
+            mapper.Setup(value => value.Map<List<ProductResponseV2>>(It.IsAny<object>()))
+                .Returns((object source) => ((IEnumerable<Product>)source).Select(product => new ProductResponseV2
                 {
                     ProductId = product.Id.ToString(),
                     Name = product.Name,
