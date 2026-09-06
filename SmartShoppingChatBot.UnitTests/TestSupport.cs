@@ -142,7 +142,7 @@ internal static class TestData
         Name = name
     };
 
-    public static ProductResponseV3 ProductReferenceResponse(
+    public static ProductResponseV2 ProductReferenceResponse(
         string id,
         string name,
         string externalProductId = "SKU-001") => new()

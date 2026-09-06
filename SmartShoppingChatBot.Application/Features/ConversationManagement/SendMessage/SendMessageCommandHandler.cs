@@ -213,9 +213,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 };
 
                 var cacheProducts = _productReferenceCollector.GetProducts();
-                var cachedProductDetails = cacheProducts
-                    .Select(product => product.ToProductResponseV2())
-                    .ToList();
+                var cachedProductDetails = cacheProducts.ToList();
 
                 var productById = BuildAvailableProductReferences(
                     cacheProducts,
@@ -396,7 +394,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
         }
 
         private static Dictionary<string, CachedProductReference> BuildAvailableProductReferences(
-            IEnumerable<ProductResponseV3> currentProducts,
+            IEnumerable<ProductResponseV2> currentProducts,
             ConversationContextCache conversationContext)
         {
 
@@ -461,7 +459,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             Message aiMessage,
             string rawQuery,
             KernelChatResult kernelResult,
-            IReadOnlyCollection<ProductResponseV3> retrievedProducts,
+            IReadOnlyCollection<ProductResponseV2> retrievedProducts,
             IReadOnlyCollection<MessageProductResponse> selectedProducts,
             long retrievalLatency,
             CancellationToken cancellationToken)
@@ -520,7 +518,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             var comparedProductById = await _productReferenceResolver.ResolveAsync(
                 businessId,
                 comparedProductIds,
-                retrievedProducts.Select(product => product.ToProductResponseV2()),
+                retrievedProducts,
                 cancellationToken);
             var comparedProducts = _productReferenceResolver
                 .GetInOrder(comparedProductIds, comparedProductById)
