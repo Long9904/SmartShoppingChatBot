@@ -13,12 +13,12 @@ using Microsoft.OpenApi.Models;
 using Microsoft.SemanticKernel;
 using Qdrant.Client;
 using Quartz;
-using SmartShoppingChatBot.Application.Features.SubscriptionManagement.ResetSubscription;
 using SmartShoppingChatBot.API.Extensions;
 using SmartShoppingChatBot.API.Middlewares;
 using SmartShoppingChatBot.Application;
 using SmartShoppingChatBot.Application.Commons.Behaviors;
 using SmartShoppingChatBot.Application.Commons.Options;
+using SmartShoppingChatBot.Application.Features.SubscriptionManagement.ResetSubscription;
 using SmartShoppingChatBot.Application.Plugins;
 using SmartShoppingChatBot.Infrastructure;
 using SmartShoppingChatBot.Infrastructure.Seeders;
@@ -185,6 +185,7 @@ builder.Services.AddAuthentication(options =>
             }
         };
 
+        // Jwt validation
         options.TokenValidationParameters = new()
         {
             ValidateIssuer = true,
@@ -199,6 +200,7 @@ builder.Services.AddAuthentication(options =>
         };
     })
 
+    // Other validation
     .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>("ApiKey", options => { });
 
 
@@ -241,6 +243,7 @@ builder.Services.AddSingleton(_ =>
 // Semantic Kernel
 builder.Services.AddScoped<ProductPlugin>();
 builder.Services.AddScoped<DocumentPlugin>();
+builder.Services.AddScoped<RecommendationPlugin>();
 builder.Services.AddScoped<Kernel>(sp =>
 {
     var kb = Kernel.CreateBuilder();

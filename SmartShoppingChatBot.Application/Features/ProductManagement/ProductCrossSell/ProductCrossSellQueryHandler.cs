@@ -12,7 +12,7 @@ using SmartShoppingChatBot.Domain.Interface;
 namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCrossSell;
 
 public sealed class ProductCrossSellQueryHandler
-    : IRequestHandler<ProductCrossSellQuery, Result<List<ProductResponseV3>>>
+    : IRequestHandler<ProductCrossSellQuery, Result<List<ProductResponseV2>>>
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly IProductRepository _productRepository;
@@ -28,14 +28,14 @@ public sealed class ProductCrossSellQueryHandler
         _sender = sender;
     }
 
-    public async Task<Result<List<ProductResponseV3>>> Handle(
+    public async Task<Result<List<ProductResponseV2>>> Handle(
         ProductCrossSellQuery query,
         CancellationToken cancellationToken)
     {
         var businessResult = await _currentUserService.GetBusiness();
         if (!businessResult.IsSuccess || businessResult.Data is null)
         {
-            return Result<List<ProductResponseV3>>.Failure(
+            return Result<List<ProductResponseV2>>.Failure(
                 businessResult.StatusCode,
                 businessResult.Message,
                 businessResult.Errors,
@@ -44,7 +44,7 @@ public sealed class ProductCrossSellQueryHandler
 
         if (!ObjectId.TryParse(query.Request.ReferenceProductId.Trim(), out var referenceProductId))
         {
-            return Result<List<ProductResponseV3>>.Failure(
+            return Result<List<ProductResponseV2>>.Failure(
                 400,
                 "Reference product ID is invalid.",
                 messageCode: ProductMessageCode.InvalidId);
@@ -57,7 +57,7 @@ public sealed class ProductCrossSellQueryHandler
 
         if (referenceProduct is null)
         {
-            return Result<List<ProductResponseV3>>.Failure(
+            return Result<List<ProductResponseV2>>.Failure(
                 404,
                 "Reference product not found.",
                 messageCode: ProductMessageCode.NotFound);
