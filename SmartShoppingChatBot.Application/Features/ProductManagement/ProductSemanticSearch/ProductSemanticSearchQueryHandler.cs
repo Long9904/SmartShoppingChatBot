@@ -15,7 +15,7 @@ using SmartShoppingChatBot.Domain.QdrantConfig;
 namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSemanticSearch
 {
     public class ProductSemanticSearchQueryHandler
-        : IRequestHandler<ProductSemanticSearchQuery, Result<List<ProductResponseV3>>>
+        : IRequestHandler<ProductSemanticSearchQuery, Result<List<ProductResponseV2>>>
     {
         private readonly ICurrentUserService _currentUserService;
         private readonly IGeminiService _geminiService;
@@ -43,21 +43,21 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
             _mapper = mapper;
         }
 
-        public Task<Result<List<ProductResponseV3>>> Handle(
+        public Task<Result<List<ProductResponseV2>>> Handle(
             ProductSemanticSearchQuery query,
             CancellationToken cancellationToken)
         {
             return SearchAsync(query.Request, cancellationToken);
         }
 
-        private async Task<Result<List<ProductResponseV3>>> SearchAsync(
+        private async Task<Result<List<ProductResponseV2>>> SearchAsync(
             ProductSemanticSearchRequest request,
             CancellationToken ct)
         {
             var business = await _currentUserService.GetBusiness();
             if (!business.IsSuccess || business.Data == null)
             {
-                return Result<List<ProductResponseV3>>.Failure(
+                return Result<List<ProductResponseV2>>.Failure(
                     business.StatusCode,
                     business.Message,
                     business.Errors,
@@ -75,7 +75,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             if (!buildVectors.IsSuccess || buildVectors.Data == null)
             {
-                return Result<List<ProductResponseV3>>.Failure(
+                return Result<List<ProductResponseV2>>.Failure(
                     buildVectors.StatusCode,
                     buildVectors.Message,
                     buildVectors.Errors,
@@ -89,7 +89,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             //if (!embeddingSemantic.IsSuccess || embeddingSemantic.Data == null)
             //{
-            //    return Result<List<ProductResponseV3>>.Failure(
+            //    return Result<List<ProductResponseV2>>.Failure(
             //        embeddingSemantic.StatusCode,
             //        embeddingSemantic.Message,
             //        embeddingSemantic.Errors,
@@ -104,7 +104,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             //if (!embeddingTechnical.IsSuccess || embeddingTechnical.Data == null)
             //{
-            //    return Result<List<ProductResponseV3>>.Failure(
+            //    return Result<List<ProductResponseV2>>.Failure(
             //        embeddingTechnical.StatusCode,
             //        embeddingTechnical.Message,
             //        embeddingTechnical.Errors,
@@ -145,7 +145,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             if (products.Count == 0)
             {
-                return Result<List<ProductResponseV3>>.Success(
+                return Result<List<ProductResponseV2>>.Success(
                     [],
                     200,
                     "No matching products found.");
@@ -169,14 +169,14 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
 
             if (!reranked.IsSuccess || reranked.Data == null)
             {
-                return Result<List<ProductResponseV3>>.Failure(
+                return Result<List<ProductResponseV2>>.Failure(
                     reranked.StatusCode,
                     reranked.Message,
                     reranked.Errors,
                     reranked.MessageCode);
             }
 
-            var responses = _mapper.Map<List<ProductResponseV3>>(
+            var responses = _mapper.Map<List<ProductResponseV2>>(
                 reranked.Data.Select(item => item.Product).ToList());
 
             for (var index = 0; index < responses.Count; index++)
@@ -184,7 +184,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductSem
                 responses[index].Score = reranked.Data[index].Score;
             }
 
-            return Result<List<ProductResponseV3>>.Success(
+            return Result<List<ProductResponseV2>>.Success(
                 responses,
                 200,
                 "Product semantic search successfully.");

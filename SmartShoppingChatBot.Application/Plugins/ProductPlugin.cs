@@ -35,7 +35,7 @@ namespace SmartShoppingChatBot.Application.Plugins
           "Product search result. When IsSuccess is true and Data contains products, " +
           "you must present 3-5 products from Data and include their exact productId values " +
           "in selectedProductIds. Never claim that no products were found when Data is non-empty.")]
-        public async Task<Result<List<ProductResponseV3>>> SemanticProductSearch(
+        public async Task<Result<List<ProductResponseV2>>> SemanticProductSearch(
             [Description("Bộ lọc cấu trúc")] ProductSemanticSearchRequest request,
             [Description("Field này không được gọi")] CancellationToken cancellationToken)
         {
@@ -59,7 +59,7 @@ namespace SmartShoppingChatBot.Application.Plugins
         [return: Description(
             "Danh sách sản phẩm đã được lọc theo khoảng giá tương đối và rerank. " +
             "Chỉ trình bày sản phẩm trong Data và sao chép productId chính xác vào selectedProductIds.")]
-        public async Task<Result<List<ProductResponseV3>>> SearchPriceAlternatives(
+        public async Task<Result<List<ProductResponseV2>>> SearchPriceAlternatives(
             [Description("Sản phẩm tham chiếu, chiến lược giá, nhu cầu semantic từ conversation context và nhu cầu bổ sung")] ProductPriceAlternativeRequest request,
             [Description("Field này không được gọi")] CancellationToken cancellationToken)
         {
@@ -83,7 +83,7 @@ namespace SmartShoppingChatBot.Application.Plugins
         [return: Description(
             "Danh sách phụ kiện hoặc sản phẩm bổ trợ đã được tìm kiếm và rerank. " +
             "Chỉ trình bày sản phẩm trong Data và sao chép productId chính xác vào selectedProductIds.")]
-        public async Task<Result<List<ProductResponseV3>>> SearchCompatibleAccessories(
+        public async Task<Result<List<ProductResponseV2>>> SearchCompatibleAccessories(
             [Description("Sản phẩm tham chiếu, nhu cầu semantic và loại phụ kiện cần tìm")] ProductCrossSellRequest request,
             [Description("Field này không được gọi")] CancellationToken cancellationToken)
         {

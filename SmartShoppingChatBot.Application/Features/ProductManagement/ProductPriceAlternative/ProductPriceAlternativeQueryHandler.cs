@@ -12,7 +12,7 @@ using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductPriceAlternative;
 
-public class ProductPriceAlternativeQueryHandler : IRequestHandler<ProductPriceAlternativeQuery, Result<List<ProductResponseV3>>>
+public class ProductPriceAlternativeQueryHandler : IRequestHandler<ProductPriceAlternativeQuery, Result<List<ProductResponseV2>>>
 {
     private const decimal DownSellMinimumRatio = 0.85m;
     private const decimal UpSellMaximumRatio = 1.20m;
@@ -34,14 +34,14 @@ public class ProductPriceAlternativeQueryHandler : IRequestHandler<ProductPriceA
         _logger = logger;
     }
 
-    public async Task<Result<List<ProductResponseV3>>> Handle(
+    public async Task<Result<List<ProductResponseV2>>> Handle(
         ProductPriceAlternativeQuery query,
         CancellationToken cancellationToken)
     {
         var businessResult = await _currentUserService.GetBusiness();
         if (!businessResult.IsSuccess || businessResult.Data is null)
         {
-            return Result<List<ProductResponseV3>>.Failure(
+            return Result<List<ProductResponseV2>>.Failure(
                 businessResult.StatusCode,
                 businessResult.Message,
                 businessResult.Errors,
@@ -50,7 +50,7 @@ public class ProductPriceAlternativeQueryHandler : IRequestHandler<ProductPriceA
 
         if (!ObjectId.TryParse(query.Request.ReferenceProductId.Trim(), out var referenceProductId))
         {
-            return Result<List<ProductResponseV3>>.Failure(
+            return Result<List<ProductResponseV2>>.Failure(
                 400,
                 "Reference product ID is invalid.",
                 messageCode: ProductMessageCode.InvalidId);
@@ -63,7 +63,7 @@ public class ProductPriceAlternativeQueryHandler : IRequestHandler<ProductPriceA
 
         if (referenceProduct is null)
         {
-            return Result<List<ProductResponseV3>>.Failure(
+            return Result<List<ProductResponseV2>>.Failure(
                 404,
                 "Reference product not found.",
                 messageCode: ProductMessageCode.NotFound);
@@ -71,7 +71,7 @@ public class ProductPriceAlternativeQueryHandler : IRequestHandler<ProductPriceA
 
         if (referenceProduct.Price <= 0)
         {
-            return Result<List<ProductResponseV3>>.Failure(
+            return Result<List<ProductResponseV2>>.Failure(
                 400,
                 "Reference product must have a positive price for relative price search.");
         }

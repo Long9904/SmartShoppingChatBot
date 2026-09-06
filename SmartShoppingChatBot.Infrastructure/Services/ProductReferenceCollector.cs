@@ -5,14 +5,9 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 {
     public class ProductReferenceCollector : IProductReferenceCollector
     {
-        private readonly List<ProductResponseV3> _products = [];
+        private readonly List<ProductResponseV2> _products = [];
 
         public void AddRange(IEnumerable<ProductResponseV2> products)
-        {
-            AddRange(products.Select(product => ProductResponseV3.FromProduct(product)));
-        }
-
-        public void AddRange(IEnumerable<ProductResponseV3> products)
         {
             foreach (var product in products)
             {
@@ -39,7 +34,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
         }
 
-        public IReadOnlyList<ProductResponseV3> GetProducts()
+        public IReadOnlyList<ProductResponseV2> GetProducts()
         {
             return _products.ToList();
         }
