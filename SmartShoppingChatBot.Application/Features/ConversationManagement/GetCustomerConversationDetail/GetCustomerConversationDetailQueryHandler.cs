@@ -130,7 +130,7 @@ public sealed class GetCustomerConversationDetailQueryHandler
 
     private ConversationMessageResponse MapMessage(
         Message message,
-        IReadOnlyDictionary<string, ProductResponseV2> productById)
+        IReadOnlyDictionary<string, ResolvedProductReference> productById)
     {
         return new ConversationMessageResponse
         {

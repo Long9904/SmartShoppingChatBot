@@ -153,6 +153,7 @@ namespace SmartShoppingChatBot.Application.Features.ProductManagement.ProductCre
                     Name = user.Data.FullName,
                 };
             }
+            // TODO: normallize product data
 
 
             // Build search text

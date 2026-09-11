@@ -14,6 +14,19 @@ public sealed class MessageProductResponse
 
     public int StockQuantity { get; set; }
 
+    public static MessageProductResponse FromProduct(ProductResponseV2 product)
+    {
+        return new MessageProductResponse
+        {
+            ProductId = product.ProductId,
+            ExternalId = product.ExternalProductId,
+            ExternalProductUrl = product.ExternalProductUrl,
+            Name = product.Name,
+            Price = product.Price,
+            StockQuantity = product.StockQuantity
+        };
+    }
+
     public static MessageProductResponse FromProduct(ResolvedProductReference product)
     {
         return new MessageProductResponse
