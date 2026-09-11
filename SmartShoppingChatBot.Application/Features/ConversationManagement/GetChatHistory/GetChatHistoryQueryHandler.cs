@@ -90,7 +90,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.GetCh
                 .SelectMany(message => message.CacheProductReference ?? [])
                 .Select(product => product.ProductId);
 
-            var productById = await _productReferenceResolver.ResolveAsync(
+            var productById = await _productReferenceResolver.ResolveProductReferencesV2Async(
                 businessId,
                 productIds,
                 cancellationToken: cancellationToken);
@@ -105,7 +105,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.GetCh
                     ContentType = x.ContentType,
                     CreatedAt = x.CreatedAt,
                     ProductReferences = _productReferenceResolver
-                        .GetInOrder(
+                        .GetInOrderProductV2(
                             (x.CacheProductReference ?? []).Select(product => product.ProductId),
                             productById)
                         .Select(MessageProductResponse.FromProduct)

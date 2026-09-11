@@ -20,7 +20,7 @@ public sealed class ProductReferenceResolver : IProductReferenceResolver
         _mapper = mapper;
     }
 
-    public async Task<IReadOnlyDictionary<string, ProductResponseV2>> ResolveAsync(
+    public async Task<IReadOnlyDictionary<string, ProductResponseV2>> ResolveProductReferencesAsync(
         ObjectId businessId,
         IEnumerable<string> productIds,
         IEnumerable<ProductResponseV2>? knownProducts = null,
@@ -73,11 +73,88 @@ public sealed class ProductReferenceResolver : IProductReferenceResolver
         return productById;
     }
 
-    public IReadOnlyList<ProductResponseV2> GetInOrder(
+    public IReadOnlyList<ProductResponseV2> GetInOrderProduct(
         IEnumerable<string> productIds,
         IReadOnlyDictionary<string, ProductResponseV2> productById)
     {
         var products = new List<ProductResponseV2>();
+        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rawProductId in productIds)
+        {
+            var productId = rawProductId?.Trim();
+            if (string.IsNullOrWhiteSpace(productId) || !seenIds.Add(productId))
+            {
+                continue;
+            }
+
+            if (productById.TryGetValue(productId, out var product))
+            {
+                products.Add(product);
+            }
+        }
+
+        return products;
+    }
+
+    public async Task<IReadOnlyDictionary<string, ResolvedProductReference>> ResolveProductReferencesV2Async(
+        ObjectId businessId,
+        IEnumerable<string> productIds,
+        IEnumerable<ProductResponseV2>? knownProducts = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Clear product id list
+        var requestedIds = productIds
+            .Where(productId => !string.IsNullOrWhiteSpace(productId))
+            .Select(productId => productId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var requestedIdSet = requestedIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var productById = new Dictionary<string, ResolvedProductReference>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var product in knownProducts ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(product.ProductId) && requestedIdSet.Contains(product.ProductId.Trim()))
+            {
+                productById[product.ProductId.Trim()] = ResolvedProductReference.FromProduct(product);
+            }
+        }
+
+        var missingIds = requestedIds
+            .Where(productId => !productById.ContainsKey(productId))
+            .Select(productId => ObjectId.TryParse(productId, out var objectId)
+                ? objectId
+                : (ObjectId?)null)
+            .Where(productId => productId.HasValue)
+            .Select(productId => productId!.Value)
+            .ToList();
+
+        if (missingIds.Count > 0)
+        {
+            var products = await _productRepository.FindAllAsync(product =>
+                missingIds.Contains(product.Id)
+                && product.BusinessId == businessId
+                && product.Status == ProductStatus.Active);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            foreach (var product in _mapper.Map<List<ProductResponseV2>>(products))
+            {
+                productById[product.ProductId] = ResolvedProductReference.FromProduct(product);
+            }
+        }
+
+        return productById;
+    }
+
+    public IReadOnlyList<ResolvedProductReference> GetInOrderProductV2(
+        IEnumerable<string> productIds,
+        IReadOnlyDictionary<string, ResolvedProductReference> productById)
+    {
+        var products = new List<ResolvedProductReference>();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var rawProductId in productIds)

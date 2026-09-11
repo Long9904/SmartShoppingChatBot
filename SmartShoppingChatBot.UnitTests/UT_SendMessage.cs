@@ -397,7 +397,7 @@ public class UT_SendMessage
                 .ReturnsAsync(Result<KernelChatResult>.Success(TestData.KernelResult()));
             ProductCollector.Setup(collector => collector.GetProducts())
                 .Returns([]);
-            ProductReferenceResolver.Setup(resolver => resolver.ResolveAsync(
+            ProductReferenceResolver.Setup(resolver => resolver.ResolveProductReferencesV2Async(
                     It.IsAny<ObjectId>(),
                     It.IsAny<IEnumerable<string>>(),
                     It.IsAny<IEnumerable<ProductResponseV2>?>(),
@@ -409,20 +409,21 @@ public class UT_SendMessage
                     CancellationToken cancellationToken) =>
                 {
                     var requestedIds = productIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    IReadOnlyDictionary<string, ProductResponseV2> productsById = (knownProducts ?? [])
+                    IReadOnlyDictionary<string, ResolvedProductReference> productsById = (knownProducts ?? [])
                         .Where(product => requestedIds.Contains(product.ProductId))
                         .ToDictionary(
                             product => product.ProductId,
+                            ResolvedProductReference.FromProduct,
                             StringComparer.OrdinalIgnoreCase);
 
                     return productsById;
                 });
-            ProductReferenceResolver.Setup(resolver => resolver.GetInOrder(
+            ProductReferenceResolver.Setup(resolver => resolver.GetInOrderProductV2(
                     It.IsAny<IEnumerable<string>>(),
-                    It.IsAny<IReadOnlyDictionary<string, ProductResponseV2>>()))
+                    It.IsAny<IReadOnlyDictionary<string, ResolvedProductReference>>()))
                 .Returns((
                     IEnumerable<string> productIds,
-                    IReadOnlyDictionary<string, ProductResponseV2> productById) => productIds
+                    IReadOnlyDictionary<string, ResolvedProductReference> productById) => productIds
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .Where(productById.ContainsKey)
                     .Select(productId => productById[productId])

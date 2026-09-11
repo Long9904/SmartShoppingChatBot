@@ -107,7 +107,7 @@ public sealed class GetCustomerConversationDetailQueryHandler
             .SelectMany(message => message.CacheProductReference ?? [])
             .Select(product => product.ProductId);
 
-        var productById = await _productReferenceResolver.ResolveAsync(
+        var productById = await _productReferenceResolver.ResolveProductReferencesV2Async(
             businessId,
             productIds,
             cancellationToken: cancellationToken);
@@ -130,7 +130,7 @@ public sealed class GetCustomerConversationDetailQueryHandler
 
     private ConversationMessageResponse MapMessage(
         Message message,
-        IReadOnlyDictionary<string, ProductResponseV2> productById)
+        IReadOnlyDictionary<string, ResolvedProductReference> productById)
     {
         return new ConversationMessageResponse
         {
@@ -140,7 +140,7 @@ public sealed class GetCustomerConversationDetailQueryHandler
             ContentType = message.ContentType,
             CreatedAt = message.CreatedAt,
             ProductReferences = _productReferenceResolver
-                .GetInOrder(
+                .GetInOrderProductV2(
                     (message.CacheProductReference ?? []).Select(product => product.ProductId),
                     productById)
                 .Select(MessageProductResponse.FromProduct)

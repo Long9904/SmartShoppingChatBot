@@ -411,21 +411,21 @@ public class UT_ConversationQueries
                     HasMore = true,
                     NextCursor = "next-cursor"
                 });
-            ProductReferenceResolver.Setup(resolver => resolver.ResolveAsync(
+            ProductReferenceResolver.Setup(resolver => resolver.ResolveProductReferencesV2Async(
                     It.IsAny<ObjectId>(),
                     It.IsAny<IEnumerable<string>>(),
                     It.IsAny<IEnumerable<ProductResponseV2>?>(),
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Dictionary<string, ProductResponseV2>(StringComparer.OrdinalIgnoreCase)
+                .ReturnsAsync(new Dictionary<string, ResolvedProductReference>(StringComparer.OrdinalIgnoreCase)
                 {
-                    [storedProductId] = ResolvedProduct
+                    [storedProductId] = ResolvedProductReference.FromProduct(ResolvedProduct)
                 });
-            ProductReferenceResolver.Setup(resolver => resolver.GetInOrder(
+            ProductReferenceResolver.Setup(resolver => resolver.GetInOrderProductV2(
                     It.IsAny<IEnumerable<string>>(),
-                    It.IsAny<IReadOnlyDictionary<string, ProductResponseV2>>()))
+                    It.IsAny<IReadOnlyDictionary<string, ResolvedProductReference>>()))
                 .Returns((
                     IEnumerable<string> productIds,
-                    IReadOnlyDictionary<string, ProductResponseV2> productById) => productIds
+                    IReadOnlyDictionary<string, ResolvedProductReference> productById) => productIds
                     .Where(productById.ContainsKey)
                     .Select(productId => productById[productId])
                     .ToList());

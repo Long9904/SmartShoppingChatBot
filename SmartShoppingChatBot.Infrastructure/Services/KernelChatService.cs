@@ -34,7 +34,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         public async Task<Result<KernelChatResult>> ChatAsync(KernelChatRequest request)
         {
             var chatService = _kernel.GetRequiredService<IChatCompletionService>();
-            var businessConfig = await _redisBusinessConfig.GetBusinessConfigAsync();
+            var businessConfig = request.Business.Config;
 
             var businessPrompt = await BuildBusinessSystemPrompt(request.Business, businessConfig);
 
