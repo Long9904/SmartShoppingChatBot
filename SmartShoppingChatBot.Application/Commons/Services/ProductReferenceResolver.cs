@@ -20,7 +20,7 @@ public sealed class ProductReferenceResolver : IProductReferenceResolver
         _mapper = mapper;
     }
 
-    public async Task<IReadOnlyDictionary<string, ProductResponseV2>> ResolveAsync(
+    public async Task<IReadOnlyDictionary<string, ResolvedProductReference>> ResolveProductReferencesV2Async(
         ObjectId businessId,
         IEnumerable<string> productIds,
         IEnumerable<ProductResponseV2>? knownProducts = null,
@@ -28,6 +28,7 @@ public sealed class ProductReferenceResolver : IProductReferenceResolver
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Clear product id list
         var requestedIds = productIds
             .Where(productId => !string.IsNullOrWhiteSpace(productId))
             .Select(productId => productId.Trim())
@@ -35,14 +36,13 @@ public sealed class ProductReferenceResolver : IProductReferenceResolver
             .ToList();
 
         var requestedIdSet = requestedIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var productById = new Dictionary<string, ProductResponseV2>(StringComparer.OrdinalIgnoreCase);
+        var productById = new Dictionary<string, ResolvedProductReference>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var product in knownProducts ?? [])
         {
-            if (!string.IsNullOrWhiteSpace(product.ProductId)
-                && requestedIdSet.Contains(product.ProductId.Trim()))
+            if (!string.IsNullOrWhiteSpace(product.ProductId) && requestedIdSet.Contains(product.ProductId.Trim()))
             {
-                productById[product.ProductId.Trim()] = product;
+                productById[product.ProductId.Trim()] = ResolvedProductReference.FromProduct(product);
             }
         }
 
@@ -66,18 +66,18 @@ public sealed class ProductReferenceResolver : IProductReferenceResolver
 
             foreach (var product in _mapper.Map<List<ProductResponseV2>>(products))
             {
-                productById[product.ProductId] = product;
+                productById[product.ProductId] = ResolvedProductReference.FromProduct(product);
             }
         }
 
         return productById;
     }
 
-    public IReadOnlyList<ProductResponseV2> GetInOrder(
+    public IReadOnlyList<ResolvedProductReference> GetInOrderProductV2(
         IEnumerable<string> productIds,
-        IReadOnlyDictionary<string, ProductResponseV2> productById)
+        IReadOnlyDictionary<string, ResolvedProductReference> productById)
     {
-        var products = new List<ProductResponseV2>();
+        var products = new List<ResolvedProductReference>();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var rawProductId in productIds)

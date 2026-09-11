@@ -14,7 +14,7 @@ public sealed class MessageProductResponse
 
     public int StockQuantity { get; set; }
 
-    public static MessageProductResponse FromProduct(ProductResponseV2 product)
+    public static MessageProductResponse FromProduct(ResolvedProductReference product)
     {
         return new MessageProductResponse
         {

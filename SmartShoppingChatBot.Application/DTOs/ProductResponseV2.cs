@@ -27,10 +27,6 @@
 
         public Dictionary<string, string> Metadata { get; set; } = [];
 
-        /// <summary>
-        /// Relevance score assigned by semantic retrieval and reranking.
-        /// It is zero when the product was loaded directly by ID.
-        /// </summary>
         public double Score { get; set; }
 
         public ProductResponseV2 Copy()

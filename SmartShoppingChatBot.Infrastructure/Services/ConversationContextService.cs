@@ -91,8 +91,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             await _cacheService.SetAsync(context, ct);
 
-            _logger.LogInformation(
-            "Conversation context {ConversationId} was restored from database",
+            _logger.LogInformation("Conversation context {ConversationId} was restored from database",
             conversationId);
 
             return context;
