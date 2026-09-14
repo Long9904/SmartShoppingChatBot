@@ -1,6 +1,7 @@
 using MediatR;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Domain.Entities;
 
 namespace SmartShoppingChatBot.Application.Features.CategoryAttributeManagement.CreateDraft;
 
