@@ -9,5 +9,7 @@
         public int ConversationContextTtlHours { get; init; } = 8;
 
         public int RecentTurnLimit { get; init; } = 8;
+
+        public int CategoryAttributeSchemaTtlHours { get; init; } = 8;
     }
 }

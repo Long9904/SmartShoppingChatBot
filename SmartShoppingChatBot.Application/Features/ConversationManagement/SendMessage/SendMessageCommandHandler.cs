@@ -74,51 +74,31 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
             SendMessageCommand request,
             CancellationToken cancellationToken)
         {
-            var business = await _currentUserService.GetBusiness();
+            // 1. Some business Validation
+            var (business, businessCurrentQuota) = await BusinessValidation();
 
-            if (!business.IsSuccess || business.Data is null)
-                return Result<ConversationResponse>.Failure(
-                    statusCode: business.StatusCode,
-                    message: business.Message,
-                    messageCode: business.MessageCode);
 
+            if (!business.IsSuccess || business.Data is null || businessCurrentQuota is null)
+            {
+                return Result<ConversationResponse>
+                    .Failure(business.StatusCode, business.Message, null, business.MessageCode);
+            }
+
+            // 2. Customer get or create new
             var customer = await GetOrCreateCustomerAsync(request.ExternalCustomerId, business.Data!);
-
-            var businessCurrentQuota = await _buinessQuotaRepository.GetCurrentBusinessQuota(business.Data.Id);
-            if (businessCurrentQuota is null)
-                return Result<ConversationResponse>.Failure(
-                    statusCode: 404,
-                    message: "Business quota not found",
-                    messageCode: BusinessQuotaMessageCode.NotFound);
-
-            if (businessCurrentQuota.UsedMessages > businessCurrentQuota.MessageLimit)
-            {
-                return Result<ConversationResponse>.Failure(
-                    statusCode: 404,
-                    message: "Doanh nghiệp đã đạt đến giới hạn sử dụng hiện tại",
-                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded);
-            }
-
-            if (businessCurrentQuota.UsedTokens > businessCurrentQuota.TokenLimit)
-            {
-                return Result<ConversationResponse>.Failure(
-                    statusCode: 429,
-                    message: "Doanh nghiệp đã đạt đến giới hạn sử dụng hiện tại",
-                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded);
-            }
 
             Conversation? conversation;
             try
             {
                 var createTime = _time.GetUtcNow();
 
-                // 1. Create new or load conversation
-
+                // 3.1 Create new conversation in new chat
                 if (string.IsNullOrEmpty(request.ConversationId) || request.ConversationId == null)
                 {
                     var title = request.Message.Length > 30
                         ? request.Message.Substring(0, 30) + "..."
                         : request.Message;
+
                     conversation = new()
                     {
                         Title = title,
@@ -128,8 +108,10 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                         Id = ObjectId.GenerateNewId(),
                         Status = ConversationStatus.Active
                     };
+
                     await _conversationRepository.AddAsync(conversation);
                 }
+                // 3.2 Update conversation if exist
                 else
                 {
                     if (!ObjectId.TryParse(request.ConversationId, out var conversationId))
@@ -152,7 +134,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     await _conversationRepository.UpdateAsync(conversation);
                 }
 
-
+                // 4. Create new user message
                 var userMessage = new Message
                 {
                     Id = ObjectId.GenerateNewId(),
@@ -167,14 +149,14 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
                 await _messageRepository.AddAsync(userMessage);
 
-                // 2. Take conversation context from Redis or load it from the database
                 var sw = Stopwatch.StartNew();
 
+                // 5. Load conversation context in redis
                 var conversationContext = await _conversationContextService.GetOrLoadAsyncConversationCache(
                     conversation.Id.ToString(), cancellationToken);
 
 
-                // 3. Send req to semantic kernel + old context summary
+                // 6. Send req to semantic kernel + old context summary
                 KernelChatRequest req = new()
                 {
                     ConversationContextCache = conversationContext,
@@ -199,7 +181,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 var kernelResult = sematicKernelResponse.Data!;
                 var responseTime = _time.GetUtcNow();
 
-                // 4. Build AI response
+                // 7. Build AI response
                 var aiMessage = new Message
                 {
                     Id = ObjectId.GenerateNewId(),
@@ -213,7 +195,6 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 };
 
                 var cacheProducts = _productReferenceCollector.GetProducts();
-                var cachedProductDetails = cacheProducts.ToList();
 
                 var productById = BuildAvailableProductReferences(
                     cacheProducts,
@@ -225,47 +206,55 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                var selectedProductReferenceCandidates = selectedProductIds
-                    .Where(productById.ContainsKey)
-                    .Select((productId, index) =>
+                // 8. IMPORTANT. HARD. MUST NOT CHANGE
+
+                // 8.1 Build cache product for conversation context & AI product reponse for saving data
+
+                // Only retain products that were available in this conversation's context.
+                var selectedProductReferenceCandidates = new List<CachedProductReference>();
+                foreach (var productId in selectedProductIds)
+                {
+                    // Check productId in list productById
+                    if (!productById.TryGetValue(productId, out var product))
                     {
-                        var product = productById[productId];
+                        continue;
+                    }
 
-                        return new CachedProductReference
-                        {
-                            DisplayOrder = index + 1,
-                            DisplayName = product.DisplayName,
-                            ProductId = product.ProductId,
-                            ExternalProductId = product.ExternalProductId,
-                        };
-                    })
-                    .ToList();
+                    selectedProductReferenceCandidates.Add(new CachedProductReference
+                    {
+                        DisplayOrder = selectedProductReferenceCandidates.Count + 1,
+                        DisplayName = product.DisplayName,
+                        ProductId = product.ProductId,
+                        ExternalProductId = product.ExternalProductId,
+                    });
+                }
 
+                // List proudct cache Id
                 var responseProductIds = selectedProductReferenceCandidates
                     .Select(product => product.ProductId)
                     .ToList();
 
-                var responseProductById = await _productReferenceResolver.ResolveAsync(
+                // Take product data
+                var responseProductById = await _productReferenceResolver.ResolveProductReferencesV2Async(
                     business.Data.Id,
                     responseProductIds,
-                    cachedProductDetails,
+                    cacheProducts,
                     cancellationToken);
 
+                // Build simple list product to response
                 var productListResponse = _productReferenceResolver
-                    .GetInOrder(responseProductIds, responseProductById)
+                    .GetInOrderProductV2(responseProductIds, responseProductById)
                     .Select(MessageProductResponse.FromProduct)
                     .ToList();
 
-                var resolvedProductById = productListResponse
-                    .ToDictionary(product => product.ProductId, StringComparer.OrdinalIgnoreCase);
 
                 var selectedProductReferences = selectedProductReferenceCandidates
                     .Select((product, index) => new CachedProductReference
                     {
                         DisplayOrder = index + 1,
                         ProductId = product.ProductId,
-                        ExternalProductId = resolvedProductById.TryGetValue(product.ProductId, out var resolvedProduct)
-                            ? NormalizeExternalProductId(resolvedProduct.ExternalId)
+                        ExternalProductId = responseProductById.TryGetValue(product.ProductId, out var resolvedProduct)
+                            ? NormalizeExternalProductId(resolvedProduct.ExternalProductId)
                             : NormalizeExternalProductId(product.ExternalProductId),
                         DisplayName = product.DisplayName
                     })
@@ -280,8 +269,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                             ExternalProductId = product.ExternalProductId,
                             DisplayName = product.DisplayName
                         };
-                    })
-                    .ToList();
+                    }).ToList();
 
 
 
@@ -515,13 +503,13 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 return;
             }
 
-            var comparedProductById = await _productReferenceResolver.ResolveAsync(
+            var comparedProductById = await _productReferenceResolver.ResolveProductReferencesV2Async(
                 businessId,
                 comparedProductIds,
                 retrievedProducts,
                 cancellationToken);
             var comparedProducts = _productReferenceResolver
-                .GetInOrder(comparedProductIds, comparedProductById)
+                .GetInOrderProductV2(comparedProductIds, comparedProductById)
                 .Take(10)
                 .ToList();
 
@@ -656,6 +644,53 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 data: newCustomer,
                 message: "Create customer success",
                 messageCode: CustomerMessageCode.Create);
+        }
+
+        private async Task<(Result<Business>, BusinessQuota? businessQuota)> BusinessValidation()
+        {
+            var business = await _currentUserService.GetBusiness();
+
+            // Authorize
+            if (!business.IsSuccess || business.Data is null)
+                return (
+                    Result<Business>.Failure(
+                    statusCode: business.StatusCode,
+                    message: business.Message,
+                    messageCode: business.MessageCode),
+                    null);
+
+            // Quota checking
+            var businessCurrentQuota = await _buinessQuotaRepository.GetCurrentBusinessQuota(business.Data.Id);
+
+            if (businessCurrentQuota is null)
+                return (
+                    Result<Business>.Failure(
+                    statusCode: 404,
+                    message: "Business quota not found",
+                    messageCode: BusinessQuotaMessageCode.NotFound),
+                    null);
+
+            if (businessCurrentQuota.UsedMessages > businessCurrentQuota.MessageLimit)
+            {
+                return (
+                    Result<Business>.Failure(
+                    statusCode: 404,
+                    message: "Doanh nghiệp đã đạt đến giới hạn sử dụng hiện tại",
+                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded),
+                    null);
+            }
+
+            if (businessCurrentQuota.UsedTokens > businessCurrentQuota.TokenLimit)
+            {
+                return (
+                    Result<Business>.Failure(
+                    statusCode: 429,
+                    message: "Doanh nghiệp đã đạt đến giới hạn sử dụng hiện tại",
+                    messageCode: BusinessQuotaMessageCode.TokenLimitExceeded),
+                    null);
+            }
+
+            return (Result<Business>.Success(business.Data), businessCurrentQuota);
         }
     }
 }

@@ -42,6 +42,8 @@ public class MongoDbContext : DbContext
     public DbSet<SearchQueryLog> SearchQueryLogs { get; set; }
     public DbSet<ActivityLog> ActivityLogs { get; set; }
 
+    public DbSet<CategoryAttributeSchema> CategoryAttributeSchemas { get; set; }
+
     public MongoDbContext(DbContextOptions<MongoDbContext> options) : base(options)
     {
     }
@@ -181,6 +183,13 @@ public class MongoDbContext : DbContext
             e.HasIndex(e => new { e.BusinessId, e.ActorId, e.CreatedAt });
             e.HasIndex(e => new { e.BusinessId, e.Action, e.CreatedAt });
             e.HasIndex(e => new { e.BusinessId, e.TargetType, e.TargetId, e.CreatedAt });
+        });
+
+        modelBuilder.Entity<CategoryAttributeSchema>(e =>
+        {
+            e.HasKey(e => e.Id);
+            e.HasIndex(e => new { e.Category, e.Version }).IsUnique();
+            e.HasIndex(e => new { e.Category, e.IsActive });
         });
     }
 }
