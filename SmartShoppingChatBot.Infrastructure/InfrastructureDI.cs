@@ -34,6 +34,7 @@ public static class InfrastructureDI
         services.AddScoped<IConversationContextService, ConversationContextService>();
         services.AddScoped<IProductReferenceCollector, ProductReferenceCollector>();
         services.AddScoped<IRedisBusinessConfig, RedisBusinessConfig>();
+        services.AddScoped<ICategoryAttributeSchemaService, CategoryAttributeSchemaService>();
         services.AddScoped<IActivityLogService, ActivityLogService>();
         services.AddSingleton<GoogleAccessTokenProvider>();
 
@@ -65,6 +66,7 @@ public static class InfrastructureDI
         services.AddScoped<IConversationOrderRepository, ConversationOrderRepository>();
         services.AddScoped<ISearchQueryLogRepository, SearchQueryLogRepository>();
         services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
+        services.AddScoped<ICategoryAttributeSchemaRepository, CategoryAttributeSchemaRepository>();
 
         return services;
     }

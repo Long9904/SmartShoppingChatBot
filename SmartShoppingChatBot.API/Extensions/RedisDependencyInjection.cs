@@ -22,6 +22,9 @@ namespace SmartShoppingChatBot.API.Extensions
                 .Validate(
                     options => options.ConversationContextTtlHours > 0,
                     "Conversation context TTL must be greater than zero.")
+                .Validate(
+                    options => options.CategoryAttributeSchemaTtlHours > 0,
+                    "Category attribute schema TTL must be greater than zero.")
                 .ValidateOnStart();
 
             services.AddSingleton<IConnectionMultiplexer>(serviceProvider =>
