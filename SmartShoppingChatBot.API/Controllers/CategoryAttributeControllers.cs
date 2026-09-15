@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartShoppingChatBot.Application.Commons.Results;
@@ -16,7 +15,6 @@ namespace SmartShoppingChatBot.API.Controllers;
 [Route("api/v1/category-attributes")]
 [ApiController]
 [ApiExplorerSettings(GroupName = "internal")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
 public sealed class CategoryAttributeControllers : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -28,22 +26,27 @@ public sealed class CategoryAttributeControllers : ControllerBase
 
     [HttpPost("drafts")]
     [EndpointSummary("Creates a new draft version of a category attribute schema.")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> CreateDraftAsync([FromBody] CreateDraftCommand command)
     {
         var result = await _mediator.Send(command);
         return ToResponse(result);
     }
 
+
     [HttpGet]
     [EndpointSummary("Gets the highest schema version of every category.")]
+    [Authorize(Roles = "BUSINESS_OWNER, CATALOG_TEAM, ADMIN")]
     public async Task<IActionResult> GetAllSchemasAsync()
     {
         var result = await _mediator.Send(new GetAllSchemasQuery());
         return ToResponse(result);
     }
 
+
     [HttpPut("activate")]
     [EndpointSummary("Activates a category attribute schema version.")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> ActivateVersionAsync([FromQuery] string category, [FromQuery] int version)
     {
         var result = await _mediator.Send(new ActivateVersionCommand
@@ -60,23 +63,29 @@ public sealed class CategoryAttributeControllers : ControllerBase
         return StatusCode(result.StatusCode, ApiResponse<bool>.Fail(result.Message!, result.Errors, result.MessageCode));
     }
 
+
     [HttpGet("pending-approval")]
     [EndpointSummary("Gets category attribute schema versions pending approval.")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> GetPendingApprovalAsync()
     {
         var result = await _mediator.Send(new GetPendingApprovalQuery());
         return ToResponse(result);
     }
 
+
     [HttpGet("history")]
     [EndpointSummary("Gets all schema versions for a category.")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> GetHistoryAsync([FromQuery] string category)
     {
         var result = await _mediator.Send(new GetHistoryQuery { Category = category });
         return ToResponse(result);
     }
 
+
     [HttpPut("attributes/{attributeKey}")]
+    [Authorize(Roles = "ADMIN")]
     [EndpointSummary("Updates an attribute definition without changing its data type.")]
     public async Task<IActionResult> UpdateAttributeDefinitionAsync(
         [FromRoute] string attributeKey,
