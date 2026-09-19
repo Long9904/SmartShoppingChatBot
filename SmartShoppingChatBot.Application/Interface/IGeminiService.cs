@@ -27,6 +27,12 @@ namespace SmartShoppingChatBot.Application.Interface
             GeminiRequest geminiRequest,
             CancellationToken ct = default);
 
+        Task<Result<GeminiResponse<string>>> CategorySchemeForGeminiAsync(
+            IReadOnlyList<string> categories,
+            string userRequest,
+            string systemPrompt,
+            CancellationToken ct = default);
+
 
         Task<Result<GeminiResponse<ICollection<RankedRecord>>>> RerankerAsyncV2(
             string userQuery,
