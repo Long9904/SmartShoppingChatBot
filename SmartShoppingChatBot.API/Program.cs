@@ -297,6 +297,10 @@ var db = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
 
 await db.Database.EnsureCreatedAsync();
 
+var categoryAttributeSchemaSeeder = scope.ServiceProvider
+    .GetRequiredService<CategoryAttributeSchemaSeeder>();
+await categoryAttributeSchemaSeeder.SeedAsync();
+
 var qdrantInitializer = scope.ServiceProvider
     .GetRequiredService<QdrantCollectionInitializer>();
 

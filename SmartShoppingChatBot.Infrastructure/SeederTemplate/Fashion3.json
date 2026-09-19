@@ -1,0 +1,47 @@
+{
+    "category": "thời trang > váy (đầm)",
+    "attributes": [
+        {
+            "key": "color",
+            "displayName": "Màu sắc",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "đỏ", "đỏ_đô", "cam", "vàng", "xanh_lá", "xanh_dương", "xanh_navy", "tím", "hồng", "đen", "trắng", "xám", "nâu", "be", "kem", "pastel", "đa_màu" ]
+        },
+        {
+            "key": "size",
+            "displayName": "Kích cỡ",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "free_size" ]
+        },
+        {
+            "key": "material",
+            "displayName": "Chất liệu",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "cotton", "lụa", "satin", "voan", "ren", "linen", "denim", "len", "nhung", "tulle", "polyester", "viscose", "sequin" ]
+        },
+        {
+            "key": "dress_style",
+            "displayName": "Kiểu váy/đầm",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "váy_chữ_a", "váy_bút_chì", "váy_xếp_ly", "váy_xòe", "đầm_suông", "đầm_body", "đầm_wrap", "đầm_sơ_mi", "đầm_dạ_hội", "đầm_maxi", "đầm_babydoll", "đầm_hai_dây" ]
+        },
+        {
+            "key": "length",
+            "displayName": "Độ dài",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "mini", "trên_gối", "ngang_gối", "midi", "maxi", "chạm_đất" ]
+        },
+        {
+            "key": "occasion",
+            "displayName": "Dịp sử dụng",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "đi_làm", "đi_học", "dạo_phố", "hẹn_hò", "đi_tiệc", "dự_cưới", "dạ_hội", "đi_biển", "du_lịch", "mặc_hằng_ngày" ]
+        }
+    ]
+}

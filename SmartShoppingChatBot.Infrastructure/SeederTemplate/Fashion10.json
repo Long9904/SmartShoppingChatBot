@@ -1,0 +1,47 @@
+{
+    "category": "thời trang > áo khoác",
+    "attributes": [
+        {
+            "key": "color",
+            "displayName": "Màu sắc",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "đỏ", "đỏ_đô", "cam", "vàng", "xanh_lá", "xanh_rêu", "xanh_dương", "xanh_navy", "tím", "hồng", "đen", "trắng", "xám", "nâu", "be", "kem", "bạc", "đa_màu" ]
+        },
+        {
+            "key": "size",
+            "displayName": "Kích cỡ",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "free_size" ]
+        },
+        {
+            "key": "material",
+            "displayName": "Chất liệu",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "cotton", "kaki", "denim", "len", "dạ", "nỉ", "da_thật", "da_tổng_hợp", "nylon", "polyester", "lông_vũ", "lông_cừu", "nhung", "vải_chống_nước", "vải_dù" ]
+        },
+        {
+            "key": "jacket_style",
+            "displayName": "Kiểu áo khoác",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "blazer", "bomber", "varsity", "trench_coat", "parka", "áo_khoác_denim", "áo_khoác_da", "áo_khoác_dạ", "áo_phao", "áo_gió", "cardigan", "hoodie_khóa_kéo", "áo_khoác_thể_thao", "áo_chống_nắng" ]
+        },
+        {
+            "key": "usecase",
+            "displayName": "Mục đích sử dụng",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "giữ_ấm", "chống_nắng", "chống_gió", "chống_mưa", "đi_làm", "đi_học", "du_lịch", "thể_thao", "hoạt_động_ngoài_trời", "thời_trang", "đi_xe_máy" ]
+        },
+        {
+            "key": "target_gender",
+            "displayName": "Giới tính phù hợp",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "nam", "nữ", "unisex", "bé_trai", "bé_gái", "trẻ_em_unisex" ]
+        }
+    ]
+}

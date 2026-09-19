@@ -13,6 +13,10 @@
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		  <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 	  </Content>
+	  <None Update="SeederTemplate\**\*.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		  <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+	  </None>
   </ItemGroup>
 
   <ItemGroup>

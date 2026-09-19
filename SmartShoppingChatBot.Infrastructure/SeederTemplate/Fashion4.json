@@ -1,0 +1,40 @@
+{
+    "category": "thời trang > mũ",
+    "attributes": [
+        {
+            "key": "color",
+            "displayName": "Màu sắc",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "đỏ", "cam", "vàng", "xanh_lá", "xanh_rêu", "xanh_dương", "xanh_navy", "tím", "hồng", "đen", "trắng", "xám", "nâu", "be", "kem", "đa_màu" ]
+        },
+        {
+            "key": "size",
+            "displayName": "Kích cỡ",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "S", "M", "L", "XL", "52_cm", "54_cm", "56_cm", "58_cm", "60_cm", "free_size", "điều_chỉnh_được" ]
+        },
+        {
+            "key": "material",
+            "displayName": "Chất liệu",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "cotton", "kaki", "denim", "len", "nỉ", "cói", "rơm", "polyester", "nylon", "da", "da_tổng_hợp", "nhung" ]
+        },
+        {
+            "key": "hat_style",
+            "displayName": "Kiểu mũ",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "mũ_lưỡi_trai", "mũ_bucket", "mũ_len", "mũ_rộng_vành", "mũ_cói", "mũ_fedora", "mũ_beret", "mũ_snapback", "mũ_trucker", "mũ_che_nắng", "mũ_thể_thao" ]
+        },
+        {
+            "key": "usecase",
+            "displayName": "Mục đích sử dụng",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "thời_trang", "chống_nắng", "giữ_ấm", "thể_thao", "du_lịch", "đi_biển", "hoạt_động_ngoài_trời", "đi_mưa" ]
+        }
+    ]
+}

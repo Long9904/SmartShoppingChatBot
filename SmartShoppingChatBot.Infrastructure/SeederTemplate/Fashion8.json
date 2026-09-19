@@ -1,0 +1,47 @@
+{
+    "category": "thời trang > balo",
+    "attributes": [
+        {
+            "key": "color",
+            "displayName": "Màu sắc",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "đỏ", "cam", "vàng", "xanh_lá", "xanh_rêu", "xanh_dương", "xanh_navy", "tím", "hồng", "đen", "trắng", "xám", "nâu", "be", "kem", "đa_màu" ]
+        },
+        {
+            "key": "size",
+            "displayName": "Kích cỡ",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "mini", "nhỏ", "vừa", "lớn", "dưới_10_lít", "10_đến_20_lít", "21_đến_30_lít", "31_đến_45_lít", "trên_45_lít" ]
+        },
+        {
+            "key": "material",
+            "displayName": "Chất liệu",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "canvas", "cotton", "polyester", "nylon", "cordura", "da_thật", "da_tổng_hợp", "pu", "pvc", "vải_chống_nước" ]
+        },
+        {
+            "key": "backpack_style",
+            "displayName": "Kiểu balo",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "balo_học_sinh", "balo_laptop", "balo_công_sở", "balo_du_lịch", "balo_leo_núi", "balo_thể_thao", "balo_thời_trang", "balo_chống_trộm", "balo_mini" ]
+        },
+        {
+            "key": "laptop_size",
+            "displayName": "Kích thước laptop phù hợp",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "không_có_ngăn_laptop", "11_inch", "12_inch", "13_inch", "14_inch", "15_inch", "15_6_inch", "16_inch", "17_inch" ]
+        },
+        {
+            "key": "feature",
+            "displayName": "Tính năng",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "chống_nước", "chống_sốc", "chống_trộm", "cổng_sạc_usb", "ngăn_laptop", "đai_trợ_lực", "phản_quang", "mở_rộng_dung_tích", "gấp_gọn" ]
+        }
+    ]
+}
