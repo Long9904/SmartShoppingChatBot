@@ -1,0 +1,40 @@
+{
+    "category": "thời trang > găng tay",
+    "attributes": [
+        {
+            "key": "color",
+            "displayName": "Màu sắc",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "đỏ", "cam", "vàng", "xanh_lá", "xanh_dương", "xanh_navy", "tím", "hồng", "đen", "trắng", "xám", "nâu", "be", "đa_màu" ]
+        },
+        {
+            "key": "size",
+            "displayName": "Kích cỡ",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "XS", "S", "M", "L", "XL", "XXL", "free_size" ]
+        },
+        {
+            "key": "material",
+            "displayName": "Chất liệu",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "cotton", "len", "nỉ", "da_thật", "da_tổng_hợp", "nylon", "polyester", "cao_su", "latex", "silicone", "vải_dệt", "lưới" ]
+        },
+        {
+            "key": "glove_style",
+            "displayName": "Kiểu găng tay",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "nguyên_ngón", "hở_ngón", "nửa_ngón", "cụt_ngón", "găng_tay_dài", "găng_tay_cảm_ứng", "găng_tay_thể_thao", "găng_tay_lái_xe" ]
+        },
+        {
+            "key": "usecase",
+            "displayName": "Mục đích sử dụng",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "giữ_ấm", "chống_nắng", "chống_nước", "đi_xe_máy", "đạp_xe", "tập_gym", "chạy_bộ", "thời_trang", "bảo_hộ" ]
+        }
+    ]
+}

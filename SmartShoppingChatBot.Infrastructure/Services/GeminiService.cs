@@ -434,6 +434,181 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
         }
 
+        public async Task<Result<GeminiResponse<string>>> CategorySchemeForGeminiAsync(
+            IReadOnlyList<string> categories,
+            string userRequest,
+            string systemPrompt,
+            CancellationToken ct = default)
+        {
+            if (categories is null)
+            {
+                return Result<GeminiResponse<string>>.Failure(
+                    400,
+                    "Categories are required.");
+            }
+
+            var allowedCategories = categories
+                .Where(category => !string.IsNullOrWhiteSpace(category))
+                .Select(category => category.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            if (allowedCategories.Length == 0)
+            {
+                return Result<GeminiResponse<string>>.Failure(
+                    400,
+                    "At least one category is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(userRequest))
+            {
+                return Result<GeminiResponse<string>>.Failure(
+                    400,
+                    "User request is required.");
+            }
+
+            var projectId = _config.ProjectId;
+            var location = _config.Location ?? "asia-southeast1";
+            var model = _config.ModelId ?? "gemini-3.5-flash";
+
+            var host = "global".Equals(location, StringComparison.OrdinalIgnoreCase)
+                ? "aiplatform.googleapis.com"
+                : $"{location}-aiplatform.googleapis.com";
+            var endpoint = $"https://{host}/v1/projects/{projectId}" +
+                $"/locations/{location}/publishers/google/models/{model}:generateContent";
+
+            var requestBody = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        parts = new[]
+                        {
+                            new { text = userRequest }
+                        }
+                    }
+                },
+                systemInstruction = new
+                {
+                    parts = new[]
+                    {
+                        new { text = systemPrompt }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0,
+                    maxOutputTokens = 70,
+                    candidateCount = 1,
+                    responseMimeType = "application/json",
+                    responseSchema = new
+                    {
+                        type = "OBJECT",
+                        properties = new
+                        {
+                            category = new
+                            {
+                                type = "STRING",
+                                @enum = allowedCategories
+                            }
+                        },
+                        required = new[] { "category" }
+                    }
+                }
+            };
+
+            try
+            {
+                var json = JsonSerializer.Serialize(requestBody, JsonOptions);
+                var accessToken = await _accessTokenProvider.GetAccessTokenAsync(ct);
+
+                using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var client = _httpClientFactory.CreateClient("gemini");
+                using var response = await client.SendAsync(request, ct);
+                var responseContent = await response.Content.ReadAsStringAsync(ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError(
+                        "Gemini category classification failed with status {Status}: {Response}",
+                        response.StatusCode,
+                        responseContent);
+
+                    return Result<GeminiResponse<string>>.Failure(
+                        (int)response.StatusCode,
+                        responseContent);
+                }
+
+                using var document = JsonDocument.Parse(responseContent);
+                var root = document.RootElement;
+                var promptTokenCount = 0L;
+                var candidatesTokenCount = 0L;
+
+                if (root.TryGetProperty("usageMetadata", out var usageMetadata))
+                {
+                    promptTokenCount = ReadTokenCount(usageMetadata, "promptTokenCount");
+                    candidatesTokenCount = ReadTokenCount(usageMetadata, "candidatesTokenCount");
+                }
+
+                if (!TryReadFirstCandidateText(root, out var text)
+                    || string.IsNullOrWhiteSpace(text))
+                {
+                    return Result<GeminiResponse<string>>.Failure(
+                        502,
+                        "Gemini returned no category.");
+                }
+
+                using var categoryDocument = JsonDocument.Parse(text);
+                if (!categoryDocument.RootElement.TryGetProperty("category", out var categoryElement))
+                {
+                    return Result<GeminiResponse<string>>.Failure(
+                        502,
+                        "Gemini category response is invalid.");
+                }
+
+                var category = categoryElement.GetString();
+                if (string.IsNullOrWhiteSpace(category)
+                    || !allowedCategories.Contains(category, StringComparer.Ordinal))
+                {
+                    return Result<GeminiResponse<string>>.Failure(
+                        502,
+                        "Gemini returned a category outside the allowed values.");
+                }
+
+                return Result<GeminiResponse<string>>.Success(
+                    new GeminiResponse<string>
+                    {
+                        Result = category,
+                        InputTokens = promptTokenCount,
+                        OutputTokens = candidatesTokenCount
+                    });
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Gemini returned an invalid category JSON response");
+                return Result<GeminiResponse<string>>.Failure(
+                    502,
+                    "Gemini returned an invalid category JSON response.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error classifying category with Gemini API");
+                return Result<GeminiResponse<string>>.Failure(
+                    500,
+                    "Error classifying category with Gemini API",
+                    messageCode: "MG_SERVER_500");
+            }
+        }
+
         public async Task<Result<GeminiResponse<ICollection<RankedRecord>>>> RerankerAsyncV2(
             string userQuery,
             IEnumerable<RankRecord> records,
@@ -516,6 +691,29 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             return tokenCount.TryGetDouble(out var doubleValue)
                 ? Convert.ToInt64(doubleValue)
                 : 0;
+        }
+
+        private static bool TryReadFirstCandidateText(JsonElement root, out string? text)
+        {
+            text = null;
+
+            if (!root.TryGetProperty("candidates", out var candidates)
+                || candidates.GetArrayLength() == 0)
+            {
+                return false;
+            }
+
+            var firstCandidate = candidates[0];
+            if (!firstCandidate.TryGetProperty("content", out var content)
+                || !content.TryGetProperty("parts", out var parts)
+                || parts.GetArrayLength() == 0
+                || !parts[0].TryGetProperty("text", out var textElement))
+            {
+                return false;
+            }
+
+            text = textElement.GetString();
+            return text is not null;
         }
 
         private static readonly JsonSerializerOptions JsonOptions = new()

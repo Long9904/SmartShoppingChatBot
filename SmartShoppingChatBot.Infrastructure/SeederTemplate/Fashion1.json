@@ -1,0 +1,47 @@
+﻿{
+    "category": "thời trang > áo",
+    "attributes": [
+        {
+            "key": "color",
+            "displayName": "Màu sắc",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "đỏ", "đỏ_đô", "cam", "vàng", "vàng_mù_tạt", "xanh_lá", "xanh_rêu", "xanh_dương", "xanh_navy", "xanh_ngọc", "tím", "hồng", "hồng_đất", "đen", "trắng", "xám", "xám_bạc", "nâu", "nâu_đất", "be", "kem", "pastel", "đa_màu" ]
+        },
+        {
+            "key": "size",
+            "displayName": "Kích cỡ",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "free_size" ]
+        },
+        {
+            "key": "material",
+            "displayName": "Chất liệu",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "cotton", "cotton_hữu_cơ", "kaki", "denim", "len", "len_merino", "lụa", "linen", "polyester", "nylon", "viscose", "rayon", "modal", "spandex", "nỉ", "voan", "ren", "da", "da_tổng_hợp" ]
+        },
+        {
+            "key": "occasion",
+            "displayName": "Dịp sử dụng",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "đi_tiệc", "đi_làm", "đi_học", "ở_nhà", "thể_thao", "du_lịch", "dạo_phố", "hẹn_hò", "sự_kiện_trang_trọng", "đi_biển", "hoạt_động_ngoài_trời" ]
+        },
+        {
+            "key": "usecase",
+            "displayName": "Mục đích sử dụng",
+            "dataType": "Keyword",
+            "isStrict": false,
+            "allowedValues": [ "mặc_hằng_ngày", "giữ_ấm", "chống_nắng", "thấm_hút_mồ_hôi", "vận_động", "mặc_lớp_trong", "phối_lớp", "đồng_phục", "thời_trang_công_sở", "thời_trang_trang_trọng" ]
+        },
+        {
+            "key": "target_gender",
+            "displayName": "Giới tính phù hợp",
+            "dataType": "Keyword",
+            "isStrict": true,
+            "allowedValues": [ "nam", "nữ", "unisex", "bé_trai", "bé_gái", "trẻ_em_unisex" ]
+        }
+    ]
+}
