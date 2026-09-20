@@ -78,6 +78,10 @@ public class UpdateBusinessConfigCommandHandler
         business.Config.SystemPrompt = request.SystemPrompt?.Trim() ?? string.Empty;
         business.Config.FallBackMessage = request.FallBackMessage?.Trim() ?? string.Empty;
         business.Config.MaxOutPutToken = request.MaxOutPutToken;
+        business.Config.LowPriceMaxLimit = request.LowPriceMaxLimit;
+        business.Config.MediumPriceMinLimit = request.MediumPriceMinLimit;
+        business.Config.MediumPriceMaxLimit = request.MediumPriceMaxLimit;
+        business.Config.HighPriceMinLimit = request.HighPriceMinLimit;
         business.UpdatedAt = _time.GetUtcNow();
         business.UpdatedBy = new UserEmbedded
         {

@@ -38,28 +38,10 @@ public static class ProductMappings
             [ProductPayloadNames.BusinessId] = product.BusinessId.ToString(),
             [ProductPayloadNames.Price] = (double)product.Price,
             [ProductPayloadNames.Status] = product.Status.ToString(),
-            ["mongo_id"] = product.Id.ToString(),
-            ["business_id"] = product.BusinessId.ToString(),
             [ProductPayloadNames.ExternalId] = product.ExternalId,
-            ["name"] = product.Name,
-            ["description"] = product.Description ?? string.Empty,
-            [ProductPayloadNames.ExternalUrl] = product.ExternalProductUrl,
-            ["price"] = (double)product.Price,
-            [ProductPayloadNames.Currency] = product.Currency,
-            ["brand"] = product.Brand ?? string.Empty,
-            [ProductPayloadNames.StockQuantity] = (long)product.StockQuantity,
-            ["category"] = product.Category,
-            ["status"] = product.Status.ToString(),
-            [ProductPayloadNames.Images] = product.Images.ToArray()
+            [ProductPayloadNames.Name] = product.Name,
+            [ProductPayloadNames.Category] = product.Category
         };
-
-        foreach (var metadata in product.Metadata)
-        {
-            if (!payload.ContainsKey(metadata.Key))
-            {
-                payload[metadata.Key] = metadata.Value;
-            }
-        }
 
         return payload;
     }

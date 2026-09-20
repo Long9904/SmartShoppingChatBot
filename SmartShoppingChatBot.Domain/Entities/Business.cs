@@ -40,4 +40,12 @@ public class BusinessConfig
     public string? FallBackMessage { get; set; } = string.Empty;
 
     public int? MaxOutPutToken { get; set; } = 2000;
+
+    public decimal? LowPriceMaxLimit { get; set; } = 200000;
+
+    public decimal? MediumPriceMinLimit { get; set; } = 200000;
+
+    public decimal? MediumPriceMaxLimit { get; set; } = 1000000;
+
+    public decimal? HighPriceMinLimit { get; set; } = 1000000;
 }

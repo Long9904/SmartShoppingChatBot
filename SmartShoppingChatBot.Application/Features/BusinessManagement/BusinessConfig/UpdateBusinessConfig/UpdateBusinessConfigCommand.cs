@@ -17,4 +17,12 @@ public class UpdateBusinessConfigCommand : IRequest<Result<BusinessConfigRespons
     public string? FallBackMessage { get; set; }
 
     public int? MaxOutPutToken { get; set; }
+
+    public decimal? LowPriceMaxLimit { get; set; }
+
+    public decimal? MediumPriceMinLimit { get; set; }
+
+    public decimal? MediumPriceMaxLimit { get; set; }
+
+    public decimal? HighPriceMinLimit { get; set; }
 }
