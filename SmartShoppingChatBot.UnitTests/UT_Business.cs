@@ -97,6 +97,10 @@ public class UT_BusinessConfig
         result.IsSuccess.Should().BeTrue();
         fixture.Business.Config!.SystemPrompt.Should().Be("Helpful assistant");
         fixture.Business.Config.FallBackMessage.Should().Be("Please retry");
+        fixture.Business.Config.LowPriceMaxLimit.Should().Be(150000);
+        fixture.Business.Config.MediumPriceMinLimit.Should().Be(150000);
+        fixture.Business.Config.MediumPriceMaxLimit.Should().Be(900000);
+        fixture.Business.Config.HighPriceMinLimit.Should().Be(900000);
         fixture.Redis.Verify(service => service.SetBusinessConfigAsync(
             fixture.Business, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -126,6 +130,10 @@ public class UT_BusinessConfig
         result.IsSuccess.Should().BeTrue();
         fixture.Business.Config!.TopKDocument.Should().Be(3);
         fixture.Business.Config.ModelTemperature.Should().Be(0.2);
+        fixture.Business.Config.LowPriceMaxLimit.Should().Be(200000);
+        fixture.Business.Config.MediumPriceMinLimit.Should().Be(200000);
+        fixture.Business.Config.MediumPriceMaxLimit.Should().Be(1000000);
+        fixture.Business.Config.HighPriceMinLimit.Should().Be(1000000);
         fixture.Redis.Verify(service => service.SetBusinessConfigAsync(
             fixture.Business, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -195,7 +203,11 @@ public class UT_BusinessConfig
             RerankingScore = 0.8,
             SystemPrompt = "  Helpful assistant  ",
             FallBackMessage = "  Please retry  ",
-            MaxOutPutToken = 3000
+            MaxOutPutToken = 3000,
+            LowPriceMaxLimit = 150000,
+            MediumPriceMinLimit = 150000,
+            MediumPriceMaxLimit = 900000,
+            HighPriceMinLimit = 900000
         };
     }
 }

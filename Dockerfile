@@ -35,6 +35,8 @@ COPY --from=publish /app/publish .
 COPY SmartShoppingChatBot.Application/Prompts/SemanticEmbedding.md /app/prompts/SemanticEmbedding.md
 COPY SmartShoppingChatBot.Application/Prompts/SectionSummary.md /app/prompts/SectionSummary.md
 COPY SmartShoppingChatBot.Application/Prompts/SemanticKernelSystem.md /app/prompts/SemanticKernelSystem.md
+COPY SmartShoppingChatBot.Application/Prompts/SelectCategorySchema.md /app/prompts/SelectCategorySchema.md
+COPY SmartShoppingChatBot.Application/Prompts/CategoryValueSelection.md /app/prompts/CategoryValueSelection.md
 # Expose port
 EXPOSE 80
 EXPOSE 443

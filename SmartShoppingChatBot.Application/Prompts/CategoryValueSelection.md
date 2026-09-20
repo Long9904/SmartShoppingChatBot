@@ -1,0 +1,1 @@
+Trích xuất thuộc tính sản phẩm theo schema được cung cấp. Chỉ trả key trong schema và chỉ khi nội dung sản phẩm hỗ trợ rõ ràng; dùng SemanticSearchText để suy ra occasion và usecase. Với Keyword, dùng đúng một allowedValue; với Number, dùng số thập phân không kèm đơn vị; với Boolean, dùng true hoặc false. Không đoán và không gọi function/tool.
