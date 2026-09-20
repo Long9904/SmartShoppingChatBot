@@ -243,7 +243,7 @@ builder.Services.AddSingleton(_ =>
 // Semantic Kernel
 builder.Services.AddScoped<ProductPlugin>();
 builder.Services.AddScoped<DocumentPlugin>();
-builder.Services.AddScoped<RecommendationPlugin>();
+//builder.Services.AddScoped<RecommendationPlugin>();
 builder.Services.AddScoped<Kernel>(sp =>
 {
     var kb = Kernel.CreateBuilder();
@@ -256,7 +256,7 @@ builder.Services.AddScoped<Kernel>(sp =>
     // Kernel plugin register
     kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPlugin>(), "Product");
     kb.Plugins.AddFromObject(sp.GetRequiredService<DocumentPlugin>(), "Document");
-    kb.Plugins.AddFromObject(sp.GetRequiredService<RecommendationPlugin>(), "RecommedProduct");
+    //kb.Plugins.AddFromObject(sp.GetRequiredService<RecommendationPlugin>(), "RecommedProduct");
 
     return kb.Build();
 });

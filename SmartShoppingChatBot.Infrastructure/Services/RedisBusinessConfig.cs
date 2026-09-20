@@ -84,7 +84,11 @@ public class RedisBusinessConfig : IRedisBusinessConfig
                     MaxOutPutToken = 2000,
                     ModelTemperature = 0.2,
                     RerankingScore = 0.75,
-                    TopKDocument = 3
+                    TopKDocument = 3,
+                    LowPriceMaxLimit = 200000,
+                    MediumPriceMinLimit = 200000,
+                    MediumPriceMaxLimit = 1000000,
+                    HighPriceMinLimit = 1000000
                 };
             }
 

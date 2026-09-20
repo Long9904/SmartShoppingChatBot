@@ -444,6 +444,20 @@ public class UT_ProductEmbed
     }
 
     [Fact]
+    public async Task Handle_WhenQuotaIsInsufficient_StopsBeforeAiCalls()
+    {
+        var fixture = new ProductEmbedFixture();
+        fixture.Quota.UsedTokens = fixture.Quota.TokenLimit;
+
+        var result = await fixture.Handler.Handle(fixture.Command(), CancellationToken.None);
+
+        result.StatusCode.Should().Be(429);
+        fixture.Gemini.VerifyNoOtherCalls();
+        fixture.Kernel.VerifyNoOtherCalls();
+        fixture.Qdrant.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task Handle_ValidProduct_ActivatesProductChargesTokensAndPersistsQdrantPoint()
     {
         var fixture = new ProductEmbedFixture();
@@ -462,13 +476,23 @@ public class UT_ProductEmbed
         result.IsSuccess.Should().BeTrue();
         fixture.Product.Status.Should().Be(ProductStatus.Active);
         fixture.Product.EmbbbedAt.Should().Be(TestData.Now);
-        fixture.Quota.UsedTokens.Should().Be(8);
-        savedLog!.InputTokens.Should().Be(8);
-        savedLog.BillableTokens.Should().Be(16);
+        fixture.Quota.UsedTokens.Should().Be(29);
+        savedLog!.InputTokens.Should().Be(13);
+        savedLog.OutputTokens.Should().Be(16);
+        savedLog.BillableTokens.Should().Be(29);
         savedLog.SourceType.Should().Be(SourceTypeEnum.EmbeddingProduct);
         savedPoints.Should().ContainSingle();
         savedPoints![0].Vectors.Vectors_.Vectors.Keys.Should()
             .Contain([ProductVectorNames.ProductTechnical, ProductVectorNames.SemanticSearch]);
+        savedPoints[0].Payload[ProductPayloadNames.Category].StringValue.Should().Be("thời trang > áo");
+        savedPoints[0].Payload["color"].StringValue.Should().Be("đen");
+        savedPoints[0].Payload["weight_grams"].DoubleValue.Should().Be(250);
+        savedPoints[0].Payload["waterproof"].BoolValue.Should().BeTrue();
+        savedPoints[0].Payload.Should().NotContainKey("ram");
+        fixture.Kernel.Verify(service => service.SelectCategoryValuesAsync(
+            It.Is<string>(prompt => prompt.Contains("Semantic laptop description")),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Once);
         fixture.UnitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -511,6 +535,8 @@ public class UT_ProductEmbed
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
         public Mock<IBusinessQuotaRepository> QuotaRepository { get; } = new();
         public Mock<IUsageQuotaLogRepository> UsageRepository { get; } = new();
+        public Mock<ICategoryAttributeSchemaRepository> CategorySchemaRepository { get; } = new();
+        public Mock<IKernelChatService> Kernel { get; } = new();
         public ProductEmbedCommandHandler Handler { get; }
 
         public ProductEmbedFixture()
@@ -519,6 +545,35 @@ public class UT_ProductEmbed
             Product.SearchContent = "Laptop gaming RTX";
             Quota = TestData.Quota(Business);
             Quota.UsedTokens = 0;
+
+            var categorySchema = new CategoryAttributeSchema
+            {
+                Id = ObjectId.GenerateNewId(),
+                Category = "thời trang > áo",
+                IsActive = true,
+                Attributes =
+                [
+                    new AttributeDefinition
+                    {
+                        Key = "color",
+                        DisplayName = "Màu sắc",
+                        DataType = AttributeDataType.Keyword,
+                        AllowedValues = ["đen", "trắng"]
+                    },
+                    new AttributeDefinition
+                    {
+                        Key = "weight_grams",
+                        DisplayName = "Khối lượng",
+                        DataType = AttributeDataType.Number
+                    },
+                    new AttributeDefinition
+                    {
+                        Key = "waterproof",
+                        DisplayName = "Chống nước",
+                        DataType = AttributeDataType.Boolean
+                    }
+                ]
+            };
 
             ProductRepository.Setup(repository => repository.FindAsync(
                     It.IsAny<Expression<Func<Product, bool>>>(),
@@ -535,12 +590,44 @@ public class UT_ProductEmbed
             Gemini.Setup(service => service.EmbeddingsAsyncV2(
                     It.IsAny<string>(), "RETRIEVAL_DOCUMENT", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Vector(9));
+            Gemini.Setup(service => service.CategorySchemeForGeminiAsync(
+                    It.IsAny<IReadOnlyList<string>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result<GeminiResponse<string>>.Success(new GeminiResponse<string>
+                {
+                    Result = categorySchema.Category,
+                    InputTokens = 3,
+                    OutputTokens = 1
+                }));
+            CategorySchemaRepository.Setup(repository => repository.FindAllAsync(
+                    It.IsAny<Expression<Func<CategoryAttributeSchema, bool>>>(),
+                    It.IsAny<Func<IQueryable<CategoryAttributeSchema>, IQueryable<CategoryAttributeSchema>>?>()))
+                .ReturnsAsync([categorySchema]);
+            Kernel.Setup(service => service.SelectCategoryValuesAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result<CategoryValueSelectionResult>.Success(new CategoryValueSelectionResult
+                {
+                    Values =
+                    [
+                        new CategoryValueSelectionItem { Key = "color", Value = "đen" },
+                        new CategoryValueSelectionItem { Key = "weight_grams", Value = "250" },
+                        new CategoryValueSelectionItem { Key = "waterproof", Value = "true" },
+                        new CategoryValueSelectionItem { Key = "unknown", Value = "ignored" }
+                    ],
+                    InputTokens = 4,
+                    OutputTokens = 1
+                }));
             QuotaRepository.Setup(repository => repository.GetCurrentBusinessQuota(Business.Id)).ReturnsAsync(Quota);
 
             Handler = new ProductEmbedCommandHandler(
                 Mock.Of<ILogger<ProductEmbedCommandHandler>>(), Qdrant.Object, Gemini.Object,
                 ProductRepository.Object, Mock.Of<IQwenService>(), UnitOfWork.Object,
-                QuotaRepository.Object, UsageRepository.Object, new FixedTimeProvider(TestData.Now));
+                QuotaRepository.Object, UsageRepository.Object, CategorySchemaRepository.Object,
+                Kernel.Object, new FixedTimeProvider(TestData.Now));
         }
 
         public ProductEmbedCommand Command() => new()

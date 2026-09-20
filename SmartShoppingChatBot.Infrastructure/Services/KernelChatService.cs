@@ -125,6 +125,87 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             }
         }
 
+        public async Task<Result<CategoryValueSelectionResult>> SelectCategoryValuesAsync(
+            string prompt,
+            string systemPrompt,
+            CancellationToken cancellationToken = default)
+        {
+            var chatService = _kernel.GetRequiredService<IChatCompletionService>();
+            var history = new ChatHistory();
+            history.AddSystemMessage(systemPrompt);
+            history.AddUserMessage(prompt);
+
+            var settings = new OpenAIPromptExecutionSettings
+            {
+                FunctionChoiceBehavior = FunctionChoiceBehavior.None(),
+                ResponseFormat = typeof(CategoryValueSelectionResult),
+                Temperature = 0,
+                MaxTokens = 600
+            };
+
+            try
+            {
+                var response = await chatService.GetChatMessageContentAsync(
+                    history,
+                    settings,
+                    _kernel,
+                    cancellationToken);
+
+                if (string.IsNullOrWhiteSpace(response.Content))
+                {
+                    return Result<CategoryValueSelectionResult>.Failure(
+                        502,
+                        "Kernel returned empty category values.");
+                }
+
+                CategoryValueSelectionResult? result;
+                try
+                {
+                    result = JsonSerializer.Deserialize<CategoryValueSelectionResult>(
+                        response.Content,
+                        JsonOptions);
+                }
+                catch (JsonException exception)
+                {
+                    _logger.LogError(exception, "Could not deserialize category value selection response");
+                    return Result<CategoryValueSelectionResult>.Failure(
+                        502,
+                        "Invalid structured category value response.");
+                }
+
+                if (result?.Values is null)
+                {
+                    return Result<CategoryValueSelectionResult>.Failure(
+                        502,
+                        "Kernel returned no category values.");
+                }
+
+                if (response.Metadata.TryGetValue("Usage", out var usageMetadata)
+                    && usageMetadata is ChatTokenUsage usage)
+                {
+                    result.InputTokens = usage.InputTokenCount;
+                    result.OutputTokens = usage.OutputTokenCount;
+                }
+                else
+                {
+                    _logger.LogWarning("Category value selection response does not contain token usage metadata.");
+                }
+
+                return Result<CategoryValueSelectionResult>.Success(result);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to select category values");
+                return Result<CategoryValueSelectionResult>.Failure(
+                    500,
+                    "Failed to select category values.");
+            }
+        }
+
         private async Task<string> BuildBusinessSystemPrompt(Business business, BusinessConfig? config)
         {
             var systemPrompt = await File.ReadAllTextAsync("prompts/SemanticKernelSystem.md");
