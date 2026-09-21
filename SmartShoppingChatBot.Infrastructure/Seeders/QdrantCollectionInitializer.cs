@@ -25,10 +25,21 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 {
                     Map =
                     {
-                    [ProductVectorNames.ProductTechnical] = NewVectorParams(),
-                    [ProductVectorNames.SemanticSearch] = NewVectorParams(),
+                        [ProductVectorNames.ProductTechnical] = NewVectorParams(),
+                        [ProductVectorNames.SemanticSearch] = NewVectorParams(),
                     }
-                }, ct);
+                },
+                ct,
+                new SparseVectorConfig
+                {
+                    Map =
+                    {
+                        [ProductVectorNames.Bm25] = new SparseVectorParams
+                        {
+                            Modifier = Modifier.Idf
+                        }
+                    }
+                });
 
             // Ensure other collections if needed
             await _qdrantService.EnsureCollectionAsync(
@@ -37,8 +48,8 @@ namespace SmartShoppingChatBot.Infrastructure.Seeders
                 {
                     Map =
                     {
-                    [DocumentVectorNames.DocumentTechnical] = NewVectorParams(),
-                    [DocumentVectorNames.SemanticSearch] = NewVectorParams(),
+                        [DocumentVectorNames.DocumentTechnical] = NewVectorParams(),
+                        [DocumentVectorNames.SemanticSearch] = NewVectorParams(),
                     }
                 }, ct);
 

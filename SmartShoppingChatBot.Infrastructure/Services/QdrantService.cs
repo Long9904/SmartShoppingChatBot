@@ -20,7 +20,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         public async Task EnsureCollectionAsync(
             string collectionName,
             VectorParamsMap vectorsConfig,
-            CancellationToken ct)
+            CancellationToken ct,
+            SparseVectorConfig? sparseVectorsConfig = null)
         {
             var isCollectionExists = await _qdrantClient.CollectionExistsAsync(collectionName, ct);
             if (isCollectionExists) return;
@@ -28,6 +29,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             await _qdrantClient.CreateCollectionAsync(
                 collectionName: collectionName,
                 vectorsConfig: vectorsConfig,
+                sparseVectorsConfig: sparseVectorsConfig,
                 cancellationToken: ct);
 
             _logger.LogInformation("Collection {CollectionName} created successfully.", collectionName);
