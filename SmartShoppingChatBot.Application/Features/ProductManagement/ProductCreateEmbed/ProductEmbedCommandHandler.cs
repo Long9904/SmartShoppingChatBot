@@ -125,6 +125,7 @@ public class ProductEmbedCommandHandler : IRequestHandler<ProductEmbedCommand, R
         }
 
         _logger.LogInformation("Semantic search text generated for product {ProductId}.", product.Id);
+        _logger.LogInformation("Semantic search text generated for product content: {content}", semanticSearchText.Data.Result);
 
         var selectedCategory = await SelectCategorySchemaAsync(product, activeSchemas, cancellationToken);
         if (!selectedCategory.IsSuccess || selectedCategory.Data is null)
