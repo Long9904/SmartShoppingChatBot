@@ -217,6 +217,12 @@ public class ProductEmbedCommandHandler : IRequestHandler<ProductEmbedCommand, R
         product.Status = ProductStatus.Active;
         product.EmbbbedAt = _timeProvider.GetUtcNow();
 
+        var bm25Text = $"""
+            Name: {product.Name}
+            Brand: {product.Brand}
+            Category: {product.Category}
+            """;
+
         var qdrantPoint = new PointStruct
         {
             Id = product.QdrantPointId,
@@ -227,7 +233,15 @@ public class ProductEmbedCommandHandler : IRequestHandler<ProductEmbedCommand, R
                     Vectors =
                     {
                         [ProductVectorNames.ProductTechnical] = ToQdrantDenseVector(productTechnicalVector.Data.Result),
-                        [ProductVectorNames.SemanticSearch] = ToQdrantDenseVector(productSemanticVector.Data.Result)
+                        [ProductVectorNames.SemanticSearch] = ToQdrantDenseVector(productSemanticVector.Data.Result),
+                        [ProductVectorNames.Bm25] = new Vector
+                        {
+                            Document = new Document
+                            {
+                                Text = bm25Text,
+                                Model = "qdrant/bm25"
+                            }
+                        }
                     }
                 }
             }
