@@ -7,7 +7,8 @@ namespace SmartShoppingChatBot.Application.Interface
         Task EnsureCollectionAsync(
             string collectionName,
             VectorParamsMap vectorsConfig,
-            CancellationToken ct);
+            CancellationToken ct,
+            SparseVectorConfig? sparseVectorsConfig = null);
 
         Task UpsertAsync(
              string collectionName,

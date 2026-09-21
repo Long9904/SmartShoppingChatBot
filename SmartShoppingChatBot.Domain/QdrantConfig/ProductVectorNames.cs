@@ -4,6 +4,7 @@
     {
         public const string ProductTechnical = "product_technical";
         public const string SemanticSearch = "semantic_search";
+        public const string Bm25 = "bm25";
     }
 
 }
