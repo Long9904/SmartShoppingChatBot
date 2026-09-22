@@ -62,6 +62,8 @@ The four configured price fields define three bands, not four bands. "Bình dân
 
 Đợt hiện tại triển khai: bảo vệ canonical category khi cập nhật payload, lọc cứng thuộc tính khách truyền, phân biệt sắp giá cực trị, thêm BM25 vào RRF với fallback dense, bỏ fallback rerank 0.25, thêm dữ kiện sản phẩm nguồn cho cross-sell và hoàn thiện hai API chat V3. Backfill BM25 cho point cũ và benchmark relevance cần môi trường/dữ liệu vận hành riêng.
 
+Đã bổ sung đường duyệt category riêng cho câu hỏi không có nhu cầu semantic, ví dụ “cho tôi xem vài sản phẩm quần”. Đường này dùng collection Qdrant cũ, lọc tenant/status/category, xác minh lại database và không gọi embedding hoặc reranker.
+
 ### 1. Mục tiêu và ranh giới
 
 - Ưu tiên đúng sản phẩm, đúng điều kiện, đúng tham chiếu hội thoại; sau đó tối ưu tốc độ, chi phí và tỷ lệ mua kèm. Không mặc định thêm model/tool call là tốt hơn.
