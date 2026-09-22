@@ -12,6 +12,17 @@
         IProductReferenceCollectorV3 collector)
     {
         [KernelFunction]
+        [Description("Browse products by one exact category when the customer only asks to see products of a type, for example trousers, shirts, shoes, or phones. Do not use this when the customer gives style, purpose, feature, attribute, price, budget, cheapest, or most expensive requirements. This function does not use semantic ranking.")]
+        public async Task<Result<List<ProductReferenceV3>>> BrowseProductsByCategory(
+            ProductCategoryBrowseRequestV3 request,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await search.BrowseCategoryAsync(request, cancellationToken);
+            collector.AddRange(result.Data ?? []);
+            return result;
+        }
+
+        [KernelFunction]
         [Description("Find products using needs, an exact supplied category, allowed attributes, and a price band or numeric budget. Use this for cheap/expensive products without a reference item. Set Sort only when the customer explicitly asks for the cheapest or most expensive matching products. Never calculate business price limits yourself.")]
         public async Task<Result<List<ProductReferenceV3>>> SemanticProductSearch(
             ProductSearchRequestV3 request, CancellationToken cancellationToken = default)

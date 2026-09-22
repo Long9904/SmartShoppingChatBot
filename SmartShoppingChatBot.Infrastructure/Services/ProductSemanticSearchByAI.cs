@@ -27,6 +27,106 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         IProductReferenceResolverV3 resolver,
         ILogger<ProductSemanticSearchByAI> logger) : IProductSemanticSearchByAI
     {
+        public Task<Result<List<ProductReferenceV3>>> BrowseCategoryAsync(
+            ProductCategoryBrowseRequestV3 request,
+            CancellationToken ct) => RunAsync(async () =>
+            {
+                if (request is null || string.IsNullOrWhiteSpace(request.Category))
+                {
+                    throw new ArgumentException("An exact category is required.");
+                }
+
+                if (request.ExcludeProductIds is null
+                    || request.ExcludeProductIds.Count > 100
+                    || request.ExcludeProductIds.Any(id => !ObjectId.TryParse(id, out _)))
+                {
+                    throw new ArgumentException("Excluded product IDs are invalid.");
+                }
+
+                var business = await RequireBusinessAsync();
+                var schema = await GetSchemaAsync(request.Category)
+                    ?? throw new ArgumentException("Category must match an active schema exactly.");
+                var config = await businessConfig.GetBusinessConfigAsync(ct)
+                    ?? business.Config
+                    ?? new BusinessConfig();
+
+                var excludedIds = request.ExcludeProductIds
+                    .Select(ObjectId.Parse)
+                    .ToHashSet();
+
+                var filter = new Filter();
+                filter.Must.Add(Keyword(
+                    ProductPayloadNames.BusinessId,
+                    business.Id.ToString()));
+                filter.Must.Add(Keyword(
+                    ProductPayloadNames.Status,
+                    ProductStatus.Active.ToString()));
+                filter.Must.Add(Keyword(
+                    ProductPayloadNames.Category,
+                    schema.Category));
+
+                foreach (var excludedId in excludedIds)
+                {
+                    filter.MustNot.Add(Keyword(
+                        ProductPayloadNames.ProductId,
+                        excludedId.ToString()));
+                }
+
+                var resultLimit = Math.Max(1, config.TopKDocument ?? 5);
+                var candidateLimit = (uint)Math.Min(
+                    100,
+                    Math.Max(20, resultLimit * 3));
+
+                var scrollResponse = await qdrant.ScrollAsync(
+                    collectionName: QdrantCollections.Products,
+                    filter: filter,
+                    limit: candidateLimit,
+                    payloadSelector: true,
+                    vectorsSelector: false,
+                    cancellationToken: ct);
+
+                var productIds = scrollResponse.Result
+                    .Select(point => point.Payload.TryGetValue(
+                            ProductPayloadNames.ProductId,
+                            out var value)
+                        && ObjectId.TryParse(value.StringValue, out var id)
+                            ? (ObjectId?)id
+                            : null)
+                    .Where(id => id.HasValue && !excludedIds.Contains(id.Value))
+                    .Select(id => id!.Value)
+                    .Distinct()
+                    .ToList();
+
+                if (productIds.Count == 0)
+                {
+                    return Result<List<ProductReferenceV3>>.Success(
+                        [],
+                        message: $"No active indexed product was found in category '{schema.Category}'.");
+                }
+
+                var currentProducts = await products.FindAllAsync(product =>
+                    productIds.Contains(product.Id)
+                    && product.BusinessId == business.Id
+                    && product.Status == ProductStatus.Active);
+
+                var productsById = currentProducts.ToDictionary(product => product.Id);
+                var orderedProducts = productIds
+                    .Where(productsById.ContainsKey)
+                    .Select(id => productsById[id])
+                    .Take(resultLimit)
+                    .Select(ProductReferenceV3.FromProduct)
+                    .ToList();
+
+                if (orderedProducts.Count == 0)
+                {
+                    return Result<List<ProductReferenceV3>>.Success(
+                        [],
+                        message: $"Category '{schema.Category}' has indexed points, but no matching product is currently active in the business database.");
+                }
+
+                return Result<List<ProductReferenceV3>>.Success(orderedProducts);
+            }, ct);
+
         public Task<Result<List<ProductReferenceV3>>> SearchAsync(
             ProductSearchRequestV3 request,
             CancellationToken ct) =>
