@@ -43,12 +43,27 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     throw new ArgumentException("Excluded product IDs are invalid.");
                 }
 
+                if (!Enum.IsDefined(request.PriceBand)
+                    || request.MinPrice < 0
+                    || request.MaxPrice < 0
+                    || (request.MinPrice.HasValue
+                        && request.MaxPrice.HasValue
+                        && request.MinPrice > request.MaxPrice))
+                {
+                    throw new ArgumentException("Price bounds or price band are invalid.");
+                }
+
                 var business = await RequireBusinessAsync();
                 var schema = await GetSchemaAsync(request.Category)
                     ?? throw new ArgumentException("Category must match an active schema exactly.");
                 var config = await businessConfig.GetBusinessConfigAsync(ct)
                     ?? business.Config
                     ?? new BusinessConfig();
+                var (minimum, maximum) = ResolvePriceRange(
+                    request.PriceBand,
+                    request.MinPrice,
+                    request.MaxPrice,
+                    config);
 
                 var excludedIds = request.ExcludeProductIds
                     .Select(ObjectId.Parse)
@@ -64,6 +79,30 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 filter.Must.Add(Keyword(
                     ProductPayloadNames.Category,
                     schema.Category));
+
+                if (minimum.HasValue || maximum.HasValue)
+                {
+                    var range = new QdrantRange();
+
+                    if (minimum.HasValue)
+                    {
+                        range.Gte = (double)minimum.Value;
+                    }
+
+                    if (maximum.HasValue)
+                    {
+                        range.Lte = (double)maximum.Value;
+                    }
+
+                    filter.Must.Add(new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = ProductPayloadNames.Price,
+                            Range = range
+                        }
+                    });
+                }
 
                 foreach (var excludedId in excludedIds)
                 {
@@ -101,13 +140,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 {
                     return Result<List<ProductReferenceV3>>.Success(
                         [],
-                        message: $"No active indexed product was found in category '{schema.Category}'.");
+                        message: $"No active indexed product matched category '{schema.Category}' and the requested price conditions.");
                 }
 
                 var currentProducts = await products.FindAllAsync(product =>
                     productIds.Contains(product.Id)
                     && product.BusinessId == business.Id
-                    && product.Status == ProductStatus.Active);
+                    && product.Status == ProductStatus.Active
+                    && (!minimum.HasValue || product.Price >= minimum.Value)
+                    && (!maximum.HasValue || product.Price <= maximum.Value));
 
                 var productsById = currentProducts.ToDictionary(product => product.Id);
                 var orderedProducts = productIds
@@ -121,7 +162,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 {
                     return Result<List<ProductReferenceV3>>.Success(
                         [],
-                        message: $"Category '{schema.Category}' has indexed points, but no matching product is currently active in the business database.");
+                        message: $"Category '{schema.Category}' has indexed points, but no product currently matches the status and price conditions in the business database.");
                 }
 
                 return Result<List<ProductReferenceV3>>.Success(orderedProducts);
@@ -303,10 +344,11 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 return Result<List<ProductReferenceV3>>.Failure(502, "Failed to rank product results.");
 
             var byId = candidates.ToDictionary(p => p.Id.ToString(), StringComparer.OrdinalIgnoreCase);
-            var ordered = ranked.Data.Result.Where(item => byId.ContainsKey(item.Id))
+            var accepted = ranked.Data.Result.Where(item => byId.ContainsKey(item.Id))
                 .OrderByDescending(item => item.Score).DistinctBy(item => item.Id).ToList();
-            var threshold = config.RerankingScore ?? 0.75;
-            var accepted = ordered.Where(item => item.Score >= threshold).ToList();
+
+            // Keep every item returned by the reranker. The score only controls ordering;
+            // the chat model checks the actual product facts against the customer's request.
 
             if (request.Sort != ProductSortV3.Relevance)
             {
@@ -331,7 +373,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 .ToList();
 
             var message = result.Count == 0
-                ? "No product passed the configured relevance score."
+                ? "The reranker did not return any valid product candidate."
                 : null;
 
             return Result<List<ProductReferenceV3>>.Success(result, message: message);
@@ -500,10 +542,25 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         }
 
         private static (decimal? Minimum, decimal? Maximum) ResolvePriceRange(ProductSearchRequestV3 request, BusinessConfig config)
+            => ResolvePriceRange(
+                request.PriceBand,
+                request.MinPrice,
+                request.MaxPrice,
+                config);
+
+        private static (decimal? Minimum, decimal? Maximum) ResolvePriceRange(
+            ProductPriceBandV3 priceBand,
+            decimal? minPrice,
+            decimal? maxPrice,
+            BusinessConfig config)
         {
             // A numeric budget is more precise than vague words such as cheap or premium.
-            if (request.MinPrice.HasValue || request.MaxPrice.HasValue) return (request.MinPrice, request.MaxPrice);
-            var range = request.PriceBand switch
+            if (minPrice.HasValue || maxPrice.HasValue)
+            {
+                return (minPrice, maxPrice);
+            }
+
+            var range = priceBand switch
             {
                 ProductPriceBandV3.Low => ((decimal?)0m, config.LowPriceMaxLimit ?? 200000m),
                 ProductPriceBandV3.Medium => (config.MediumPriceMinLimit ?? 200000m, (decimal?)(config.MediumPriceMaxLimit ?? 1000000m)),
