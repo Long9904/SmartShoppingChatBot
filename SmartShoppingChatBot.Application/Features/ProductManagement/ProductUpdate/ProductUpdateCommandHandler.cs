@@ -164,10 +164,13 @@ public class ProductUpdateCommandHandler : IRequestHandler<ProductUpdateCommand,
         {
             if (!requiresReembedding && hadQdrantPoint)
             {
+                var payload = ProductMappings.BuildQdrantPayload(product);
+                payload.Remove(ProductPayloadNames.Category);
+
                 await _qdrantService.SetPayloadAsync(
                     QdrantCollections.Products,
                     [product.QdrantPointId],
-                    ProductMappings.BuildQdrantPayload(product),
+                    payload,
                     cancellationToken);
             }
 
