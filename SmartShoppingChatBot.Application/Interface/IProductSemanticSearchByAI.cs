@@ -6,6 +6,7 @@
     // This name is the agreed exception to the V3 suffix.
     public interface IProductSemanticSearchByAI
     {
+        Task<Result<List<ProductReferenceV3>>> BrowseCategoryAsync(ProductCategoryBrowseRequestV3 request, CancellationToken ct);
         Task<Result<List<ProductReferenceV3>>> SearchAsync(ProductSearchRequestV3 request, CancellationToken ct);
         Task<Result<List<ProductReferenceV3>>> GetByIdsAsync(ProductByIdsRequestV3 request, CancellationToken ct);
         Task<Result<List<ProductReferenceV3>>> SearchPriceAlternativesAsync(ProductPriceAlternativeRequestV3 request, CancellationToken ct);

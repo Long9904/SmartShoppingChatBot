@@ -29,6 +29,15 @@ public sealed class ProductAttributeFilterV3
     public required string Value { get; init; }
 }
 
+public sealed class ProductCategoryBrowseRequestV3
+{
+    [Description("Exact active category from the supplied category list.")]
+    public required string Category { get; init; }
+
+    [Description("Canonical product IDs already shown when the customer asks for other products.")]
+    public List<string> ExcludeProductIds { get; init; } = [];
+}
+
 public sealed class ProductSearchRequestV3
 {
     [Description("Describe the target product and current needs. Keep style, occasion and explicit requirements; omit price wording.")]
