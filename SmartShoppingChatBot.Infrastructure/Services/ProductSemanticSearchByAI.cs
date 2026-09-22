@@ -146,9 +146,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 var currentProducts = await products.FindAllAsync(product =>
                     productIds.Contains(product.Id)
                     && product.BusinessId == business.Id
-                    && product.Status == ProductStatus.Active
-                    && (!minimum.HasValue || product.Price >= minimum.Value)
-                    && (!maximum.HasValue || product.Price <= maximum.Value));
+                    && product.Status == ProductStatus.Active);
+
+                // Keep nullable price checks outside the MongoDB expression. Some provider
+                // versions cannot translate captured Nullable<T>.HasValue and Value reliably.
+                currentProducts = currentProducts
+                    .Where(product =>
+                        (!minimum.HasValue || product.Price >= minimum.Value)
+                        && (!maximum.HasValue || product.Price <= maximum.Value))
+                    .ToList();
 
                 var productsById = currentProducts.ToDictionary(product => product.Id);
                 var orderedProducts = productIds
