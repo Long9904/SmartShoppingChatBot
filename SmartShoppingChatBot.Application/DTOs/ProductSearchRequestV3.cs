@@ -34,6 +34,14 @@ public sealed class ProductCategoryBrowseRequestV3
     [Description("Exact active category from the supplied category list.")]
     public required string Category { get; init; }
 
+    [Description("Any, Low for cheap/budget/binh dan, Medium for mid-range, High for expensive/premium. The server reads price limits from business config.")]
+    public ProductPriceBandV3 PriceBand { get; init; }
+
+    [Description("Explicit numeric budget only. Do not invent limits for cheap or expensive.")]
+    public decimal? MinPrice { get; init; }
+
+    public decimal? MaxPrice { get; init; }
+
     [Description("Canonical product IDs already shown when the customer asks for other products.")]
     public List<string> ExcludeProductIds { get; init; } = [];
 }

@@ -12,7 +12,7 @@
         IProductReferenceCollectorV3 collector)
     {
         [KernelFunction]
-        [Description("Browse products by one exact category when the customer only asks to see products of a type, for example trousers, shirts, shoes, or phones. Do not use this when the customer gives style, purpose, feature, attribute, price, budget, cheapest, or most expensive requirements. This function does not use semantic ranking.")]
+        [Description("Browse products by one exact category, optionally with a price band or numeric budget. Use for simple requests such as trousers or cheap trousers. Do not use this when the customer gives style, purpose, feature, attribute, cheapest, or most expensive requirements. This function does not use semantic ranking. Never calculate business price limits yourself.")]
         public async Task<Result<List<ProductReferenceV3>>> BrowseProductsByCategory(
             ProductCategoryBrowseRequestV3 request,
             CancellationToken cancellationToken = default)
