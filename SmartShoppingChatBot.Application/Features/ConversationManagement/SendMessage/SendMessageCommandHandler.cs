@@ -277,7 +277,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 var usageLog = new UsageQuotaLog
                 {
                     BillableTokens = gptCredits,
-                    OutputTokens = kernelResult.OutputTokens,
+                    OutputTokens = kernelResult.OutputTokens * 6,
                     InputTokens = kernelResult.InputTokens,
                     CreatedAt = _time.GetUtcNow(),
                     Id = ObjectId.GenerateNewId(),

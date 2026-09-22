@@ -245,7 +245,6 @@ builder.Services.AddScoped<ProductPlugin>();
 builder.Services.AddInfrastructureServicesV3();
 //builder.Services.AddScoped<ProductPluginV3>();
 builder.Services.AddScoped<DocumentPlugin>();
-builder.Services.PreserveLegacyKernelV3(builder.Configuration);
 //builder.Services.AddScoped<RecommendationPlugin>();
 builder.Services.AddScoped<Kernel>(sp =>
 {

@@ -21,14 +21,15 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             {
                 PropertyNameCaseInsensitive = true
             };
-        private readonly IRedisBusinessConfig _redisBusinessConfig;
 
-        public KernelChatService(Kernel kernel, ILogger<KernelChatService> logger, IRedisBusinessConfig redisBusinessConfig)
+
+        public KernelChatService(
+            Kernel kernel,
+            ILogger<KernelChatService> logger)
         {
-
             _kernel = kernel;
             _logger = logger;
-            _redisBusinessConfig = redisBusinessConfig;
+
         }
 
         public async Task<Result<KernelChatResult>> ChatAsync(KernelChatRequest request)
@@ -72,7 +73,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 long inputTokens = 0;
                 long outputTokens = 0;
 
-                if (response.Metadata.TryGetValue("Usage", out var usageMetadata)
+                if (response.Metadata!.TryGetValue("Usage", out var usageMetadata)
                     && usageMetadata is ChatTokenUsage usage)
                 {
                     inputTokens = usage.InputTokenCount;
@@ -88,8 +89,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 _logger.LogInformation("3. Kernel response: {kernel} ms", sw.ElapsedMilliseconds);
                 Console.WriteLine("----------------------------------");
 
-                if (string.IsNullOrWhiteSpace(response.Content)) return Result<KernelChatResult>.Failure(
-                        500, "Kernel returned empty content.");
+                if (string.IsNullOrWhiteSpace(response.Content))
+                    return Result<KernelChatResult>.Failure(500, "Kernel returned empty content.");
 
                 KernelChatResult? result;
 
@@ -178,7 +179,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         "Kernel returned no category values.");
                 }
 
-                if (response.Metadata.TryGetValue("Usage", out var usageMetadata)
+                if (response.Metadata!.TryGetValue("Usage", out var usageMetadata)
                     && usageMetadata is ChatTokenUsage usage)
                 {
                     result.InputTokens = usage.InputTokenCount;

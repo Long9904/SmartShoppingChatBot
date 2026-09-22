@@ -201,8 +201,10 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
 
                 // Use the same reference type through tools, selection, and conversation turns.
                 var responseProductIds = selectedProductIds.Where(productById.ContainsKey).ToList();
+
                 var responseProductById = await _productReferenceResolver.ResolveAsync(
                     business.Data.Id, responseProductIds, cacheProducts, cancellationToken);
+
                 var selectedProductReferences = _productReferenceResolver
                     .GetInOrder(responseProductIds, responseProductById)
                     .Select((product, index) =>
@@ -227,7 +229,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 var usageLog = new UsageQuotaLog
                 {
                     BillableTokens = gptCredits,
-                    OutputTokens = kernelResult.OutputTokens,
+                    OutputTokens = kernelResult.OutputTokens * 6,
                     InputTokens = kernelResult.InputTokens,
                     CreatedAt = _time.GetUtcNow(),
                     Id = ObjectId.GenerateNewId(),
