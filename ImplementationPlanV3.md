@@ -27,7 +27,7 @@
 | --- | --- |
 | Chat temperature / output limit | Business.Config.ModelTemperature / MaxOutPutToken, with original fallbacks |
 | Business prompt / fallback text | Business.Config.SystemPrompt / FallBackMessage |
-| Rerank acceptance / result limit | RedisBusinessConfig.RerankingScore / TopKDocument, then business config |
+| Rerank ordering / result limit | Accept every reranker score for ordering; TopKDocument from RedisBusinessConfig, then business config |
 | Low price | 0 through LowPriceMaxLimit |
 | Medium price | MediumPriceMinLimit through MediumPriceMaxLimit |
 | High price | HighPriceMinLimit and above |
@@ -62,7 +62,9 @@ The four configured price fields define three bands, not four bands. "Bình dân
 
 Đợt hiện tại triển khai: bảo vệ canonical category khi cập nhật payload, lọc cứng thuộc tính khách truyền, phân biệt sắp giá cực trị, thêm BM25 vào RRF với fallback dense, bỏ fallback rerank 0.25, thêm dữ kiện sản phẩm nguồn cho cross-sell và hoàn thiện hai API chat V3. Backfill BM25 cho point cũ và benchmark relevance cần môi trường/dữ liệu vận hành riêng.
 
-Đã bổ sung đường duyệt category riêng cho câu hỏi không có nhu cầu semantic, ví dụ “cho tôi xem vài sản phẩm quần”. Đường này dùng collection Qdrant cũ, lọc tenant/status/category, xác minh lại database và không gọi embedding hoặc reranker.
+Đã bổ sung đường duyệt category riêng cho câu hỏi không có nhu cầu semantic, ví dụ “cho tôi xem vài sản phẩm quần” hoặc “cho tôi xem quần giá rẻ”. Đường này dùng collection Qdrant cũ, lọc tenant/status/category/giá, xác minh lại database và không gọi embedding hoặc reranker.
+
+V3 hiện nhận mọi kết quả mà reranker trả về, không loại theo `RerankingScore`. Score chỉ quyết định thứ tự; prompt buộc AI kiểm tra dữ kiện sản phẩm và được phép không chọn ứng viên nào nếu không đáp ứng yêu cầu.
 
 ### 1. Mục tiêu và ranh giới
 
