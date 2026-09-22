@@ -40,15 +40,12 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             ChatHistory history = new();
             history.AddSystemMessage(businessPrompt);
-
-            history.AddUserMessage(request.UserMessage);
-
             var contextJson = JsonSerializer.Serialize(
                 request.ConversationContextCache,
                 JsonOptions);
             history.AddSystemMessage($"Conversation context:\n{contextJson}");
 
-
+            history.AddUserMessage(request.UserMessage);
 
 
             var settings = new OpenAIPromptExecutionSettings
@@ -75,7 +72,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 long inputTokens = 0;
                 long outputTokens = 0;
 
-                if (response.Metadata.TryGetValue("Usage", out var usageMetadata) && usageMetadata is ChatTokenUsage usage)
+                if (response.Metadata.TryGetValue("Usage", out var usageMetadata)
+                    && usageMetadata is ChatTokenUsage usage)
                 {
                     inputTokens = usage.InputTokenCount;
                     outputTokens = usage.OutputTokenCount;
