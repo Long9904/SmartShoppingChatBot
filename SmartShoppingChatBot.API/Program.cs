@@ -241,9 +241,9 @@ builder.Services.AddSingleton(_ =>
     ));
 
 // Semantic Kernel
-// builder.Services.AddScoped<ProductPlugin>(); // The default chat kernel now uses V3 product tools.
+builder.Services.AddScoped<ProductPlugin>();
 builder.Services.AddInfrastructureServicesV3();
-builder.Services.AddScoped<ProductPluginV3>();
+//builder.Services.AddScoped<ProductPluginV3>();
 builder.Services.AddScoped<DocumentPlugin>();
 builder.Services.PreserveLegacyKernelV3(builder.Configuration);
 //builder.Services.AddScoped<RecommendationPlugin>();
@@ -257,8 +257,8 @@ builder.Services.AddScoped<Kernel>(sp =>
     );
 
     // Kernel plugin register
-    // kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPlugin>(), "Product");
-    kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPluginV3>(), "ProductV3");
+    kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPlugin>(), "Product");
+    //kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPluginV3>(), "ProductV3");
     kb.Plugins.AddFromObject(sp.GetRequiredService<DocumentPlugin>(), "Document");
     //kb.Plugins.AddFromObject(sp.GetRequiredService<RecommendationPlugin>(), "RecommedProduct");
 
