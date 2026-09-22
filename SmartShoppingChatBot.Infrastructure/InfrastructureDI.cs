@@ -36,6 +36,7 @@ public static class InfrastructureDI
         services.AddScoped<IRedisBusinessConfig, RedisBusinessConfig>();
         services.AddScoped<ICategoryAttributeSchemaService, CategoryAttributeSchemaService>();
         services.AddScoped<IActivityLogService, ActivityLogService>();
+        services.AddScoped<IProductSemanticSearchByAI, ProductSemanticSearchByAI>();
         services.AddSingleton<GoogleAccessTokenProvider>();
 
         // Seeder
