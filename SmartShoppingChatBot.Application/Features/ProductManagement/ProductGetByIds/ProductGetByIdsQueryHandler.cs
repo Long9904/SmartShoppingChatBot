@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using SmartShoppingChatBot.Application.Commons.MessageCodeMapper;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
+using SmartShoppingChatBot.Application.Features.ProductManagement.ProductCommon;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
@@ -16,15 +17,18 @@ public sealed class ProductGetByIdsQueryHandler
     private readonly ICurrentUserService _currentUserService;
     private readonly IProductRepository _productRepository;
     private readonly IMapper _mapper;
+    private readonly IQdrantService _qdrantService;
 
     public ProductGetByIdsQueryHandler(
         ICurrentUserService currentUserService,
         IProductRepository productRepository,
-        IMapper mapper)
+        IMapper mapper,
+        IQdrantService qdrantService)
     {
         _currentUserService = currentUserService;
         _productRepository = productRepository;
         _mapper = mapper;
+        _qdrantService = qdrantService;
     }
 
     public async Task<Result<List<ProductResponseV2>>> Handle(
@@ -73,6 +77,11 @@ public sealed class ProductGetByIdsQueryHandler
             .ToList();
 
         var responses = _mapper.Map<List<ProductResponseV2>>(orderedProducts);
+        foreach (var (response, product) in responses.Zip(orderedProducts))
+        {
+            response.QdrantPayload = await ProductQdrantPayloadReader.LoadAsync(
+                _qdrantService, businessId, product.Id, cancellationToken);
+        }
 
         return Result<List<ProductResponseV2>>.Success(
             responses,

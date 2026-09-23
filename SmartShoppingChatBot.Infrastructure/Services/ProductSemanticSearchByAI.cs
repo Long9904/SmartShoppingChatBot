@@ -586,17 +586,17 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             foreach (var attribute in attributes)
             {
                 var definition = schema!.Attributes.FirstOrDefault(a => a.IsFilterable
-                    && string.Equals(a.Key, attribute.Key.Trim(), StringComparison.OrdinalIgnoreCase));
+                    && string.Equals(a.Key, attribute.Key.Trim(), StringComparison.Ordinal));
                 if (definition is null || ReservedFields.Contains(definition.Key))
                     throw new ArgumentException($"Unsupported attribute: {attribute.Key}.");
                 var value = attribute.Value.Trim();
+                if (definition.AllowedValues is { Count: > 0 }
+                    && !definition.AllowedValues.Contains(value, StringComparer.Ordinal))
+                    throw new ArgumentException($"Unsupported value '{value}' for {definition.Key} in {schema.Category}. Use exactly one of AllowedValues: {string.Join(", ", definition.AllowedValues)}. Do not remove the required filter.");
                 Condition condition;
                 switch (definition.DataType)
                 {
                     case AttributeDataType.Keyword:
-                        if (definition.AllowedValues is { Count: > 0 })
-                            value = definition.AllowedValues.FirstOrDefault(v => string.Equals(v, value, StringComparison.OrdinalIgnoreCase))
-                                ?? throw new ArgumentException($"Unsupported value for {definition.Key}.");
                         condition = Keyword(definition.Key, value);
                         break;
                     case AttributeDataType.Number:

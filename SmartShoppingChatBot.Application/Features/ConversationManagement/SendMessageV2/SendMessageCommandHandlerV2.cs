@@ -244,6 +244,8 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     })
                     .ToList();
 
+                // 9. Token credit base is 0.75/1M token
+                // gpt 5.4 mini Input 0.75/1M - Output: 4.5/1M
                 var gptCredits = kernelResult.InputTokens + kernelResult.OutputTokens * 6;
                 var usageLog = new UsageQuotaLog
                 {
@@ -278,6 +280,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
+                // 10. Publist event
                 await PublishAnalyticsEventsAsync(
                     business.Data.Id,
                     customer.Data!.Id,
@@ -291,6 +294,7 @@ namespace SmartShoppingChatBot.Application.Features.ConversationManagement.SendM
                     sw.ElapsedMilliseconds,
                     cancellationToken);
 
+                // 11. Add data into history context and remove if out of max turn
                 conversationContext.RecentTurns.Add(new CachedConversationTurn
                 {
                     TurnId = userMessage.Id.ToString(),

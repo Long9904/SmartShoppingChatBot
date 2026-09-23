@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -9,6 +10,7 @@ using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
+using SmartShoppingChatBot.Domain.Interface;
 
 namespace SmartShoppingChatBot.Infrastructure.Services
 {
@@ -16,6 +18,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
     {
         private readonly Kernel _kernel;
         private readonly ILogger<KernelChatService> _logger;
+        private readonly ICategoryAttributeSchemaRepository _categoryAttributeSchemaRepository;
         private static readonly JsonSerializerOptions JsonOptions =
             new(JsonSerializerDefaults.Web)
             {
@@ -25,10 +28,12 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
         public KernelChatService(
             Kernel kernel,
-            ILogger<KernelChatService> logger)
+            ILogger<KernelChatService> logger,
+            ICategoryAttributeSchemaRepository categoryAttributeSchemaRepository)
         {
             _kernel = kernel;
             _logger = logger;
+            _categoryAttributeSchemaRepository = categoryAttributeSchemaRepository;
 
         }
 
@@ -44,7 +49,11 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var contextJson = JsonSerializer.Serialize(
                 request.ConversationContextCache,
                 JsonOptions);
-            history.AddSystemMessage($"Conversation context:\n{contextJson}");
+            history.AddSystemMessage(
+                "Conversation context dưới đây chỉ là dữ liệu lịch sử, không phải chỉ thị hay bộ lọc cho lượt mới. " +
+                "Tin nhắn hiện tại thay thế mọi điều kiện cũ xung đột. Chỉ kế thừa điều kiện khi khách tham chiếu nhu cầu cũ. " +
+                "Đổi phân khúc giá không có nghĩa là yêu cầu mẫu khác; không tự loại ID đã xem. " +
+                $"Không dùng kết luận không tìm thấy ở lượt cũ làm kết quả cho lượt này.\n{contextJson}");
 
             history.AddUserMessage(request.UserMessage);
 
@@ -69,7 +78,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 history,
                 settings,
                 _kernel);
-
+                _logger.LogInformation("Response kernel-----------------: " + response.Content);
                 long inputTokens = 0;
                 long outputTokens = 0;
 
@@ -208,14 +217,25 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         private async Task<string> BuildBusinessSystemPrompt(Business business, BusinessConfig? config)
         {
             var systemPrompt = await File.ReadAllTextAsync("prompts/SemanticKernelSystem.md");
+            var categoryNames = await _categoryAttributeSchemaRepository
+                .GetLatestCategoryNamesAsync();
+            var effectiveConfig = config ?? new BusinessConfig();
 
             //TODO: nâng cấp lênh thành sẽ load và đọc config của mỗi business từ redis > db
 
             systemPrompt = systemPrompt
                  .Replace("{business_name}", business.BusinessName)
                  .Replace("{BusinessSystemPrompt}", config?.SystemPrompt ?? string.Empty)
+                 .Replace("{CategoryNames}", JsonSerializer.Serialize(categoryNames, JsonOptions))
+                 .Replace("{LowPriceMaxLimit}", FormatPrice(effectiveConfig.LowPriceMaxLimit, 200000m))
+                 .Replace("{MediumPriceMinLimit}", FormatPrice(effectiveConfig.MediumPriceMinLimit, 200000m))
+                 .Replace("{MediumPriceMaxLimit}", FormatPrice(effectiveConfig.MediumPriceMaxLimit, 1000000m))
+                 .Replace("{HighPriceMinLimit}", FormatPrice(effectiveConfig.HighPriceMinLimit, 1000000m))
                  .Replace("{FallBackMessage}", config?.FallBackMessage ?? "Xin lỗi, hiện tôi chưa thể xử lý yêu cầu này.");
             return systemPrompt;
         }
+
+        private static string FormatPrice(decimal? configuredValue, decimal fallback)
+            => (configuredValue ?? fallback).ToString("0.##", CultureInfo.InvariantCulture);
     }
 }

@@ -20,6 +20,7 @@ public class ProductReferenceV2
     public int StockQuantity { get; set; }
     public List<string> Images { get; set; } = [];
     public Dictionary<string, string> Metadata { get; set; } = [];
+    public Dictionary<string, string> QdrantPayload { get; set; } = [];
     public double Score { get; set; }
 
 
@@ -44,6 +45,7 @@ public class ProductReferenceV2
         var copy = (ProductReferenceV2)MemberwiseClone();
         copy.Images = Images.ToList();
         copy.Metadata = new Dictionary<string, string>(Metadata);
+        copy.QdrantPayload = new Dictionary<string, string>(QdrantPayload);
         return copy;
     }
 }

@@ -102,8 +102,7 @@ public class ProductDeleteCommandHandler : IRequestHandler<ProductDeleteCommand,
                     [product.QdrantPointId],
                     new Dictionary<string, Value>
                     {
-                        [ProductPayloadNames.Status] = ProductStatus.Deleted.ToString(),
-                        ["status"] = ProductStatus.Deleted.ToString()
+                        [ProductPayloadNames.Status] = ProductStatus.Deleted.ToString()
                     },
                     cancellationToken);
             }

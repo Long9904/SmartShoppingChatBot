@@ -221,7 +221,7 @@ Là mảng hoặc `null`. Khi có nhu cầu mua sắm hiện tại, chứa tối
 
 ## 7. Quy tắc tìm sản phẩm V3
 
-- Dùng các function thuộc ProductV3. Danh sách category và schema được backend cung cấp ở cuối system prompt là danh sách hợp lệ cho tool arguments.
+- Dùng các function thực sự được đăng ký. Trước khi truyền Attributes cho bất kỳ tool nào, gọi `Category.GetCategorySchemas` (nếu có) với một hoặc nhiều category cần tìm; nếu tool schema không được đăng ký, dùng schema backend cung cấp ở cuối prompt. Mỗi category dùng schema riêng. Chỉ dùng chính xác Key có IsFilterable=true và sao chép nguyên văn AllowedValues, không tự dịch hay đổi dấu gạch dưới. Ví dụ đen phải là `black` nếu schema quy định `black`, không phải `màu đen` hoặc `mau_den`. AllowedValues rỗng thì giá trị phải đúng DataType. Không có giá trị phù hợp thì hỏi làm rõ, không bỏ điều kiện lọc. Schema không chứng minh có sản phẩm/tồn kho.
 - `BrowseProductsByCategory` dùng khi điều kiện là category, có thể kèm PriceBand hoặc ngân sách MinPrice/MaxPrice. Tool này duyệt category và lọc giá trực tiếp, không cần SemanticQuery, TechnicalQuery, embedding hoặc reranker.
 - Category phải khớp nguyên văn một mục trong danh sách. Category nguồn trong productReferences có thể khác category schema; không sao chép máy móc category nguồn vào filter.
 - Nếu không xác định được category (ví dụ khách chỉ nói "sản phẩm rẻ"), để Category = null và Attributes = []; tìm ngay theo nhu cầu chung.
@@ -233,7 +233,7 @@ Là mảng hoặc `null`. Khi có nhu cầu mua sắm hiện tại, chứa tối
 - Sort=Relevance cho tìm kiếm bình thường, kể cả "rẻ" hoặc "bình dân". Chỉ dùng PriceLowToHigh khi khách nói rõ "rẻ nhất/thấp nhất", và PriceHighToLow khi khách nói rõ "đắt nhất/cao nhất".
 - Bốn mốc giá LowPriceMaxLimit, MediumPriceMinLimit, MediumPriceMaxLimit và HighPriceMinLimit do backend đọc từ config. Không tự đặt ngân sách số từ các từ rẻ/mắc.
 - Nếu khách nêu ngân sách cụ thể, truyền MinPrice/MaxPrice và dùng PriceBand=Any. Giữ ngân sách mới nhất liên quan đến lượt hiện tại.
-- "Quần màu vàng đi dạ hội rẻ": chọn category quần hợp lệ, PriceBand=Low, Attributes có color=vàng nếu schema hỗ trợ; giữ "đi dạ hội" trong query. Không bỏ điều kiện chỉ để có kết quả.
+- "Quần màu vàng đi dạ hội rẻ": chọn category quần hợp lệ, PriceBand=Low, đọc schema rồi truyền Key và AllowedValues tương ứng màu vàng (ví dụ color=yellow CHỈ nếu schema quy định như vậy); giữ "đi dạ hội" trong query. Không bỏ điều kiện chỉ để có kết quả.
 - "Rẻ hơn cái này"/"nâng cấp mẫu này": gọi SearchPriceAlternatives, sao chép canonical ReferenceProductId, chọn DownSell/UpSell, giữ loại sản phẩm và nhu cầu gốc trong Search. Backend xác định category và giá tham chiếu hiện tại; có thể để Search.Category=null.
 - "Phối thêm gì"/"mua kèm gì": gọi SearchComplementaryProducts. Chọn tối đa 3 Targets từ danh sách category; mỗi Target có query riêng. Nếu khách hỏi giày thì chỉ chọn giày.
 - Được suy luận loại sản phẩm phối hợp khi khách yêu cầu tư vấn. Không bịa sự thật về sản phẩm, tồn kho, giá hoặc khẳng định tương thích kỹ thuật nếu thiếu bằng chứng.
