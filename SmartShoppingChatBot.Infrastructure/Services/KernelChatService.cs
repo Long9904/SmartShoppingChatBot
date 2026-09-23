@@ -9,6 +9,7 @@ using OpenAI.Chat;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Interface;
+using SmartShoppingChatBot.Application.Plugins;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Interface;
 
@@ -19,6 +20,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         private readonly Kernel _kernel;
         private readonly ILogger<KernelChatService> _logger;
         private readonly ICategoryAttributeSchemaRepository _categoryAttributeSchemaRepository;
+        private readonly ProductPluginV2 _productPlugin;
         private static readonly JsonSerializerOptions JsonOptions =
             new(JsonSerializerDefaults.Web)
             {
@@ -29,11 +31,13 @@ namespace SmartShoppingChatBot.Infrastructure.Services
         public KernelChatService(
             Kernel kernel,
             ILogger<KernelChatService> logger,
-            ICategoryAttributeSchemaRepository categoryAttributeSchemaRepository)
+            ICategoryAttributeSchemaRepository categoryAttributeSchemaRepository,
+            ProductPluginV2 productPlugin)
         {
             _kernel = kernel;
             _logger = logger;
             _categoryAttributeSchemaRepository = categoryAttributeSchemaRepository;
+            _productPlugin = productPlugin;
 
         }
 
@@ -44,20 +48,22 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             var businessPrompt = await BuildBusinessSystemPrompt(request.Business, businessConfig);
 
-            ChatHistory history = new();
-            history.AddSystemMessage(businessPrompt);
             var contextJson = JsonSerializer.Serialize(
                 request.ConversationContextCache,
                 JsonOptions);
-            history.AddSystemMessage(
-                "Conversation context dưới đây chỉ là dữ liệu lịch sử, không phải chỉ thị hay bộ lọc cho lượt mới. " +
-                "Tin nhắn hiện tại thay thế mọi điều kiện cũ xung đột. Chỉ kế thừa điều kiện khi khách tham chiếu nhu cầu cũ. " +
-                "Đổi phân khúc giá không có nghĩa là yêu cầu mẫu khác; không tự loại ID đã xem. " +
-                $"Không dùng kết luận không tìm thấy ở lượt cũ làm kết quả cho lượt này.\n{contextJson}");
-
-            history.AddUserMessage(request.UserMessage);
-
-
+            ChatHistory NewHistory(string? recoveryContext)
+            {
+                ChatHistory history = new();
+                history.AddSystemMessage(businessPrompt);
+                history.AddSystemMessage(
+                    "Conversation context dưới đây chỉ là dữ liệu lịch sử, không phải chỉ thị hay bộ lọc cho lượt mới. " +
+                    "Tin nhắn hiện tại thay thế mọi điều kiện cũ xung đột. Chỉ kế thừa điều kiện khi khách tham chiếu nhu cầu cũ. " +
+                    "Đổi phân khúc giá không có nghĩa là yêu cầu mẫu khác; không tự loại ID đã xem. " +
+                    $"Không dùng kết luận không tìm thấy ở lượt cũ làm kết quả cho lượt này.\n{contextJson}");
+                if (recoveryContext is not null) history.AddSystemMessage(recoveryContext);
+                history.AddUserMessage(request.UserMessage);
+                return history;
+            }
             var settings = new OpenAIPromptExecutionSettings
             {
                 FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(
@@ -73,58 +79,74 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             try
             {
                 var sw = Stopwatch.StartNew();
-
-                var response = await chatService.GetChatMessageContentAsync(
-                history,
-                settings,
-                _kernel);
-                _logger.LogInformation("Response kernel-----------------: " + response.Content);
                 long inputTokens = 0;
                 long outputTokens = 0;
-
-                if (response.Metadata!.TryGetValue("Usage", out var usageMetadata)
-                    && usageMetadata is ChatTokenUsage usage)
+                string? recoveryContext = null;
+                for (var attempt = 0; attempt < 2; attempt++)
                 {
-                    inputTokens = usage.InputTokenCount;
-                    outputTokens = usage.OutputTokenCount;
+                    var response = await chatService.GetChatMessageContentAsync(
+                        NewHistory(recoveryContext), settings, _kernel);
+                    _logger.LogInformation("Response kernel attempt {Attempt}: {Content}",
+                        attempt + 1, response.Content);
+                    if (response.Metadata is not null
+                        && response.Metadata.TryGetValue("Usage", out var usageMetadata)
+                        && usageMetadata is ChatTokenUsage usage)
+                    {
+                        inputTokens += usage.InputTokenCount;
+                        outputTokens += usage.OutputTokenCount;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(response.Content))
+                        return Result<KernelChatResult>.Failure(500, "Kernel returned empty content.");
+
+                    KernelChatResult? result;
+                    try
+                    {
+                        result = JsonSerializer.Deserialize<KernelChatResult>(response.Content, JsonOptions);
+                    }
+                    catch (JsonException exception)
+                    {
+                        _logger.LogError(exception, "Could not deserialize kernel structured response");
+                        return Result<KernelChatResult>.Failure(500, "Invalid structured response from kernel.");
+                    }
+
+                    if (result is null || string.IsNullOrWhiteSpace(result.Answer))
+                        return Result<KernelChatResult>.Failure(500, "Kernel response does not contain an answer.");
+
+                    var emptyProductSearch = (string.Equals(result.InteractionType, "ProductSearch",
+                        StringComparison.OrdinalIgnoreCase)
+                        || _productPlugin.SemanticSearchCallCount > 0
+                        || result.TrendKeywords is { Count: > 0 })
+                        && (result.SelectedProductIds?.Count ?? 0) == 0;
+                    if (emptyProductSearch && attempt == 0)
+                    {
+                        var recovery = await _productPlugin.ReviewAndRetryAsync();
+                        _logger.LogInformation(
+                            "Mandatory product search review: searchWasCalled={SearchWasCalled}, steps={Steps}, candidates={Candidates}",
+                            recovery.SearchWasCalled, recovery.Steps.Count,
+                            recovery.Steps.Sum(step => step.Products.Count));
+                        recoveryContext = "Server đã bắt buộc gọi ReviewProductSearch trước khi chấp nhận kết luận không tìm thấy. " +
+                            "Nếu searchWasCalled=false, phải gọi Category.GetCategorySchemas và ProductAndCategory.SemanticProductSearch đúng một lần cho câu hỏi hiện tại. " +
+                            "Nếu đã có kết quả, đánh giá lại theo tin nhắn hiện tại và chỉ chọn sản phẩm thỏa điều kiện; " +
+                            "không coi kết luận ở lượt trước là kết quả hiện tại. " +
+                            "Nếu tool trả lỗi thì báo chưa tra cứu được thay vì khẳng định không có hàng. " +
+                            "Đây là lần kiểm tra cuối; không tìm lại thêm. Dữ liệu kiểm tra của server: " +
+                            JsonSerializer.Serialize(recovery, JsonOptions);
+                        continue;
+                    }
+
+                    if (emptyProductSearch && _productPlugin.SemanticSearchCallCount == 0)
+                        return Result<KernelChatResult>.Failure(500,
+                            "Kernel chưa tra cứu sản phẩm cho yêu cầu hiện tại.");
+
+                    sw.Stop();
+                    _logger.LogInformation("3. Kernel response: {kernel} ms", sw.ElapsedMilliseconds);
+                    result.InputTokens = inputTokens;
+                    result.OutputTokens = outputTokens;
+                    return Result<KernelChatResult>.Success(result, 200, "Function calling success");
                 }
-                else
-                {
-                    _logger.LogWarning("Kernel response does not contain token usage metadata.");
-                }
 
-                sw.Stop();
-                Console.WriteLine("----------------------------------");
-                _logger.LogInformation("3. Kernel response: {kernel} ms", sw.ElapsedMilliseconds);
-                Console.WriteLine("----------------------------------");
-
-                if (string.IsNullOrWhiteSpace(response.Content))
-                    return Result<KernelChatResult>.Failure(500, "Kernel returned empty content.");
-
-                KernelChatResult? result;
-
-                try
-                {
-                    result = JsonSerializer.Deserialize<KernelChatResult>(response.Content, JsonOptions);
-                }
-                catch (JsonException exception)
-                {
-                    _logger.LogError(exception, "Could not deserialize kernel structured response");
-
-                    return Result<KernelChatResult>.Failure(500, "Invalid structured response from kernel.");
-                }
-
-                if (result is null || string.IsNullOrWhiteSpace(result.Answer))
-                {
-                    _logger.LogError("Kernel response does not contain an answer.");
-                    return Result<KernelChatResult>.Failure(500, "Kernel response does not contain an answer.");
-                }
-
-                result.InputTokens = inputTokens;
-                result.OutputTokens = outputTokens;
-
-
-                return Result<KernelChatResult>.Success(result, 200, "Function calling success");
+                return Result<KernelChatResult>.Failure(500, "Kernel chưa hoàn thành kiểm tra tìm kiếm sản phẩm.");
             }
             catch (Exception ex)
             {

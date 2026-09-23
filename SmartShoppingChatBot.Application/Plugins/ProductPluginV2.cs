@@ -22,9 +22,13 @@ namespace SmartShoppingChatBot.Application.Plugins
         // Plugin is scoped to one chat request. Bound retries independently of model instructions.
         private int _semanticSearchCalls;
         private int _categoryBrowseCalls;
+        private int _searchCalls;
+        private int _searchCallLimit = 2;
         private bool _searchRecoveryRequested;
+        private ProductSemanticSearchV2Request? _lastSemanticRequest;
         private readonly Dictionary<string, ProductResponseV2> _productsLoadedById =
             new(StringComparer.OrdinalIgnoreCase);
+        public int SemanticSearchCallCount => _semanticSearchCalls;
 
         public ProductPluginV2(
             IMediator mediator,
@@ -61,9 +65,10 @@ namespace SmartShoppingChatBot.Application.Plugins
             {
                 return Result<List<ProductReferenceV2>>.Failure(400, "Thiếu yêu cầu tìm kiếm sản phẩm.");
             }
-            if (Interlocked.Increment(ref _semanticSearchCalls) > 2)
+            if (Interlocked.Increment(ref _searchCalls) > _searchCallLimit)
                 return Result<List<ProductReferenceV2>>.Failure(429,
-                    "Đã hết lượt SemanticProductSearch trong tin nhắn hiện tại. Gọi ReviewProductSearch để biết bước còn lại; không gọi lại function này.");
+                    "Đã hết lượt tìm sản phẩm trong tin nhắn hiện tại. Không gọi lại function tìm kiếm.");
+            Interlocked.Increment(ref _semanticSearchCalls);
 
             request = new ProductSemanticSearchV2Request
             {
@@ -78,6 +83,7 @@ namespace SmartShoppingChatBot.Application.Plugins
                 MaxPrice = request.MaxPrice,
                 ExcludeProductIds = request.ExcludeProductIds ?? []
             };
+            _lastSemanticRequest = request;
 
             _logger.LogInformation(
                 "Product.SemanticProductSearch V2 invoked. Category: {Category}, AttributeCount: {AttributeCount}, ExcludedProductCount: {ExcludedProductCount}",
@@ -134,9 +140,10 @@ namespace SmartShoppingChatBot.Application.Plugins
             if (!_searchRecoveryRequested)
                 return Result<List<ProductReferenceV2>>.Failure(400,
                     "Dùng SemanticProductSearch trước; chỉ Browse khi ReviewProductSearch yêu cầu kiểm tra lại.");
-            if (Interlocked.Increment(ref _categoryBrowseCalls) > 2)
+            if (Interlocked.Increment(ref _searchCalls) > _searchCallLimit)
                 return Result<List<ProductReferenceV2>>.Failure(429,
-                    "Đã hết lượt BrowseProductsByCategory trong tin nhắn hiện tại. Không gọi lại function này.");
+                    "Đã hết lượt tìm sản phẩm trong tin nhắn hiện tại. Không gọi lại function tìm kiếm.");
+            Interlocked.Increment(ref _categoryBrowseCalls);
 
             request = new CategorySemanticSearchRequest
             {
@@ -176,18 +183,19 @@ namespace SmartShoppingChatBot.Application.Plugins
         }
 
         [KernelFunction]
-        [Description("Bắt buộc gọi trước khi kết luận không tìm thấy sản phẩm sau SemanticProductSearch hoặc khi loại toàn bộ ứng viên. Trả chỉ thị kiểm tra lại SemanticProductSearch và BrowseProductsByCategory với giới hạn server theo lượt chat. Không tìm sản phẩm, không chứng minh hết hàng. Nếu đã có sản phẩm phù hợp thì trả lời ngay, không cần gọi.")]
+        [Description("Kiểm tra trước khi kết luận không tìm thấy. Chỉ thị tối đa một lần tìm lại bằng SemanticProductSearch; bước này bao gồm category, vector và BM25. Nếu đã có sản phẩm phù hợp thì trả lời ngay.")]
         public ProductSearchReview ReviewProductSearch(
             [Description("Lý do không chọn được ứng viên; nêu điều kiện hiện tại nào không khớp và dữ liệu chứng minh. Không tự thêm điều kiện từ lịch sử.")]
-            string rejectionReason,
-            [Description("true chỉ khi đã lấy được category schema hợp lệ cho nhu cầu hiện tại; false thì không thể Browse.")]
-            bool hasCategorySchema)
+            string rejectionReason)
         {
-            _searchRecoveryRequested = true;
+            if (!_searchRecoveryRequested)
+            {
+                _searchCallLimit = Math.Min(_searchCalls + 1, 2);
+                _searchRecoveryRequested = true;
+            }
             var nextFunctions = new List<string>();
-            if (_semanticSearchCalls < 2) nextFunctions.Add("ProductAndCategory.SemanticProductSearch");
-            if (hasCategorySchema && _categoryBrowseCalls < 2)
-                nextFunctions.Add("ProductAndCategory.BrowseProductsByCategory");
+            if (_searchCalls < _searchCallLimit)
+                nextFunctions.Add("ProductAndCategory.SemanticProductSearch");
             _logger.LogInformation(
                 "Product search review: reason={Reason}, semanticCalls={SemanticCalls}, browseCalls={BrowseCalls}, next={Next}",
                 rejectionReason, _semanticSearchCalls, _categoryBrowseCalls, string.Join(", ", nextFunctions));
@@ -197,13 +205,46 @@ namespace SmartShoppingChatBot.Application.Plugins
                 CanConclude = nextFunctions.Count == 0,
                 Instruction = nextFunctions.Count == 0
                     ? "Đã hết bước kiểm tra lại. Chỉ hiển thị ứng viên thỏa nhu cầu hiện tại. Nếu không có, trả chưa tìm thấy và selectedProductIds=[]. Nếu tool báo lỗi dịch vụ, báo chưa tra cứu được, không khẳng định không có hàng."
-                    : "Gọi lần lượt mỗi function trong NextFunctions một lần rồi đánh giá dữ liệu mới. Có sản phẩm đúng thì trả lời ngay. " +
-                      "Nếu vẫn không có, gọi ReviewProductSearch để kiểm tra bước còn lại. " +
+                    : "Chỉ gọi function trong NextFunctions một lần rồi đánh giá dữ liệu mới. Có sản phẩm đúng thì trả lời ngay. Không tìm lại lần thứ hai. " +
                       "Dựng lại nhu cầu từ tin nhắn hiện tại: thay điều kiện cũ bị thay đổi; dùng đúng schema/AllowedValues. " +
                       "Chỉ nói phân khúc giá thì MinPrice/MaxPrice=null; không yêu cầu mẫu khác thì ExcludeProductIds=[]. " +
                       "Bm25Query chỉ chứa loại/tên/brand, không chứa màu hoặc giá đã có filter. Không xóa điều kiện bắt buộc để có hàng. " +
                       "Chỉ kiểm tra mục đích/phong cách khi khách thực sự yêu cầu; không loại áo đúng màu và giá vì thiếu phong cách không được hỏi."
             };
+        }
+
+        // Called by the chat service when the model tries to finish a product search without a product.
+        // Review and one follow-up search run on the server, regardless of model tool choice.
+        public async Task<ProductSearchRecovery> ReviewAndRetryAsync(CancellationToken cancellationToken = default)
+        {
+            var request = _lastSemanticRequest;
+            var review = ReviewProductSearch(
+                "Câu trả lời dự kiến không chọn sản phẩm; kiểm tra lại trước khi kết luận.");
+            if (request is null)
+                return new ProductSearchRecovery
+                {
+                    Review = review,
+                    SearchWasCalled = false
+                };
+
+            var recovery = new ProductSearchRecovery
+            {
+                Review = review,
+                SearchWasCalled = true
+            };
+            if (_searchCalls < _searchCallLimit)
+            {
+                var semantic = await SemanticProductSearch(request, cancellationToken);
+                recovery.Steps.Add(new ProductSearchRecoveryStep
+                {
+                    Function = "SemanticProductSearch",
+                    IsSuccess = semantic.IsSuccess,
+                    Message = semantic.Message ?? string.Empty,
+                    Products = semantic.Data ?? []
+                });
+            }
+
+            return recovery;
         }
 
         [KernelFunction]
