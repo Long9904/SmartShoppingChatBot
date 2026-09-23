@@ -17,6 +17,8 @@
   <ItemGroup>
     <Folder Include="Features\BusinessManagement\BusinessAttributeConfig\" />
     <Folder Include="Features\ConversationManagement\SendMessageV3\" />
+    <Folder Include="Features\KernelSemanticSearch\CategorySemanticSearch\" />
+    <Folder Include="Features\KernelSemanticSearch\ProductSemanticSearchV2\" />
     <Folder Include="Features\ProductManagement\ProductSemanticSearch\" />
     <Folder Include="Features\SystemContentManagement\CreateSystemContent\" />
     <Folder Include="Features\SystemContentManagement\DeleteSystemContent\" />

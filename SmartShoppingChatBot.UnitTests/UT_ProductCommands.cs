@@ -16,6 +16,7 @@ using SmartShoppingChatBot.Application.Interface;
 using SmartShoppingChatBot.Domain.Entities;
 using SmartShoppingChatBot.Domain.Enums;
 using SmartShoppingChatBot.Domain.Interface;
+using SmartShoppingChatBot.Domain.QdrantConfig;
 
 namespace SmartShoppingChatBot.UnitTests;
 
@@ -400,8 +401,12 @@ public class UT_ProductDelete
         result.IsSuccess.Should().BeTrue();
         fixture.Product.Status.Should().Be(ProductStatus.Deleted);
         fixture.Qdrant.Verify(service => service.SetPayloadAsync(
-            It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(),
-            It.Is<Dictionary<string, Qdrant.Client.Grpc.Value>>(payload => payload.Count == 2),
+            QdrantCollections.Products,
+            It.Is<IReadOnlyList<Guid>>(ids => ids.Count == 1 && ids[0] == fixture.Product.QdrantPointId),
+            It.Is<Dictionary<string, Qdrant.Client.Grpc.Value>>(payload =>
+                payload.Count == 1
+                && payload.ContainsKey(ProductPayloadNames.Status)
+                && payload[ProductPayloadNames.Status].StringValue == ProductStatus.Deleted.ToString()),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

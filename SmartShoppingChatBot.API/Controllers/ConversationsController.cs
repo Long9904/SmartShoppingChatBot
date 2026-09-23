@@ -6,7 +6,7 @@ using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.CustomerGetConversations;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.GetChatHistory;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.RegisterConversationOrder;
-using SmartShoppingChatBot.Application.Features.ConversationManagement.SendMessage;
+using SmartShoppingChatBot.Application.Features.ConversationManagement.SendMessageV2;
 using SmartShoppingChatBot.Application.Features.ConversationManagement.UpdateConversationOrderStatus;
 using SmartShoppingChatBot.Domain.Commons;
 
@@ -25,12 +25,12 @@ namespace SmartShoppingChatBot.API.Controllers
             _mediator = mediator;
         }
 
-        // V3
+        // V2
         [HttpPost("messages")]
         [EndpointDescription("Customer send a message")]
         [EndpointSummary("Customer send a message")]
         public async Task<IActionResult> SendChatMessageV1(
-            [FromBody] SendMessageCommand command,
+            [FromBody] SendMessageCommandV2 command,
             CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
@@ -53,13 +53,13 @@ namespace SmartShoppingChatBot.API.Controllers
                     result.MessageCode));
         }
 
-        //V3
+        //V2
         [HttpPost("{conversationId}/messages")]
         [EndpointDescription("Customer send a message")]
         [EndpointSummary("Customer send a message")]
         public async Task<IActionResult> SendChatMessageV2(
             [FromRoute] string? conversationId,
-            [FromBody] SendMessageCommand command,
+            [FromBody] SendMessageCommandV2 command,
             CancellationToken cancellationToken)
         {
             if (!string.IsNullOrWhiteSpace(conversationId))

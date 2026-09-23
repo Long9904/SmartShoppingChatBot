@@ -151,7 +151,7 @@ public class ProductEmbedCommandHandler : IRequestHandler<ProductEmbedCommand, R
             return Result<ProductResponse>.Failure(500, "Failed to select category attribute values.");
         }
 
-        var categoryPayload = BuildCategoryPayload(selectedSchema, selectedValues.Data);
+        var categoryPayload = BuildCategoryPayload(product, selectedSchema, selectedValues.Data);
 
         var productTechnicalVector = await _geminiService.EmbeddingsAsyncV2(
             embeddingText,
@@ -367,6 +367,7 @@ public class ProductEmbedCommandHandler : IRequestHandler<ProductEmbedCommand, R
     }
 
     private Dictionary<string, Value> BuildCategoryPayload(
+        Product product,
         CategoryAttributeSchema schema,
         CategoryValueSelectionResult selection)
     {
@@ -444,6 +445,26 @@ public class ProductEmbedCommandHandler : IRequestHandler<ProductEmbedCommand, R
                         definition.DataType,
                         definition.Key);
                     break;
+            }
+        }
+
+        // Variant options in Metadata identify the SKU. Shared descriptions can list
+        // other colors or even contradict the variant, so they cannot override it.
+        foreach (var definition in schema.Attributes.Where(attribute => attribute.IsFilterable))
+        {
+            if (!ProductVariantAttributes.TryGetCanonicalKeyword(product, definition, out var canonical))
+                continue;
+
+            if (canonical is null)
+            {
+                payload.Remove(definition.Key);
+                _logger.LogWarning(
+                    "Variant metadata value for {ProductId}/{AttributeKey} is outside the active schema; omitting this filterable payload field.",
+                    product.Id, definition.Key);
+            }
+            else
+            {
+                payload[definition.Key] = canonical;
             }
         }
 

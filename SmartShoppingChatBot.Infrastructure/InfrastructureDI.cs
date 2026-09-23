@@ -37,6 +37,7 @@ public static class InfrastructureDI
         services.AddScoped<ICategoryAttributeSchemaService, CategoryAttributeSchemaService>();
         services.AddScoped<IActivityLogService, ActivityLogService>();
         services.AddScoped<IProductSemanticSearchByAI, ProductSemanticSearchByAI>();
+        services.AddScoped<IProductReferenceCollectorV2, ProductReferenceCollectorV2>();
         services.AddSingleton<GoogleAccessTokenProvider>();
 
         // Seeder
