@@ -34,12 +34,30 @@ namespace SmartShoppingChatBot.Application.Interface
             Filter filter,
             int candidateLimit,
             CancellationToken ct);
+        Task<List<ScoredPoint>> HybridProductSearchV2Async(
+            float[] embeddingSemantic,
+            float[] embeddingTechnical,
+            string bm25Query,
+            Filter filter,
+            int candidateLimit,
+            CancellationToken ct);
         Task<List<ScoredPoint>> HybridDocumentSearchAsync(
             float[] embeddingSemantic,
             float[] embeddingTechnical,
             int candidateLimit,
             Filter filter,
             CancellationToken ct);
+        Task<IReadOnlyList<RetrievedPoint>> ScrollAsync(
+            string collectionName,
+            Filter filter,
+            uint limit,
+            CancellationToken ct = default);
+        Task<IReadOnlyList<ScoredPoint>> SearchBm25Async(
+            string collectionName,
+            string query,
+            Filter filter,
+            uint limit,
+            CancellationToken ct = default);
         Task DeletePointsAsync(string collectionName, IReadOnlyList<Guid> ids, CancellationToken ct = default);
     }
 }

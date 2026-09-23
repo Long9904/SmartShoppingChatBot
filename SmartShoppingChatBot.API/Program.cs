@@ -240,12 +240,13 @@ builder.Services.AddSingleton(_ =>
         port: int.Parse(builder.Configuration["Qdrant:Port"] ?? "6334")
     ));
 
-// Semantic Kernel
-builder.Services.AddScoped<ProductPlugin>();
 builder.Services.AddInfrastructureServicesV3();
-//builder.Services.AddScoped<ProductPluginV3>();
+
+// Semantic Kernel
+builder.Services.AddScoped<ProductPluginV2>();
+builder.Services.AddScoped<CategoryPlugin>();
 builder.Services.AddScoped<DocumentPlugin>();
-builder.Services.PreserveLegacyKernelV3(builder.Configuration);
+
 //builder.Services.AddScoped<RecommendationPlugin>();
 builder.Services.AddScoped<Kernel>(sp =>
 {
@@ -257,7 +258,8 @@ builder.Services.AddScoped<Kernel>(sp =>
     );
 
     // Kernel plugin register
-    kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPlugin>(), "Product");
+    kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPluginV2>(), "ProductAndCategory");
+    kb.Plugins.AddFromObject(sp.GetRequiredService<CategoryPlugin>(), "Category");
     //kb.Plugins.AddFromObject(sp.GetRequiredService<ProductPluginV3>(), "ProductV3");
     kb.Plugins.AddFromObject(sp.GetRequiredService<DocumentPlugin>(), "Document");
     //kb.Plugins.AddFromObject(sp.GetRequiredService<RecommendationPlugin>(), "RecommedProduct");

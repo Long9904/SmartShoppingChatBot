@@ -8,6 +8,7 @@ namespace SmartShoppingChatBot.Domain.Interface
         Task<CategoryAttributeSchema?> GetByVersionAsync(string category, int version);
         Task<List<CategoryAttributeSchema>> GetByCategoryAsync(string category);
         Task<List<CategoryAttributeSchema>> GetLatestSchemasAsync();
+        Task<List<string>> GetLatestCategoryNamesAsync(CancellationToken cancellationToken = default);
         Task<List<CategoryAttributeSchema>> GetPendingApprovalAsync();
     }
 }

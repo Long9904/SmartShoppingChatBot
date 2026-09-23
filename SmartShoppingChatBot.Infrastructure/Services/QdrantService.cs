@@ -105,6 +105,54 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             return points.ToList();
         }
 
+        public async Task<List<ScoredPoint>> HybridProductSearchV2Async(
+            float[] embeddingSemantic,
+            float[] embeddingTechnical,
+            string bm25Query,
+            Filter filter,
+            int candidateLimit,
+            CancellationToken ct)
+        {
+            var prefetch = new List<PrefetchQuery>
+            {
+                new()
+                {
+                    Query = embeddingSemantic,
+                    Using = ProductVectorNames.SemanticSearch,
+                    Filter = filter,
+                    Limit = 60
+                },
+                new()
+                {
+                    Query = embeddingTechnical,
+                    Using = ProductVectorNames.ProductTechnical,
+                    Filter = filter,
+                    Limit = 40
+                },
+                new()
+                {
+                    Query = new Document
+                    {
+                        Text = bm25Query,
+                        Model = "qdrant/bm25"
+                    },
+                    Using = ProductVectorNames.Bm25,
+                    Filter = filter,
+                    Limit = 40
+                }
+            };
+
+            var points = await _qdrantClient.QueryAsync(
+                collectionName: QdrantCollections.Products,
+                query: Fusion.Rrf,
+                prefetch: prefetch,
+                limit: (ulong)candidateLimit,
+                payloadSelector: true,
+                cancellationToken: ct);
+
+            return points.ToList();
+        }
+
         public async Task<List<ScoredPoint>> HybridDocumentSearchAsync(
             float[] embeddingSemantic,
             float[] embeddingTechnical,
@@ -143,6 +191,42 @@ namespace SmartShoppingChatBot.Infrastructure.Services
 
             return points.ToList();
         }
+
+        public async Task<IReadOnlyList<RetrievedPoint>> ScrollAsync(
+            string collectionName,
+            Filter filter,
+            uint limit,
+            CancellationToken ct = default)
+        {
+            var response = await _qdrantClient.ScrollAsync(
+                collectionName: collectionName,
+                filter: filter,
+                limit: limit,
+                payloadSelector: true,
+                vectorsSelector: false,
+                cancellationToken: ct);
+
+            return response.Result;
+        }
+
+        public async Task<IReadOnlyList<ScoredPoint>> SearchBm25Async(
+            string collectionName,
+            string query,
+            Filter filter,
+            uint limit,
+            CancellationToken ct = default)
+        {
+            var points = await _qdrantClient.QueryAsync(
+                collectionName: collectionName,
+                query: new Document { Text = query, Model = "qdrant/bm25" },
+                usingVector: ProductVectorNames.Bm25,
+                filter: filter,
+                limit: limit,
+                payloadSelector: true,
+                cancellationToken: ct);
+            return points.ToList();
+        }
+
         public async Task DeletePointsAsync(string collectionName, IReadOnlyList<Guid> ids, CancellationToken ct = default)
         {
             await _qdrantClient.DeleteAsync(

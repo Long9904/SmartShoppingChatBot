@@ -45,6 +45,23 @@ namespace SmartShoppingChatBot.Infrastructure.Repositories
                 .ToList();
         }
 
+        public async Task<List<string>> GetLatestCategoryNamesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            var categoryNames = await _context.CategoryAttributeSchemas
+                .AsNoTracking()
+                .Where(schema => schema.IsActive)
+                .Select(schema => schema.Category)
+                .ToListAsync(cancellationToken);
+
+            return categoryNames
+                .Where(category => !string.IsNullOrWhiteSpace(category))
+                .Select(category => category.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(category => category, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
         public Task<List<CategoryAttributeSchema>> GetPendingApprovalAsync()
         {
             return _context.CategoryAttributeSchemas

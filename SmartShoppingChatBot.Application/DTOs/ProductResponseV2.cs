@@ -27,6 +27,9 @@
 
         public Dictionary<string, string> Metadata { get; set; } = [];
 
+        [System.ComponentModel.Description("Các field scalar của Qdrant payload, gồm category và các thuộc tính canonical dùng để lọc. Khác với Category/Metadata nguồn từ MongoDB.")]
+        public Dictionary<string, string> QdrantPayload { get; set; } = [];
+
         public double Score { get; set; }
 
         public ProductResponseV2 Copy()
@@ -44,6 +47,7 @@
                 Category = Category,
                 Images = Images.ToList(),
                 Metadata = new Dictionary<string, string>(Metadata),
+                QdrantPayload = new Dictionary<string, string>(QdrantPayload),
                 Score = Score
             };
         }
