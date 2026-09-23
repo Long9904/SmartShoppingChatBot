@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using AutoMapper;
 using FluentAssertions;
 using Moq;
+using Qdrant.Client.Grpc;
 using SmartShoppingChatBot.Application.Commons.Results;
 using SmartShoppingChatBot.Application.DTOs;
 using SmartShoppingChatBot.Application.Features.ProductManagement.GetImportJobs;
@@ -219,6 +220,7 @@ public class UT_ProductReadQueries
         public List<Product> Products { get; } = [];
         public Mock<ICurrentUserService> CurrentUser { get; } = new();
         public Mock<IProductRepository> ProductRepository { get; } = new();
+        public Mock<IQdrantService> QdrantService { get; } = new();
         public ProductGetAllQueryHandler GetAllHandler { get; }
         public ProductGetByIdQueryHandler GetByIdHandler { get; }
         public ProductGetByIdsQueryHandler GetByIdsHandler { get; }
@@ -268,7 +270,11 @@ public class UT_ProductReadQueries
                 }).ToList());
             GetAllHandler = new ProductGetAllQueryHandler(CurrentUser.Object, ProductRepository.Object);
             GetByIdHandler = new ProductGetByIdQueryHandler(CurrentUser.Object, ProductRepository.Object);
-            GetByIdsHandler = new ProductGetByIdsQueryHandler(CurrentUser.Object, ProductRepository.Object, mapper.Object);
+            QdrantService.Setup(service => service.ScrollAsync(
+                    It.IsAny<string>(), It.IsAny<Filter>(), It.IsAny<uint>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<RetrievedPoint>());
+            GetByIdsHandler = new ProductGetByIdsQueryHandler(
+                CurrentUser.Object, ProductRepository.Object, mapper.Object, QdrantService.Object);
         }
     }
 }
