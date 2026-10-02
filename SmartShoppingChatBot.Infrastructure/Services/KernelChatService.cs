@@ -51,7 +51,7 @@ namespace SmartShoppingChatBot.Infrastructure.Services
             var contextJson = JsonSerializer.Serialize(
                 request.ConversationContextCache,
                 JsonOptions);
-            ChatHistory NewHistory(string? recoveryContext)
+            ChatHistory NewHistory()
             {
                 ChatHistory history = new();
                 history.AddSystemMessage(businessPrompt);
@@ -60,7 +60,6 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                     "Tin nhắn hiện tại thay thế mọi điều kiện cũ xung đột. Chỉ kế thừa điều kiện khi khách tham chiếu nhu cầu cũ. " +
                     "Đổi phân khúc giá không có nghĩa là yêu cầu mẫu khác; không tự loại ID đã xem. " +
                     $"Không dùng kết luận không tìm thấy ở lượt cũ làm kết quả cho lượt này.\n{contextJson}");
-                if (recoveryContext is not null) history.AddSystemMessage(recoveryContext);
                 history.AddUserMessage(request.UserMessage);
                 return history;
             }
@@ -69,7 +68,8 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(
                     options: new FunctionChoiceBehaviorOptions
                     {
-                        AllowStrictSchemaAdherence = true
+                        AllowStrictSchemaAdherence = true,
+                        AllowConcurrentInvocation = false
                     }),
                 ResponseFormat = typeof(KernelChatResult),
                 Temperature = businessConfig?.ModelTemperature ?? 0.2,
@@ -81,11 +81,11 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                 var sw = Stopwatch.StartNew();
                 long inputTokens = 0;
                 long outputTokens = 0;
-                string? recoveryContext = null;
+                var history = NewHistory();
                 for (var attempt = 0; attempt < 2; attempt++)
                 {
                     var response = await chatService.GetChatMessageContentAsync(
-                        NewHistory(recoveryContext), settings, _kernel);
+                        history, settings, _kernel);
                     _logger.LogInformation("Response kernel attempt {Attempt}: {Content}",
                         attempt + 1, response.Content);
                     if (response.Metadata is not null
@@ -124,14 +124,21 @@ namespace SmartShoppingChatBot.Infrastructure.Services
                         _logger.LogInformation(
                             "Mandatory product search review: searchWasCalled={SearchWasCalled}, steps={Steps}, candidates={Candidates}",
                             recovery.SearchWasCalled, recovery.Steps.Count,
-                            recovery.Steps.Sum(step => step.Products.Count));
-                        recoveryContext = "Server đã bắt buộc gọi ReviewProductSearch trước khi chấp nhận kết luận không tìm thấy. " +
+                            recovery.Candidates.Count);
+                        var recoveryContext = "Server đã bắt buộc gọi ReviewProductSearch trước khi chấp nhận kết luận không tìm thấy. " +
                             "Nếu searchWasCalled=false, phải gọi Category.GetCategorySchemas và ProductAndCategory.SemanticProductSearch đúng một lần cho câu hỏi hiện tại. " +
                             "Nếu đã có kết quả, đánh giá lại theo tin nhắn hiện tại và chỉ chọn sản phẩm thỏa điều kiện; " +
                             "không coi kết luận ở lượt trước là kết quả hiện tại. " +
-                            "Nếu tool trả lỗi thì báo chưa tra cứu được thay vì khẳng định không có hàng. " +
-                            "Đây là lần kiểm tra cuối; không tìm lại thêm. Dữ liệu kiểm tra của server: " +
+                            "Candidates tổng hợp dữ liệu sản phẩm đã lấy thành công trong lượt này, kể cả khi một bước khác lỗi. " +
+                            "Hết lượt gọi tool không phải lỗi dịch vụ và không làm mất dữ liệu đã nhận. " +
+                            "Chỉ báo chưa tra cứu được khi không có dữ liệu dùng được và thực sự có lỗi dịch vụ. " +
+                            "Nếu SearchWasCalled=true thì đã hoàn tất tìm kiếm: không gọi tool nữa, đánh giá ngay Candidates. " +
+                            "Phong cách và hoàn cảnh có thể được chứng minh bằng mô tả, tên và thuộc tính canonical tương đương; không yêu cầu khớp từng chữ. " +
+                            "Dữ liệu kiểm tra của server: " +
                             JsonSerializer.Serialize(recovery, JsonOptions);
+                        history.AddSystemMessage(recoveryContext);
+                        if (recovery.SearchWasCalled)
+                            settings.FunctionChoiceBehavior = FunctionChoiceBehavior.None();
                         continue;
                     }
 

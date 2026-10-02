@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -44,7 +43,9 @@ public sealed class ProductSemanticSearchV2QueryHandler(
             }
 
             var request = query.Request;
+
             var category = request.Category.Trim();
+
             var schema = string.IsNullOrEmpty(category)
                 ? null
                 : await categorySchemas.GetActiveSchemaAsync(category);
@@ -74,7 +75,9 @@ public sealed class ProductSemanticSearchV2QueryHandler(
             var config = await redisBusinessConfig.GetBusinessConfigAsync(cancellationToken)
                 ?? businessResult.Data.Config
                 ?? new BusinessConfig();
+
             var priceRange = ResolvePriceRange(request, config);
+
             if (!priceRange.IsValid)
             {
                 return Result<List<ProductReferenceV2>>.Failure(400, priceRange.Error);
@@ -87,6 +90,7 @@ public sealed class ProductSemanticSearchV2QueryHandler(
                 priceRange.Minimum,
                 priceRange.Maximum,
                 excludedProductIds);
+
             if (!filterResult.IsSuccess || filterResult.Data is null)
             {
                 return Result<List<ProductReferenceV2>>.Failure(
@@ -97,20 +101,31 @@ public sealed class ProductSemanticSearchV2QueryHandler(
             }
 
             var resultLimit = Math.Clamp(config.TopKDocument ?? 5, 1, 20);
+
             var candidateLimit = Math.Clamp(resultLimit * 8, 40, 100);
-            logger.LogInformation(
-                "Product search input: category={Category}, attributes={Attributes}, priceBand={PriceBand}, min={Minimum}, max={Maximum}, excluded={Excluded}, semanticMatch={SemanticMatch}, semantic={SemanticQuery}, bm25={Bm25Query}",
-                category, JsonSerializer.Serialize(request.Attributes), request.PriceBand,
-                priceRange.Minimum, priceRange.Maximum, excludedProductIds.Count,
-                request.RequiresSemanticMatch, request.SemanticQuery, request.Bm25Query);
+            // TopK controls display size, not the candidate pool the model evaluates.
+            var evaluationLimit = Math.Clamp(resultLimit * 3, 9, 15);
+            var combineStages = query.IncludeBm25Candidates || request.RequiresSemanticMatch
+                || request.Attributes.Any(attribute => attribute.IsPreference);
+
+            //logger.LogInformation(
+            //    "Product search input: category={Category}, attributes={Attributes}, priceBand={PriceBand}, min={Minimum}, max={Maximum}, excluded={Excluded}, semanticMatch={SemanticMatch}, semantic={SemanticQuery}, bm25={Bm25Query}",
+            //    category, JsonSerializer.Serialize(request.Attributes), request.PriceBand,
+            //    priceRange.Minimum, priceRange.Maximum, excludedProductIds.Count,
+            //    request.RequiresSemanticMatch, request.SemanticQuery, request.Bm25Query);
+
+
 
             async Task<Result<List<ProductReferenceV2>>> EvaluateAsync(
-                IEnumerable<IDictionary<string, Value>> payloads, string stage)
+                IEnumerable<IDictionary<string, Value>> payloads,
+                string stage)
             {
+
                 var payloadById = new Dictionary<ObjectId, IDictionary<string, Value>>();
                 var pointCount = 0;
                 var invalidIdCount = 0;
                 var excludedCount = 0;
+
                 foreach (var payload in payloads)
                 {
                     pointCount++;
@@ -127,11 +142,12 @@ public sealed class ProductSemanticSearchV2QueryHandler(
                     }
                     payloadById.TryAdd(id, payload);
                 }
-                logger.LogInformation(
-                    "Product search stage {Stage}: Qdrant points={Points}, invalid productIds={InvalidIds}, excluded={Excluded}, usable={Usable}",
-                    stage, pointCount, invalidIdCount, excludedCount, payloadById.Count);
+                //logger.LogInformation(
+                //    "Product search stage {Stage}: Qdrant points={Points}, invalid productIds={InvalidIds}, excluded={Excluded}, usable={Usable}",
+                //    stage, pointCount, invalidIdCount, excludedCount, payloadById.Count);
 
                 var ids = payloadById.Keys.ToList();
+
                 if (ids.Count == 0)
                 {
                     logger.LogInformation("Product search stage {Stage}: no candidates", stage);
@@ -142,17 +158,21 @@ public sealed class ProductSemanticSearchV2QueryHandler(
                     ids.Contains(product.Id)
                     && product.BusinessId == businessResult.Data.Id
                     && product.Status == ProductStatus.Active);
+
                 var candidates = products.Where(product =>
                     (!priceRange.Minimum.HasValue || product.Price >= priceRange.Minimum.Value)
                     && (!priceRange.Maximum.HasValue || product.Price <= priceRange.Maximum.Value)
                     && (schema is null || !HasConflictingCanonicalMetadata(product, schema, request, stage != "category")))
                     .ToDictionary(product => product.Id);
+
                 var orderedProducts = payloadById.Keys
                     .Where(candidates.ContainsKey)
                     .Select(id => candidates[id])
-                    .Where(product => stage != "category" || MatchesNamedType(product, request.Bm25Query))
-                    .Take(resultLimit)
+                    .Where(product => stage != "category" || request.RequiresSemanticMatch
+                        || MatchesNamedType(product, request.Bm25Query))
+                    .Take(evaluationLimit)
                     .ToList();
+
                 if (orderedProducts.Count == 0)
                 {
                     logger.LogInformation("Product search stage {Stage}: no current matching products", stage);
@@ -166,32 +186,39 @@ public sealed class ProductSemanticSearchV2QueryHandler(
                     reference.QdrantPayload = ProductQdrantPayloadReader.FromPayload(payloadById[product.Id]);
                     return reference;
                 }).ToList();
-                logger.LogInformation(
-                    "Product search stage {Stage}: {Candidates} current candidates, {Returned} returned",
-                    stage, candidates.Count, references.Count);
-                logger.LogInformation("Product search stage {Stage}: returned products={Products}", stage,
-                    JsonSerializer.Serialize(references.Select(product => new
-                    {
-                        product.ProductId, product.Name, product.Category, product.Price,
-                        product.Metadata, product.QdrantPayload
-                    })));
-                return Result<List<ProductReferenceV2>>.Success(references,
-                    message: $"Tìm sản phẩm ở bước {stage}.");
+
+                //logger.LogInformation(
+                //    "Product search stage {Stage}: {Candidates} current candidates, {Returned} returned",
+                //    stage, candidates.Count, references.Count);
+                //logger.LogInformation("Product search stage {Stage}: returned products={Products}", stage,
+                //    JsonSerializer.Serialize(references.Select(product => new
+                //    {
+                //        product.ProductId,
+                //        product.Name,
+                //        product.Category,
+                //        product.Price,
+                //        product.Metadata,
+                //        product.QdrantPayload
+                //    })));
+                return Result<List<ProductReferenceV2>>.Success(references, message: $"Tìm sản phẩm ở bước {stage}.");
             }
 
             // First try the selected category and its validated key/value filters.
-            // Embeddings are only generated when this stage has no suitable result.
+            // Style/occasion searches keep category candidates and evaluate vector/BM25 too.
             var recoveryCandidates = new List<ProductReferenceV2>();
             if (schema is not null)
             {
                 var exactPoints = await qdrantService.ScrollAsync(
                     QdrantCollections.Products, filterResult.Data, (uint)candidateLimit, cancellationToken);
+
                 var exactResult = await EvaluateAsync(exactPoints.Select(point => point.Payload), "category");
+
                 if (!exactResult.IsSuccess) return exactResult;
-                if (query.IncludeBm25Candidates) recoveryCandidates.AddRange(exactResult.Data ?? []);
+
+                if (combineStages) recoveryCandidates.AddRange(exactResult.Data ?? []);
+
                 if (exactResult.Data is { Count: > 0 }
-                    && !query.IncludeBm25Candidates
-                    && !request.RequiresSemanticMatch && !request.Attributes.Any(attribute => attribute.IsPreference))
+                    && !combineStages)
                     return exactResult;
             }
 
@@ -199,13 +226,16 @@ public sealed class ProductSemanticSearchV2QueryHandler(
             // Explicit requirements and schema-strict attributes remain hard filters.
             var fallbackFilterResult = BuildFilter(businessResult.Data.Id, schema, request,
                 priceRange.Minimum, priceRange.Maximum, excludedProductIds, includeCategory: false);
+
             if (!fallbackFilterResult.IsSuccess || fallbackFilterResult.Data is null)
                 return Result<List<ProductReferenceV2>>.Failure(
                     fallbackFilterResult.StatusCode, fallbackFilterResult.Message,
                     fallbackFilterResult.Errors, fallbackFilterResult.MessageCode);
+
             logger.LogInformation("Product fallback filter: {Filter}", fallbackFilterResult.Data.ToString());
 
             var vectorFailed = false;
+
             try
             {
                 var vectors = await geminiService.EmbeddingsAsyncV3(
@@ -219,7 +249,7 @@ public sealed class ProductSemanticSearchV2QueryHandler(
                         fallbackFilterResult.Data, candidateLimit, cancellationToken);
                     var vectorResult = await EvaluateAsync(vectorPoints.Select(point => point.Payload), "vector");
                     if (!vectorResult.IsSuccess) return vectorResult;
-                    if (query.IncludeBm25Candidates) recoveryCandidates.AddRange(vectorResult.Data ?? []);
+                    if (combineStages) recoveryCandidates.AddRange(vectorResult.Data ?? []);
                     else if (vectorResult.Data is { Count: > 0 }) return vectorResult;
                 }
                 else
@@ -238,17 +268,30 @@ public sealed class ProductSemanticSearchV2QueryHandler(
                 logger.LogWarning(exception, "Product vector stage failed; trying BM25");
             }
 
-            var bm25Points = await qdrantService.SearchBm25Async(QdrantCollections.Products,
-                request.Bm25Query.Trim(), fallbackFilterResult.Data, (uint)candidateLimit, cancellationToken);
-            var bm25Result = await EvaluateAsync(bm25Points.Select(point => point.Payload), "bm25");
-            if (query.IncludeBm25Candidates && bm25Result.IsSuccess)
+            Result<List<ProductReferenceV2>> bm25Result;
+            try
             {
-                recoveryCandidates.AddRange(bm25Result.Data ?? []);
+                var bm25Points = await qdrantService.SearchBm25Async(QdrantCollections.Products,
+                    request.Bm25Query.Trim(), fallbackFilterResult.Data, (uint)candidateLimit, cancellationToken);
+                bm25Result = await EvaluateAsync(bm25Points.Select(point => point.Payload), "bm25");
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(exception, "Product BM25 stage failed; retaining candidates from completed stages");
+                bm25Result = Result<List<ProductReferenceV2>>.Failure(502, "Bước BM25 tạm thời không khả dụng.");
+            }
+            if (combineStages)
+            {
+                if (bm25Result.IsSuccess) recoveryCandidates.AddRange(bm25Result.Data ?? []);
                 var combined = recoveryCandidates.DistinctBy(product => product.ProductId).ToList();
                 for (var index = 0; index < combined.Count; index++) combined[index].DisplayOrder = index + 1;
                 if (combined.Count > 0)
                     return Result<List<ProductReferenceV2>>.Success(combined,
-                        message: "Đã kiểm tra lại category, vector và BM25. Chỉ chọn ứng viên thỏa nhu cầu hiện tại.");
+                        message: "Ứng viên tổng hợp từ các bước tra cứu thành công, đã loại ID trùng. Đánh giá tên, mô tả và thuộc tính canonical để chọn đúng loại, điều kiện bắt buộc và phong cách; không yêu cầu khớp nguyên văn từ khóa.");
             }
             if (!bm25Result.IsSuccess || bm25Result.Data is { Count: > 0 }) return bm25Result;
             if (vectorFailed)
@@ -288,7 +331,9 @@ public sealed class ProductSemanticSearchV2QueryHandler(
         bool includeCategory = true)
     {
         var filter = new Filter();
+
         filter.Must.Add(Keyword(ProductPayloadNames.BusinessId, businessId.ToString()));
+
         filter.Must.Add(Keyword(ProductPayloadNames.Status, ProductStatus.Active.ToString()));
 
         if (includeCategory && schema is not null)
@@ -368,7 +413,9 @@ public sealed class ProductSemanticSearchV2QueryHandler(
         switch (definition.DataType)
         {
             case AttributeDataType.Keyword:
+
                 return Result<Condition>.Success(Keyword(definition.Key, requestedValue));
+
             case AttributeDataType.Number:
                 if (!double.TryParse(requestedValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)
                     || !double.IsFinite(number))
@@ -386,6 +433,7 @@ public sealed class ProductSemanticSearchV2QueryHandler(
                         Range = new QdrantRange { Gte = number, Lte = number }
                     }
                 });
+
             case AttributeDataType.Boolean:
                 if (!bool.TryParse(requestedValue, out var boolean))
                 {
@@ -402,6 +450,7 @@ public sealed class ProductSemanticSearchV2QueryHandler(
                         Match = new Match { Boolean = boolean }
                     }
                 });
+
             default:
                 return Result<Condition>.Failure(
                     400,
@@ -415,6 +464,7 @@ public sealed class ProductSemanticSearchV2QueryHandler(
     {
         decimal? minimum;
         decimal? maximum;
+
         if (request.MinPrice.HasValue || request.MaxPrice.HasValue)
         {
             minimum = request.MinPrice;
@@ -422,13 +472,17 @@ public sealed class ProductSemanticSearchV2QueryHandler(
         }
         else
         {
+            // Check price range with business config
             (minimum, maximum) = request.PriceBand switch
             {
                 CategoryPriceBand.Low => ((decimal?)0m, config.LowPriceMaxLimit ?? 200000m),
+
                 CategoryPriceBand.Medium => (
                     (decimal?)(config.MediumPriceMinLimit ?? 200000m),
                     config.MediumPriceMaxLimit ?? 1000000m),
+
                 CategoryPriceBand.High => (config.HighPriceMinLimit ?? 1000000m, (decimal?)null),
+
                 _ => ((decimal?)null, (decimal?)null)
             };
         }
@@ -449,9 +503,11 @@ public sealed class ProductSemanticSearchV2QueryHandler(
     private static HashSet<ObjectId>? ParseExcludedProductIds(IEnumerable<string> productIds)
     {
         var result = new HashSet<ObjectId>();
+
         foreach (var productId in productIds)
         {
             if (!ObjectId.TryParse(productId?.Trim(), out var parsedId)) return null;
+
             result.Add(parsedId);
         }
 
@@ -467,6 +523,7 @@ public sealed class ProductSemanticSearchV2QueryHandler(
         return request.Attributes.Any(attribute =>
         {
             var definition = schema.Attributes.First(item => item.Key == attribute.Name.Trim());
+
             if (isFallback && attribute.IsPreference && !definition.IsStrict) return false;
             return ProductVariantAttributes.TryGetCanonicalKeyword(product, definition, out var canonical)
                 && (canonical is null

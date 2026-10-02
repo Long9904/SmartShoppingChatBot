@@ -8,7 +8,7 @@ namespace SmartShoppingChatBot.Application.Plugins;
 public class CategoryPlugin(ICategoryAttributeSchemaService categorySchemas)
 {
     [KernelFunction]
-    [Description("Bước đầu trước khi tìm sản phẩm: lấy schema đang hoạt động của một hoặc nhiều danh mục trong danh sách ở system prompt. Truyền mảng tên danh mục, kể cả khi chỉ có một. Tool trả Key, DataType, IsFilterable và AllowedValues riêng cho từng danh mục. Sau đó gọi ProductAndCategory.SemanticProductSearch với category và key-value hợp lệ; server lọc chính xác trước, rồi chuyển vector và cuối cùng BM25 khi chưa có kết quả phù hợp. Schema không phải dữ liệu tồn kho.")]
+    [Description("Bước đầu trước khi tìm sản phẩm: lấy schema đang hoạt động của một hoặc nhiều danh mục trong danh sách ở system prompt. Truyền mảng tên danh mục, kể cả khi chỉ có một. Tool trả Key, DataType, IsFilterable và AllowedValues riêng cho từng danh mục. Sau đó gọi ProductAndCategory.SemanticProductSearch với category và key-value hợp lệ; nhu cầu phong cách/hoàn cảnh được tổng hợp ứng viên category, vector và BM25. Schema không phải dữ liệu tồn kho.")]
     public async Task<Result<List<CategoryFilterSchema>>> GetCategorySchemas(
         [Description("Ưu tiên một danh mục phù hợp nhất với loại sản phẩm và mục đích khách cần; ưu tiên danh mục con phù hợp. Chỉ truyền nhiều khi cần phân biệt schema hoặc khách tìm nhiều loại. Tối đa 10 tên nguyên văn từ danh sách trong prompt.")] List<string> categories,
         CancellationToken cancellationToken = default)
