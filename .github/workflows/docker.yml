@@ -2,7 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
 
 permissions:
   contents: read
@@ -38,6 +38,7 @@ jobs:
           docker push ghcr.io/${{ steps.owner.outputs.owner }}/smartshoppingchatbot-api:latest
 
       - name: Deploy to VM
+        if: github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VM_HOST }}

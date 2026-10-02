@@ -23,7 +23,9 @@ namespace SmartShoppingChatBot.Application.Plugins
         private int _semanticSearchCalls;
         private int _categoryBrowseCalls;
         private int _searchCalls;
-        private int _searchCallLimit = 2;
+        private const int SearchCallLimit = 6;
+        private readonly Dictionary<string, int> _searchCallsByCategory = new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<ProductSearchRecoveryStep> _searchSteps = [];
         private bool _searchRecoveryRequested;
         private ProductSemanticSearchV2Request? _lastSemanticRequest;
         private readonly Dictionary<string, ProductResponseV2> _productsLoadedById =
@@ -42,7 +44,7 @@ namespace SmartShoppingChatBot.Application.Plugins
 
         [KernelFunction]
         [Description(
-            "Tìm sản phẩm theo thứ tự bắt buộc: lọc category và key-value trước; không có kết quả phù hợp thì tìm bằng hai vector; cuối cùng mới dùng BM25. " +
+            "Tìm sản phẩm bằng category/key-value, hai vector và BM25. Với nhu cầu phong cách/hoàn cảnh hoặc IsPreference, server tổng hợp cả ba nguồn ngay trong một lần gọi. " +
             "Đây là function chính cho tìm sản phẩm mới; server tự chuyển bước khi bước trước không có sản phẩm hiện hành khớp bộ lọc hoặc tên loại yêu cầu. " +
             "Nếu xác định được danh mục, gọi Category.GetCategorySchemas trước. Truyền Category chính xác và chỉ truyền Attributes có IsFilterable=true với Value đúng AllowedValues; " +
             "Bước đầu áp dụng category, attributes, giá và ExcludeProductIds. Bước vector và BM25 bỏ category và các Attributes có IsPreference=true (trừ schema IsStrict=true); giữ điều kiện bắt buộc, giá và ExcludeProductIds. " +
@@ -65,9 +67,13 @@ namespace SmartShoppingChatBot.Application.Plugins
             {
                 return Result<List<ProductReferenceV2>>.Failure(400, "Thiếu yêu cầu tìm kiếm sản phẩm.");
             }
-            if (Interlocked.Increment(ref _searchCalls) > _searchCallLimit)
+            var categoryKey = request.Category?.Trim() ?? string.Empty;
+            var categoryCalls = _searchCallsByCategory.GetValueOrDefault(categoryKey);
+            if (_searchCalls >= SearchCallLimit || categoryCalls >= 2)
                 return Result<List<ProductReferenceV2>>.Failure(429,
-                    "Đã hết lượt tìm sản phẩm trong tin nhắn hiện tại. Không gọi lại function tìm kiếm.");
+                    "Đã hết lượt tìm cho danh mục này hoặc tin nhắn hiện tại. Đánh giá các sản phẩm đã nhận; giới hạn gọi tool không phải lỗi tra cứu.");
+            _searchCalls++;
+            _searchCallsByCategory[categoryKey] = categoryCalls + 1;
             Interlocked.Increment(ref _semanticSearchCalls);
 
             request = new ProductSemanticSearchV2Request
@@ -98,6 +104,18 @@ namespace SmartShoppingChatBot.Application.Plugins
                     IncludeBm25Candidates = _searchRecoveryRequested
                 },
                 cancellationToken);
+            _searchSteps.Add(new ProductSearchRecoveryStep
+            {
+                Function = "SemanticProductSearch",
+                SearchRequest = request,
+                IsSuccess = result.IsSuccess,
+                Message = result.Message ?? string.Empty,
+                Products = (result.Data ?? []).Select(product => product.Copy()).ToList()
+            });
+            _logger.LogInformation(
+                "Product.SemanticProductSearch completed: category={Category}, success={Success}, candidates={Candidates}, calls={Calls}, categoryCalls={CategoryCalls}, message={Message}",
+                request.Category, result.IsSuccess, result.Data?.Count ?? 0,
+                _searchCalls, _searchCallsByCategory[categoryKey], result.Message);
             if (result.IsSuccess)
             {
                 _productReferenceCollector.AddRangeFromV2(result.Data ?? []);
@@ -140,9 +158,10 @@ namespace SmartShoppingChatBot.Application.Plugins
             if (!_searchRecoveryRequested)
                 return Result<List<ProductReferenceV2>>.Failure(400,
                     "Dùng SemanticProductSearch trước; chỉ Browse khi ReviewProductSearch yêu cầu kiểm tra lại.");
-            if (Interlocked.Increment(ref _searchCalls) > _searchCallLimit)
+            if (_searchCalls >= SearchCallLimit)
                 return Result<List<ProductReferenceV2>>.Failure(429,
                     "Đã hết lượt tìm sản phẩm trong tin nhắn hiện tại. Không gọi lại function tìm kiếm.");
+            _searchCalls++;
             Interlocked.Increment(ref _categoryBrowseCalls);
 
             request = new CategorySemanticSearchRequest
@@ -173,6 +192,13 @@ namespace SmartShoppingChatBot.Application.Plugins
                 result.StatusCode,
                 result.Data?.Count ?? 0,
                 result.Message);
+            _searchSteps.Add(new ProductSearchRecoveryStep
+            {
+                Function = "BrowseProductsByCategory",
+                IsSuccess = result.IsSuccess,
+                Message = result.Message ?? string.Empty,
+                Products = (result.Data ?? []).Select(product => product.Copy()).ToList()
+            });
 
             if (result.IsSuccess)
             {
@@ -190,11 +216,12 @@ namespace SmartShoppingChatBot.Application.Plugins
         {
             if (!_searchRecoveryRequested)
             {
-                _searchCallLimit = Math.Min(_searchCalls + 1, 2);
                 _searchRecoveryRequested = true;
             }
             var nextFunctions = new List<string>();
-            if (_searchCalls < _searchCallLimit)
+            if (_searchCalls < SearchCallLimit
+                && (_lastSemanticRequest is null
+                    || _searchCallsByCategory.GetValueOrDefault(_lastSemanticRequest.Category) < 2))
                 nextFunctions.Add("ProductAndCategory.SemanticProductSearch");
             _logger.LogInformation(
                 "Product search review: reason={Reason}, semanticCalls={SemanticCalls}, browseCalls={BrowseCalls}, next={Next}",
@@ -218,33 +245,34 @@ namespace SmartShoppingChatBot.Application.Plugins
         public async Task<ProductSearchRecovery> ReviewAndRetryAsync(CancellationToken cancellationToken = default)
         {
             var request = _lastSemanticRequest;
-            var review = ReviewProductSearch(
+            ReviewProductSearch(
                 "Câu trả lời dự kiến không chọn sản phẩm; kiểm tra lại trước khi kết luận.");
             if (request is null)
                 return new ProductSearchRecovery
                 {
-                    Review = review,
+                    Review = ReviewProductSearch("Chưa gọi tìm kiếm sản phẩm."),
                     SearchWasCalled = false
                 };
 
-            var recovery = new ProductSearchRecovery
+            if (_searchCalls < SearchCallLimit
+                && _searchCallsByCategory.GetValueOrDefault(request.Category) < 2)
             {
-                Review = review,
-                SearchWasCalled = true
-            };
-            if (_searchCalls < _searchCallLimit)
-            {
-                var semantic = await SemanticProductSearch(request, cancellationToken);
-                recovery.Steps.Add(new ProductSearchRecoveryStep
-                {
-                    Function = "SemanticProductSearch",
-                    IsSuccess = semantic.IsSuccess,
-                    Message = semantic.Message ?? string.Empty,
-                    Products = semantic.Data ?? []
-                });
+                await SemanticProductSearch(request, cancellationToken);
             }
 
-            return recovery;
+            return new ProductSearchRecovery
+            {
+                SearchWasCalled = true,
+                Review = new ProductSearchReview
+                {
+                    CanConclude = true,
+                    Instruction = "Server đã hoàn tất kiểm tra. Không gọi thêm tool; đánh giá toàn bộ Candidates và chọn sản phẩm phù hợp. Hết lượt gọi không có nghĩa là tra cứu thất bại."
+                },
+                Steps = _searchSteps.ToList(),
+                Candidates = _searchSteps.Where(step => step.IsSuccess)
+                    .SelectMany(step => step.Products)
+                    .DistinctBy(product => product.ProductId).ToList()
+            };
         }
 
         [KernelFunction]
