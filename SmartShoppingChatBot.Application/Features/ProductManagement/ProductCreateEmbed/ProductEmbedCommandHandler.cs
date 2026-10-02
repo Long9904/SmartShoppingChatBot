@@ -68,7 +68,7 @@ public class ProductEmbedCommandHandler : IRequestHandler<ProductEmbedCommand, R
 
         if (product == null)
         {
-            return Result<ProductResponse>.Failure(404, "Product not found.");
+            return Result<ProductResponse>.Failure(404, "Product not found. 1");
         }
 
         if (product.Status != ProductStatus.PendingEmbedding)
@@ -79,7 +79,7 @@ public class ProductEmbedCommandHandler : IRequestHandler<ProductEmbedCommand, R
         var embeddingText = product.SearchContent;
         if (embeddingText == null)
         {
-            return Result<ProductResponse>.Failure(404, "Product not found.");
+            return Result<ProductResponse>.Failure(404, "Product not found. 2");
         }
 
         var currentBusinessQuota = await _businessQuotaRepository.GetCurrentBusinessQuota(product.BusinessId);
